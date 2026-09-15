@@ -234,11 +234,12 @@ both reveal modes.
 
 ### 5.4 The result that never arrives
 
-An inspection can fail to produce a result in two different ways, and the design treats them
-differently because the *game* treats them differently.
+An inspection resolves three ways, and the design treats them differently because the *game* treats
+them differently. Only the first is the ordinary case; the other two are why this section exists.
 
 | Case | What the actor is sent | What the replay shows |
 | --- | --- | --- |
+| **Resolved, and still alive** | a `private_result` of `Wolf` or `Not a wolf` | the `Private result` panel with the verdict |
 | **Blocked, and still alive** | a bare `private_result` of `No result`, with no reason attached | the `Private result` panel, plus the block in *How the night resolved* |
 | **Killed before it resolved** | **nothing at all** — no `private_result`, no seat-directed update | one row in *How the night resolved*: `Inspect · Coriander → Hollis · no result — the actor died before it resolved` |
 
@@ -466,7 +467,7 @@ The fold's entire responsibility, in one table.
 every journal event satisfies the accepted audience/reveal matrix
 journal events declare wcw.events/1
 the fixture exercises every accepted payload kind except private_result
-no private_result is staged: a killed Seer gets none, and no living Seer is blocked here
+no private_result is staged: the only Seer dies before her one inspection resolves
 live artifact is a wcw.viewer/1 reset packet
 live projection carries only public events
 live projection carries no roles and no seed
@@ -535,11 +536,12 @@ because each one is visible in the design.
 
 Remaining limitations, which are not dependencies:
 
-- **`private_result` is not staged.** Under the settled lifecycle its only remaining case is a
-  *living blocked* Seer, and this episode has one Seer who dies on night 1. Restaging it would mean
-  rewriting both nights and the day-2 spine that the killed case exists to demonstrate, so the
-  absence is asserted rather than papered over, and the renderer still implements the beat (§5.4).
-  A rules-level fixture should cover it.
+- **`private_result` is not staged.** It carries every result a living actor receives — `wolf`,
+  `not_wolf`, and a bare `no_result` when the inspection was blocked (§5.4) — but this episode's one
+  Seer inspects once, on night 1, and dies before it resolves, so none of the three occurs. Staging
+  one would mean rewriting both nights and the day-2 spine that the killed case exists to
+  demonstrate, so the absence is asserted rather than papered over and the renderer still implements
+  the beat. A rules-level fixture should cover all three.
 - The fixture is an abridged three-day episode built as design evidence. Its mechanics are
   illustrative — do not derive a rules test from it.
 - Playback durations are not yet tuned against the architecture's suggested values (speech 4s, phase

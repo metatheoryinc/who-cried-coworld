@@ -26,13 +26,15 @@ try { assertMatrix(JOURNAL); assert(true, 'every journal event satisfies the acc
 catch (e) { assert(false, 'audience/reveal matrix: ' + e.message); }
 
 assert(JOURNAL.every(e => e.schema === 'wcw.events/1'), 'journal events declare wcw.events/1');
-/* `private_result` is deliberately unexercised: its only remaining case is a LIVING
-   blocked Seer, and this episode's one Seer dies on night 1. Asserted, not ignored. */
+/* `private_result` is deliberately unexercised. It still carries every result a LIVING
+   actor receives — wolf, not_wolf, and a bare no_result when the inspection was blocked —
+   but this episode's one Seer inspects once, on night 1, and dies before it resolves, so
+   none of the three occurs. Asserted, not ignored. */
 const UNSTAGED = ['private_result'];
 assert(Object.keys(MATRIX).filter(k => !UNSTAGED.includes(k)).every(k => JOURNAL.some(e => e.payload.kind === k)),
   'the fixture exercises every accepted payload kind except private_result');
 assert(!JOURNAL.some(e => e.payload.kind === 'private_result'),
-  'no private_result is staged: a killed Seer gets none, and no living Seer is blocked here');
+  'no private_result is staged: the only Seer dies before her one inspection resolves');
 
 const live = projectLive(EPISODE, JOURNAL, EPISODE.liveHorizon);
 const replay = projectReplay(EPISODE, JOURNAL, REPLAY_ALLOWLIST);

@@ -14,9 +14,10 @@
  *
  * Abridged design evidence, not a rules fixture.
  *
- * One accepted payload kind is absent: `private_result`. Its only remaining case is a
- * living blocked Seer, and this three-day episode has one Seer who dies on night 1. The
- * renderer still implements the beat; build-fixtures.mjs asserts the absence deliberately.
+ * One accepted payload kind is absent: `private_result`. It still carries every result a
+ * living actor receives — wolf, not_wolf, and a bare no_result when blocked — but this
+ * episode's one Seer inspects once, on night 1, and dies before it resolves. The renderer
+ * still implements the beat; build-fixtures.mjs asserts the absence deliberately.
  */
 
 import { normalizePresentation } from './project.mjs';

@@ -416,6 +416,9 @@ the cause is retained server-side as night_outcome actor_dead
 eliminations carry no role, so roles stay hidden on death
 the Alchemist submits kill and block together, either nullable
 every public night declares the same fixed duration
+export refuses a bundle with no finished event
+export refuses a bundle with no started event
+export refuses a bundle whose outcome and reason disagree
 injected nested field does not survive into the live packet
 injected nested field does not survive into the replay bundle
 the sentinel run still produced a real projection

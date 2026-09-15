@@ -29,3 +29,4 @@ shot 08-holdings-replay.png            1440,1100 "source=replay&reveal=omniscien
 shot 09-seat-identity.png              1440,1100 "source=replay&reveal=aired&cursor=61&open=2,4"
 shot 10-replay-medium.png               860,1000 "source=replay&reveal=omniscient&cursor=60"
 shot 11-replay-omniscient-fallback.png 1440,1100 "source=replay&reveal=omniscient&cursor=26"
+shot 12-transition-day2.png             1440,1100 "source=replay&reveal=aired&cursor=48"

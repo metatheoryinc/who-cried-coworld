@@ -186,7 +186,8 @@ mapping is §10.2.
 
 | Beat | Carries |
 | --- | --- |
-| `PhaseBanner` | day/phase mark and one line of fold-authored narration |
+| `PhaseTransition` | original illustrated day/night interstitial with a caption derived from public phase and elimination evidence |
+| `PhaseBanner` | compact vote/phase mark and one line of fold-authored narration |
 | `SpeechBeat` | identity, seat, reply target, the text, declared accusation, and — when revealed — why that bid took the floor |
 | `VoteTally` | bars, derived majority, resolution when it is not a plain majority, every ballot as `voter → target` |
 | `Knell` | who left and how; secrecy caption only while roles are unknown |
@@ -443,7 +444,7 @@ The fold's entire responsibility, in one table.
 | Accepted payload kind | Beat | Fold adds |
 | --- | --- | --- |
 | `started` | — (seeds the roster) | reads each seat's `presentation` off the roster; never matches on the name |
-| `phase` | `PhaseBanner`; a night becomes `NightScene` or `NightHold` | narration; the hold quotes `durationMs` |
+| `phase` | day/night boundaries become `PhaseTransition`; vote uses `PhaseBanner`; a night also becomes `NightScene` or `NightHold` | transition choice and narration from already-public elimination evidence; the hold quotes `durationMs` |
 | `speech` | `SpeechBeat` | resolves `replyTo` to a name; attaches the selected bid's `reason` when revealed |
 | `ballots` | `VoteTally` | derives the majority threshold from ballot count |
 | `elimination` | `Knell` when `cause: 'vote'`; state only when `cause: 'wolf'` | — |
@@ -567,16 +568,19 @@ A build satisfies this design when each is demonstrable.
 | A11 | Nothing conveys alive/dead, faction, abstention or night outcome by colour alone | §4.1, all captures |
 | A12 | The UI states what the browser is holding, and never implies the spoiler toggle is a boundary | `07-holdings-live.png`, `08-holdings-replay.png` |
 | A13 | An inspection whose actor died before it resolved produces no private beat, and reads as `no result — the actor died before it resolved` in the night's resolution panel | assertions 21–22; `01-replay-omniscient-night1.png` |
+| A14 | The original Who Cried Wolf world, title, player-card and role treatments frame the evidence UI, and day/night boundaries use the matching illustrated interstitial | `02-live-public-night1.png`, `03-replay-asaired-day2.png`, `12-transition-day2.png` |
 
 ---
 
 ## Appendix: reuse boundary
 
-Tofu Tech's client and the benchmark's web app were read as references only. Nothing was copied.
+The user owns the Tofu Tech source and explicitly authorized reuse of its Who Cried Wolf graphics in
+this prototype. The bounded copied set and exact source revision are recorded in
+[`prototype/assets/wcw/README.md`](prototype/assets/wcw/README.md). The prototype reuses the day and
+night worlds, title, player-card treatment, role icons, paper/chat textures, game-over art, and
+phase-transition compositions. It does not import Tofu components or depend on the Tofu repository
+at runtime.
 
-- **From Tofu:** the vocabulary — fold, seat card, role badge, ballot, elimination mark. No asset,
-  sprite, font or component was reused; none has a verified licence record, and the product contract
-  requires one. All identity marks here are generated from slot and name.
 - **From the benchmark:** the shape of the behaviour — typed bids with urgency and reason, floor
   arbitration, sequential wolf chat, audience-tagged events. Its producer console (channel tabs,
   controller scores, approve/edit/regenerate, raw provider response) is explicitly **not** the model

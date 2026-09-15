@@ -422,6 +422,33 @@ body::after {
 .role-icon { width: 17px; height: 17px; object-fit: contain; vertical-align: -4px; margin-right: 2px; }
 .rrow .role-icon { width: 19px; height: 19px; }
 
+/* Phase interstitials use the original illustrated compositions, but their
+   captions are derived only from public events already present in the fold. */
+.transition {
+  position: relative; min-height: clamp(260px, 40vw, 520px); overflow: hidden;
+  border: 1px solid rgba(255,235,188,.46); border-radius: var(--r3);
+  background: #17121c url("assets/wcw/backgrounds/tscreen_base.png") center / 100% 100% no-repeat;
+  box-shadow: 0 16px 44px rgba(27,17,31,.34);
+  animation: interstitial-in .55s ease both;
+}
+.transition::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: url("assets/wcw/backgrounds/tscreen_frame.png") center / 100% 100% no-repeat;
+}
+.transition-art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.transition-scrim {
+  position: absolute; inset: 0; z-index: 1;
+  background: linear-gradient(180deg, transparent 34%, rgba(18,13,24,.18) 60%, rgba(18,13,24,.88));
+}
+.transition-copy {
+  position: absolute; z-index: 2; left: clamp(22px, 5vw, 72px); right: clamp(22px, 5vw, 72px); bottom: clamp(22px, 4vw, 56px);
+  color: #fff6df; text-align: center; text-shadow: 0 2px 5px rgba(22,13,25,.9);
+}
+.transition-copy .eyebrow { display: block; margin-bottom: 4px; font-size: 11px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: #efc766; }
+.transition-copy h2 { margin: 0; font: 700 clamp(28px, 4vw, 52px)/1.05 var(--voice); }
+.transition-copy p { margin: 8px 0 0; font: 17px/1.4 var(--voice); color: #ede4d9; }
+@keyframes interstitial-in { from { opacity: 0; transform: scale(.985); } to { opacity: 1; transform: scale(1); } }
+
 /* ------------------------------------------------------------- responsive */
 /* Wide screens are an app shell: the fold and the transport hold still, the
    floor scrolls. Narrow screens fall back to ordinary page flow. */
@@ -449,6 +476,8 @@ body::after {
   .bar { grid-template-columns: 76px minmax(0,1fr) 24px; }
   .transport { padding: var(--s3) var(--s4) calc(var(--s3) + env(safe-area-inset-bottom, 0px)); }
   .deps { margin: var(--s2) var(--s3) 0; }
+  .transition { min-height: 300px; }
+  .transition-art { object-position: center; }
 }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
@@ -711,6 +740,40 @@ function narrate(p, living) {
   return `Day ${p.day}. ${living} remain.`;
 }
 
+function transitionBeat(e, all) {
+  const p = e.payload;
+  let file, title, copy;
+
+  if (p.phase === 'night') {
+    const voteDeath = [...all].reverse().find(x => x.cursor < e.cursor && x.day === e.day
+      && x.payload.kind === 'elimination' && x.payload.cause === 'vote');
+    file = voteDeath ? 'tscreen_day_death.png' : 'tscreen_day_nodeath.png';
+    title = 'The Night Begins...';
+    copy = voteDeath
+      ? `${nameOf(voteDeath.payload.slot)} was voted out of the fold.`
+      : 'No one reached a majority. The village turns in for the night.';
+  } else if (p.day === 1) {
+    file = 'tscreen_first_day.png';
+    title = 'The First Day Begins...';
+    copy = 'Nine voices enter the fold. Two of them belong to wolves.';
+  } else {
+    const resolved = [...all].reverse().find(x => x.cursor < e.cursor && x.day === p.day - 1
+      && x.payload.kind === 'night_resolved');
+    const lost = resolved ? resolved.payload.eliminated : [];
+    file = lost.length ? 'tscreen_night_death.png' : 'tscreen_night_nodeath.png';
+    title = 'The Day Begins...';
+    copy = lost.length
+      ? `${lost.map(nameOf).join(' and ')} did not survive the night.`
+      : 'Morning reaches the village. Everyone is still in the fold.';
+  }
+
+  return `<section class="beat transition" data-to="${esc(p.phase)}">
+    <img class="transition-art" src="assets/wcw/backgrounds/${file}" alt="">
+    <span class="transition-scrim" aria-hidden="true"></span>
+    <div class="transition-copy"><span class="eyebrow">Day ${p.day}</span><h2>${esc(title)}</h2><p>${esc(copy)}</p></div>
+  </section>`;
+}
+
 /* The winning bid's text is committed directly as the speech (architecture design
    §5), so a selected bid is matched to its speech by author and text. */
 function winningReason(sp, all) {
@@ -937,6 +1000,7 @@ function renderFloor(rawEvs, m) {
       while (j < evs.length && evs[j].day === e.day && evs[j].phase === 'night') {
         (evs[j].reveal === 'public' ? pub : priv).push(evs[j]); j++;
       }
+      out.push(transitionBeat(e, rawEvs));
       out.push(priv.length
         ? nightScene(p, priv)
         : `<div class="beat phase" data-phase="night"><span class="mark">Night ${p.day}</span><span class="narr">Night falls. The village sleeps.</span></div>` + holdBeat(p.durationMs));
@@ -949,8 +1013,11 @@ function renderFloor(rawEvs, m) {
     if (p.kind === 'started') { i++; continue; }
     else if (p.kind === 'seed' || p.kind === 'roles') { i++; continue; }
     else if (p.kind === 'phase') {
-      const label = p.phase === 'vote' ? 'The vote' : `Day ${p.day}`;
-      out.push(`<div class="beat phase" data-phase="${esc(p.phase)}"><span class="mark">${esc(label)}</span><span class="narr">${esc(narrate(p, living))}</span></div>`);
+      if (p.phase === 'day') out.push(transitionBeat(e, rawEvs));
+      else {
+        const label = p.phase === 'vote' ? 'The vote' : `Day ${p.day}`;
+        out.push(`<div class="beat phase" data-phase="${esc(p.phase)}"><span class="mark">${esc(label)}</span><span class="narr">${esc(narrate(p, living))}</span></div>`);
+      }
     }
     else if (p.kind === 'speech') out.push(speechBeat(e, rawEvs));
     else if (p.kind === 'ballots') out.push(tallyBeat(e));

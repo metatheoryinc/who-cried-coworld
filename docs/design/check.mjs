@@ -84,5 +84,18 @@ for (const [needle, label] of VISUAL_HOOKS) {
   if (!prototype.includes(needle)) bad.push(`prototype visual hook missing: ${label}`);
 }
 
+const TRANSITION_HOOKS = [
+  ['class="beat transition"', 'illustrated transition beat'],
+  ['tscreen_first_day.png', 'first-day transition'],
+  ['tscreen_day_death.png', 'day-with-death transition'],
+  ['tscreen_day_nodeath.png', 'day-without-death transition'],
+  ['tscreen_night_death.png', 'night-with-death transition'],
+  ['tscreen_night_nodeath.png', 'night-without-death transition'],
+  ['prefers-reduced-motion: reduce', 'reduced-motion transition path'],
+];
+for (const [needle, label] of TRANSITION_HOOKS) {
+  if (!prototype.includes(needle)) bad.push(`prototype transition hook missing: ${label}`);
+}
+
 if (bad.length) { console.error(bad.join('\n')); process.exit(1); }
 console.log('ok    links, fences and evidence references all resolve');

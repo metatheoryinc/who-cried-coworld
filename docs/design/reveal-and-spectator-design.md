@@ -211,6 +211,12 @@ the entire roster at once — the rail and the floor flip together. That simulta
 the whole surface, and it is why role reveal is anchored to the terminal result rather than to a
 toggle or to death.
 
+**This beat belongs to the replay, not to live.** The `roles` event has a server audience, so a live
+public viewer never receives it: at the end of a live episode they see the public result and its
+scores, and no role badges. That is correct rather than a gap — hosted v1 is replay-first, the reveal
+is the replay's reason to exist, and faction membership is still inferable from the published scores
+for anyone who wants it before the bundle lands.
+
 ### 5.3 The night
 
 **Public live and as-aired:** a phase banner and a hold card, which quotes the night's own declared
@@ -349,8 +355,13 @@ Six properties of projection the renderer depends on, all of them already requir
    `actions`, `scores`, `roles` and `bid`. A shallow allowlist is not sufficient; nested objects carry
    whatever else they hold.
 4. **No `roles` or `seed` event reaches a live projection.**
-5. **The replay declares `complete: true` and `revealPolicy`,** so the renderer never implies a result
-   that does not exist and can state what policy produced the bytes it holds.
+5. **The replay declares `complete: true` and `revealPolicy`** only after validation, so the renderer
+   never implies a result that does not exist and can state what policy produced the bytes it holds.
+   `projectReplay` refuses to emit a bundle that fails it: exactly one `started` and one `finished`,
+   dense increasing cursors, unique IDs, every `replyTo` resolvable inside the bundle, no `never`
+   category, unique roster slots, scores covering the roster as 0 or 1, and an outcome/reason pair
+   fixed by the union. A bundle that cannot be validated is a visible failure, never a truncated
+   artifact still claiming to be complete.
 6. **The roster arrives in `started`,** so the fold has identity before any beat is drawn.
 
 ### 10.2 Payload kind → beat

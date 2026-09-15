@@ -85,6 +85,19 @@ assert(alch.payload.actions.length === 2 && alch.payload.actions.some(a => a.abi
 assert(JOURNAL.filter(e => e.payload.kind === 'phase' && e.payload.phase === 'night')
   .every(e => e.payload.durationMs === 40000), 'every public night declares the same fixed duration');
 
+/* The export guard must actually refuse, not merely exist. */
+const refuses = (label, mutate) => {
+  try { projectReplay(EPISODE, mutate(JOURNAL.map(e => ({ ...e }))), REPLAY_ALLOWLIST); return false; }
+  catch { return true; }
+};
+assert(refuses('no terminal', j => j.filter(e => e.payload.kind !== 'finished')),
+  'export refuses a bundle with no finished event');
+assert(refuses('no roster', j => j.filter(e => e.payload.kind !== 'started')),
+  'export refuses a bundle with no started event');
+assert(refuses('bad result', j => j.map(e => e.payload.kind === 'finished'
+  ? { ...e, payload: { ...e.payload, result: { ...e.payload.result, reason: 'day_cap' } } } : e)),
+  'export refuses a bundle whose outcome and reason disagree');
+
 /* --------------------------------------------------------- constructed, not copied -- */
 const SENTINEL = 'SENTINEL_MUST_NOT_SURVIVE';
 const spike = o => (o && typeof o === 'object' ? { ...o, smuggled: SENTINEL } : o);

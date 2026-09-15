@@ -160,8 +160,31 @@ export function projectReplay(episode, journal, allow) {
   const set = new Set(allow);
   const kept = journal.filter(e => e.reveal === 'public' || set.has(e.reveal));
   const events = emit(kept);
+  /* Terminal-safe export, per architecture design §7: complete:true is set only after
+     validation. A bundle that cannot be validated is a visible failure, never a
+     silently truncated artifact that still claims to be a complete replay. */
+  const count = k => events.filter(e => e.payload.kind === k).length;
   const fin = events.find(e => e.payload.kind === 'finished');
-  if (!fin) throw new Error('refusing to export a replay with no finished event');
+  const ids = new Set(events.map(e => e.id));
+  const problems = [];
+  if (count('started') !== 1) problems.push('expected exactly one started event');
+  if (count('finished') !== 1) problems.push('expected exactly one finished event');
+  if (!events.every((e, i) => e.cursor === i + 1)) problems.push('cursors are not dense and increasing');
+  if (new Set(events.map(e => e.id)).size !== events.length) problems.push('event ids are not unique');
+  if (!events.every(e => e.payload.kind !== 'speech' || e.payload.speech.replyTo === null
+      || ids.has(e.payload.speech.replyTo))) problems.push('a replyTo points outside the bundle');
+  if (events.some(e => e.reveal === 'never')) problems.push('a never-category event reached the export');
+  if (fin) {
+    const r = fin.payload.result;
+    const roster = events.find(e => e.payload.kind === 'started');
+    const n = roster ? roster.payload.roster.length : 0;
+    if (r.scores.length !== n) problems.push('scores do not cover the roster');
+    if (!r.scores.every(v => v === 0 || v === 1)) problems.push('scores are not 0 or 1');
+    if (roster && new Set(roster.payload.roster.map(x => x.slot)).size !== n) problems.push('roster slots are not unique');
+    const PAIR = { town_win: 'wolves_eliminated', wolf_win: 'wolf_parity', draw: 'day_cap' };
+    if (PAIR[r.outcome] !== r.reason) problems.push('outcome and reason disagree');
+  } else problems.push('refusing to export a replay with no finished event');
+  if (problems.length) throw new Error('replay export failed validation: ' + problems.join('; '));
   return {
     schema: 'wcw.replay/1',
     eventSchema: 'wcw.events/1',

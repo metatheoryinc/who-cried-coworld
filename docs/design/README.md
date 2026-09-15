@@ -9,16 +9,18 @@
 ## Prototype
 
 ```
-node docs/design/prototype/build-fixtures.mjs     # rebuild the two projections and run the privacy assertions
+node docs/design/prototype/build-fixtures.mjs   # rebuild the projections; runs 27 schema and privacy assertions
+node docs/design/check.mjs                      # links, code fences, evidence references
 open docs/design/prototype/index.html
 ```
 
-- `episode-source.mjs` — authored, omniscient episode. **Never loaded by the page.**
-- `project.mjs` — the projection; per-kind projectors that construct allowlisted payloads.
-- `build-fixtures.mjs` — generates `fixtures/live-public.js` and `fixtures/replay-export.js`, and asserts the privacy properties.
-- `index.html` — the renderer, fed only by the two generated projections.
+- `episode-source.mjs` — the authored internal journal, omniscient by construction. **Never loaded by the page.** Shaped to the accepted `wcw.events/1` union; it does not define one.
+- `project.mjs` — the projection and the audience/reveal matrix; one constructing projector per accepted payload kind.
+- `build-fixtures.mjs` — generates `fixtures/live-public.js` (a `wcw.viewer/1` reset packet), `fixtures/replay-export.js` (a `wcw.replay/1` bundle) and `fixtures/cast.js` (presentation config), and asserts schema conformance and privacy.
+- `index.html` — the renderer. Folds accepted payload kinds into presentation beats; see §10.2 of the design guide for the mapping.
 
 Deep links for capturing states: `?source=live|replay&reveal=aired|omniscient&cursor=N&deps=1&open=2,8`.
 
-This is design evidence, not production code, and its mocked mechanics are abridged — see
-§12 of the design guide for what is still unreconciled.
+This is design evidence, not production code. The authoritative wire schemas live in
+`docs/plans/2026-09-15-who-cried-wolf-coworld-design.md` §6-7; this prototype is shaped to them
+and never redefines them. Settled decisions and remaining limitations are §12 of the design guide.

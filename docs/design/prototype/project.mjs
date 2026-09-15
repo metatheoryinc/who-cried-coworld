@@ -1,127 +1,178 @@
 /*
  * Projection — the only secrecy boundary.
  *
- * In the product this runs in trusted game code before serialization: the live
- * WebSocket payload and the post-game replay export are two different projections
- * of one journal. The browser is never handed something it is trusted not to draw.
+ * Shaped to the ACCEPTED `wcw.events/1` / `wcw.viewer/1` / `wcw.replay/1` schemas in
+ * ../../plans/2026-09-15-who-cried-wolf-coworld-design.md §6-7. This module is design
+ * evidence for that contract, not a second definition of it. Where the two disagree,
+ * the architecture design is right and this file is wrong.
  *
- * Properties this function is responsible for:
- *   1. An event the audience may not have is not emitted at all.
- *   2. Only allowlisted fields of an emitted event survive. Nothing arbitrary is
- *      copied through, so a policy cannot smuggle payload into the artifact.
- *   3. Sequence numbers are re-issued densely over the surviving events. A gap in
- *      the sequence would itself be a disclosure: it tells the viewer that
- *      something happened and how much of it.
- *   4. Cross-references (replyTo) are remapped into the new sequence, or nulled if
- *      they point at something this audience never received.
- *   5. Roles ride on the roster and are gated by the `roles` reveal category.
+ * In the product this runs in trusted game code before serialization: the live viewer
+ * packet and the post-game replay bundle are two projections of one journal. The
+ * browser is never handed something it is trusted not to draw.
+ *
+ * Responsibilities:
+ *   1. Authorize first. An event this audience may not have is not emitted at all.
+ *   2. Construct allowlisted payloads field by field, including inside nested arrays.
+ *      Nothing from the journal is copied by reference.
+ *   3. Assign recipient-local cursors starting at 1. Internal `seq` never leaves.
+ *      A gap would itself disclose that something happened, and how much.
+ *   4. Assign opaque IDs from a public namespace. Public speech keeps a stable ID so
+ *      `replyTo` survives; every other event gets an ID derived from its own cursor.
+ *   5. Drop references that point at something this audience never received.
  */
 
 export const REVEAL_CATEGORIES = [
-  'public', 'discarded_bids', 'confessional', 'wolf_chat',
-  'night_choices', 'failures', 'roles', 'never',
+  'public', 'roles', 'wolf_chat', 'confessional',
+  'night_choices', 'discarded_bids', 'failures', 'never',
 ];
 
-/**
- * Per-kind projectors. Each one CONSTRUCTS a fresh payload field by field and
- * coerces every leaf. Nothing from the authored event is copied by reference, so
- * an extra nested field on an authored object cannot survive into an artifact.
- * A shallow `{...pick(e, allowed)}` would not give this property: `items`,
- * `ballots`, `actions` and `scores` are arrays of objects, and the array would
- * carry whatever else those objects happened to hold.
- */
-const str = v => String(v);
-const num = v => Number(v);
-const slotOrNull = v => (v === null || v === undefined ? null : Number(v));
-const noteOrNull = v => (v === null || v === undefined ? null : String(v));
-
-export const PROJECTORS = {
-  phase:        e => ({ text: str(e.text) }),
-  speech:       e => ({ slot: num(e.slot), window: num(e.window),
-                        accusation: slotOrNull(e.accusation), replyTo: slotOrNull(e.replyTo),
-                        text: str(e.text) }),
-  vote_close:   e => ({ eliminated: slotOrNull(e.eliminated), majority: num(e.majority),
-                        ballots: e.ballots.map(b => ({ slot: num(b.slot), target: slotOrNull(b.target) })) }),
-  elimination:  e => ({ slot: num(e.slot), cause: str(e.cause) }),
-  death_notice: e => ({ slot: num(e.slot) }),
-  outcome:      e => ({ result: str(e.result), headline: str(e.headline), detail: str(e.detail),
-                        scores: e.scores.map(s => ({ slot: num(s.slot), score: num(s.score) })) }),
-  bids:         e => ({ window: num(e.window), note: noteOrNull(e.note),
-                        items: e.items.map(i => ({ slot: num(i.slot), urgency: num(i.urgency),
-                          rank: num(i.rank), reason: str(i.reason), text: str(i.text) })) }),
-  wolf_chat:    e => ({ slot: num(e.slot), turn: num(e.turn), text: str(e.text) }),
-  night_action: e => ({ slot: num(e.slot),
-                        actions: e.actions.map(a => ({ ability: str(a.ability), target: slotOrNull(a.target) })) }),
-  night_pass:   e => ({ slots: e.slots.map(num), note: noteOrNull(e.note) }),
-  night_result: e => ({ slot: num(e.slot), ability: str(e.ability), target: num(e.target),
-                        result: str(e.result), note: noteOrNull(e.note) }),
-  resolution:   e => ({ text: str(e.text) }),
-  failure:      e => ({ slot: num(e.slot), request: str(e.request), code: str(e.code),
-                        provenance: str(e.provenance), fallback: str(e.fallback), note: noteOrNull(e.note) }),
-  deliberation: e => ({ slot: num(e.slot), label: str(e.label), text: str(e.text) }),
+/** Accepted audience/reveal matrix, §6. A payload kind may only ever pair as listed. */
+export const MATRIX = {
+  started:       { audience: ['public'], reveal: ['public'] },
+  phase:         { audience: ['public'], reveal: ['public'] },
+  speech:        { audience: ['public'], reveal: ['public'] },
+  ballots:       { audience: ['public'], reveal: ['public'] },
+  elimination:   { audience: ['public'], reveal: ['public'] },
+  night_resolved:{ audience: ['public'], reveal: ['public'] },
+  finished:      { audience: ['public'], reveal: ['public'] },
+  bid:           { audience: ['seats'],  reveal: ['discarded_bids'] },
+  confessional:  { audience: ['seats'],  reveal: ['confessional'] },
+  wolf_chat:     { audience: ['seats'],  reveal: ['wolf_chat'] },
+  night_choices: { audience: ['seats'],  reveal: ['night_choices'] },
+  private_result:{ audience: ['seats'],  reveal: ['night_choices'] },
+  night_outcome: { audience: ['server'], reveal: ['night_choices'] },
+  failure:       { audience: ['seats'],  reveal: ['failures'] },
+  roles:         { audience: ['server'], reveal: ['roles'] },
+  seed:          { audience: ['server'], reveal: ['roles'] },
 };
 
-/** A seat row is constructed the same way; `role` only exists when allowed. */
-function projectSeat(s, withRole) {
-  const out = { slot: Number(s.slot), name: String(s.name), kind: String(s.kind),
-                persona: s.persona == null ? null : String(s.persona) };
-  if (withRole) out.role = String(s.role);
-  return out;
+const str = v => String(v);
+const num = v => Number(v);
+const orNull = v => (v === null || v === undefined ? null : Number(v));
+const txtOrNull = v => (v === null || v === undefined ? null : String(v));
+
+/**
+ * Per-kind payload projectors. Each CONSTRUCTS a fresh payload and coerces every leaf.
+ * A shallow `{...pick(payload, allowed)}` would not give this property: `roster`,
+ * `ballots`, `actions`, `scores`, `roles` and `bid` are nested structures, and the copy
+ * would carry whatever else those objects happened to hold.
+ */
+export const PAYLOADS = {
+  started: p => ({ kind: 'started', rulesVersion: str(p.rulesVersion),
+    roster: p.roster.map(r => ({ slot: num(r.slot), name: str(r.name), alive: Boolean(r.alive) })) }),
+
+  phase: p => ({ kind: 'phase', phase: str(p.phase), day: num(p.day), durationMs: num(p.durationMs) }),
+
+  speech: (p, ref) => ({ kind: 'speech', speech: {
+    slot: num(p.speech.slot), text: str(p.speech.text),
+    replyTo: ref(p.speech.replyTo), accusation: orNull(p.speech.accusation) } }),
+
+  ballots: p => ({ kind: 'ballots', eliminated: orNull(p.eliminated), resolution: str(p.resolution),
+    ballots: p.ballots.map(b => ({ slot: num(b.slot), target: orNull(b.target) })) }),
+
+  elimination: p => ({ kind: 'elimination', slot: num(p.slot), cause: str(p.cause) }),
+
+  night_resolved: p => ({ kind: 'night_resolved', eliminated: p.eliminated.map(num) }),
+
+  finished: p => ({ kind: 'finished', result: {
+    schema: str(p.result.schema), rulesVersion: str(p.result.rulesVersion),
+    outcome: str(p.result.outcome), reason: str(p.result.reason),
+    daysCompleted: num(p.result.daysCompleted), scores: p.result.scores.map(num) } }),
+
+  bid: (p, ref) => ({ kind: 'bid', slot: num(p.slot), window: num(p.window),
+    rank: orNull(p.rank), selected: Boolean(p.selected),
+    bid: { kind: 'bid', wantsToSpeak: Boolean(p.bid.wantsToSpeak), urgency: num(p.bid.urgency),
+      text: str(p.bid.text), replyTo: ref(p.bid.replyTo),
+      accusation: orNull(p.bid.accusation), reason: str(p.bid.reason) } }),
+
+  confessional: p => ({ kind: 'confessional', slot: num(p.slot),
+    requestKind: str(p.requestKind), text: str(p.text) }),
+
+  wolf_chat: p => ({ kind: 'wolf_chat', slot: num(p.slot), text: str(p.text) }),
+
+  night_choices: p => ({ kind: 'night_choices', slot: num(p.slot),
+    actions: p.actions.map(a => ({ ability: str(a.ability), target: orNull(a.target) })) }),
+
+  night_outcome: p => ({ kind: 'night_outcome', ability: str(p.ability),
+    actor: orNull(p.actor), target: orNull(p.target), outcome: str(p.outcome) }),
+
+  private_result: p => ({ kind: 'private_result', slot: num(p.slot), result: {
+    day: num(p.result.day), ability: str(p.result.ability),
+    target: num(p.result.target), result: str(p.result.result) } }),
+
+  failure: p => ({ kind: 'failure', slot: num(p.slot), requestKind: str(p.requestKind),
+    code: str(p.code), source: str(p.source), disposition: str(p.disposition), attempt: num(p.attempt) }),
+
+  roles: p => ({ kind: 'roles', roles: p.roles.map(r => ({
+    slot: num(r.slot), role: str(r.role), faction: str(r.faction) })) }),
+
+  seed: p => ({ kind: 'seed', seed: str(p.seed), randomVersion: str(p.randomVersion) }),
+};
+
+/** Throws if a journal event pairs a payload kind with a disallowed audience or reveal. */
+export function assertMatrix(journal) {
+  for (const e of journal) {
+    const rule = MATRIX[e.payload.kind];
+    if (!rule) throw new Error('unknown payload kind "' + e.payload.kind + '"');
+    if (!rule.audience.includes(e.audience.kind))
+      throw new Error(`seq ${e.seq}: ${e.payload.kind} may not have audience ${e.audience.kind}`);
+    if (!rule.reveal.includes(e.reveal))
+      throw new Error(`seq ${e.seq}: ${e.payload.kind} may not have reveal ${e.reveal}`);
+  }
 }
 
-function project(e) {
-  const build = PROJECTORS[e.kind];
-  if (!build) throw new Error('no projector for event kind "' + e.kind + '"');
-  return { day: Number(e.day), phase: String(e.phase), kind: String(e.kind),
-           reveal: String(e.reveal), ...build(e) };
-}
-
-function resequence(kept) {
-  const ord = new Map();
-  kept.forEach((e, i) => ord.set(e.seq, i + 1));
+/* Cursor and ID assignment, shared by both projections. */
+function emit(kept) {
+  const publicIds = new Set(kept.filter(e => e.publicId).map(e => e.publicId));
+  const ref = id => (id != null && publicIds.has(id) ? String(id) : null);
   return kept.map((e, i) => {
-    const out = project(e);
-    out.seq = i + 1;
-    if ('replyTo' in out && out.replyTo != null) out.replyTo = ord.get(out.replyTo) ?? null;
-    return out;
+    const cursor = i + 1;
+    return {
+      schema: 'wcw.events/1',
+      id: e.publicId ? String(e.publicId) : 'x' + cursor,
+      cursor,
+      day: Number(e.day),
+      phase: String(e.phase),
+      reveal: String(e.reveal),
+      payload: PAYLOADS[e.payload.kind](e.payload, ref),
+    };
   });
 }
 
 /**
- * What a public spectator holds while the episode is running.
- * `horizon` is exclusive: events at or after it have not happened yet.
+ * `wcw.viewer/1` reset packet: the full bounded state a public spectator holds while
+ * the episode is running. `horizon` is exclusive.
  */
-export function projectLive(episode, events, horizon = Infinity) {
-  const kept = events.filter(e => e.audience === 'public' && e.seq < horizon);
+export function projectLive(episode, journal, horizon = Infinity) {
+  const kept = journal.filter(e => e.audience.kind === 'public' && e.seq < horizon);
+  const events = emit(kept);
   return {
-    projection: 'live.public',
-    protocol: episode.protocol,
+    protocol: 'wcw.viewer/1',
+    type: 'reset',
     episodeId: episode.episodeId,
-    title: episode.title,
-    variant: episode.variant,
-    complete: false,
-    // no role field exists on this roster at all
-    seats: episode.seats.map(s => projectSeat(s, false)),
-    revealed: [],
-    events: resequence(kept),
+    throughCursor: events.length,
+    events,
   };
 }
 
-/** What the completed static replay bundle contains. */
-export function projectReplay(episode, events, allow) {
+/** `wcw.replay/1` bundle: exported only after terminal resolution. */
+export function projectReplay(episode, journal, allow) {
   const set = new Set(allow);
-  const kept = events.filter(e => e.reveal === 'public' || set.has(e.reveal));
+  const kept = journal.filter(e => e.reveal === 'public' || set.has(e.reveal));
+  const events = emit(kept);
+  const fin = events.find(e => e.payload.kind === 'finished');
+  if (!fin) throw new Error('refusing to export a replay with no finished event');
   return {
-    projection: 'replay.export',
-    protocol: episode.protocol,
-    episodeId: episode.episodeId,
-    title: episode.title,
-    variant: episode.variant,
+    schema: 'wcw.replay/1',
+    eventSchema: 'wcw.events/1',
+    gameVersion: episode.gameVersion,
+    rulesVersion: episode.rulesVersion,
     complete: true,
-    seats: episode.seats.map(s => projectSeat(s, set.has('roles'))),
-    revealed: [...set],
-    events: resequence(kept),
-    reconciliationNotes: episode.reconciliationNotes.map(String),
+    episodeId: episode.episodeId,
+    maxDays: episode.maxDays,
+    revealPolicy: 'postgame_allowlist/1',
+    events,
+    result: fin.payload.result,
   };
 }
 
@@ -130,9 +181,9 @@ export function census(projection) {
   const by = {};
   for (const e of projection.events) by[e.reveal] = (by[e.reveal] || 0) + 1;
   return {
-    projection: projection.projection,
+    artifact: projection.schema || projection.protocol,
     events: projection.events.length,
-    rolesOnRoster: projection.seats.some(s => 'role' in s),
+    carriesRoles: projection.events.some(e => e.payload.kind === 'roles'),
     byReveal: by,
     bytes: JSON.stringify(projection).length,
   };

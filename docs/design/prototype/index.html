@@ -206,6 +206,7 @@ button { font: inherit; color: inherit; }
 .speech .reply { font-size: 11.5px; color: var(--text-faint); }
 .speech .body { font-family: var(--voice); font-size: 16.5px; line-height: 1.58; color: var(--text); margin: 0; }
 .speech .meta { display: flex; gap: var(--s2); flex-wrap: wrap; margin-top: var(--s3); }
+.speech .meta .badge { white-space: normal; text-transform: none; letter-spacing: .02em; font-weight: 600; font-size: 11px; }
 
 /* revealed block — one treatment for every post-game reveal */
 .sealed {
@@ -384,7 +385,7 @@ button { font: inherit; color: inherit; }
 
 <header class="masthead">
   <div class="brand">
-    <h1 id="ep-title">—</h1>
+    <h1 id="ep-title">Who Cried Wolf</h1>
     <span class="sub" id="ep-sub">—</span>
   </div>
 
@@ -427,17 +428,41 @@ button { font: inherit; color: inherit; }
 
 <script src="fixtures/live-public.js"></script>
 <script src="fixtures/replay-export.js"></script>
+<script src="fixtures/cast.js"></script>
 <script>
 /* ============================================================================
    Presentation fold.
 
-   The page is handed two already-projected artifacts. LIVE_PUBLIC is what a
-   public spectator's socket delivers while the episode runs; REPLAY_EXPORT is
-   the completed static bundle. Neither is filtered here for secrecy — that
-   already happened, in project.mjs, on the trusted side.
+   The page is handed two already-projected artifacts:
+     LIVE_PUBLIC   a `wcw.viewer/1` reset packet — what a public spectator's socket
+                   delivers while the episode runs.
+     REPLAY_EXPORT a `wcw.replay/1` bundle — the completed static artifact.
+   Both carry accepted `wcw.events/1` ProjectedEvents. Neither is filtered here for
+   secrecy; that already happened in project.mjs, on the trusted side.
 
-   The Reveal control below therefore chooses what to DRAW from bytes the viewer
-   already has. It is a viewing preference, not a lock.
+   This file turns accepted PAYLOAD KINDS into presentation BEATS. Beats are a
+   design-only vocabulary; they are not wire kinds and must never redefine event
+   semantics. The fold may add narration and derive the majority threshold. It never
+   resolves a vote, determines death, or infers a hidden role.
+
+     payload kind        beat
+     ------------------  --------------------------------------------------
+     started             (no beat; seeds the roster)
+     phase               PhaseBanner, or NightScene / NightHold for a night
+     speech              SpeechBeat
+     ballots             VoteTally            (majority derived here)
+     elimination         (no beat when cause 'wolf'; Knell when cause 'vote')
+     night_resolved      Knell (dawn)
+     finished            OutcomeBeat
+     bid                 SealedBeat "Bidding"
+     confessional        SealedBeat "Confessionals" / "Why they voted"
+     wolf_chat           SealedBeat "Wolf channel"
+     night_choices       SealedBeat "Night actions" (+ "Nothing to do")
+     night_outcome       SealedBeat "How the night resolved"
+     private_result      SealedBeat "Private result"
+     failure             SealedBeat "Fallback"
+     roles               (no beat; unlocks role badges)
+     seed                (never drawn)
    ========================================================================= */
 
 const state = {
@@ -448,57 +473,74 @@ const state = {
 };
 
 const data = () => (state.source === 'live' ? LIVE_PUBLIC : REPLAY_EXPORT);
-const seatsOf = () => data().seats;
-const maxSeq = () => data().events.length;
-const seat = n => seatsOf()[n];
+const maxCursor = () => data().events.length;
+const findKind = k => data().events.find(e => e.payload.kind === k);
+
+const ROSTER = () => (findKind('started') || { payload: { roster: [] } }).payload.roster;
+const seat = n => ROSTER()[n] || { slot: n, name: 'Seat ' + n };
 const nameOf = n => seat(n).name;
+const personaOf = n => CAST_CATALOGUE.personas[nameOf(n)] || null;
+const isBundled = n => Boolean(personaOf(n));
 
 const ROLE_LABEL = { wolf: 'Wolf', alchemist: 'Alchemist', seer: 'Seer', guard: 'Guard', sheep: 'Sheep' };
-const FACTION = { wolf: 'wolf', alchemist: 'wolf', seer: 'town', guard: 'town', sheep: 'town' };
 const ABILITY = { kill: 'Kill', block: 'Block', inspect: 'Inspect', protect: 'Protect' };
-const REVEAL_LABEL = {
-  discarded_bids: 'discarded bids', confessional: 'confessionals', wolf_chat: 'wolf chat',
-  night_choices: 'night choices and results', failures: 'fallbacks', roles: 'roles',
-  public: 'delivered live to everyone',
-};
+const OUTCOME = { applied: 'took effect', blocked: 'blocked', protected: 'stopped by protection',
+                  passed: 'passed', actor_dead: 'the actor did not live to receive it' };
+const RESULT_WORD = { wolf: 'Wolf', not_wolf: 'Not a wolf', no_result: 'No result' };
+const REQUEST_KIND = { bid: 'bid', wolf_chat: 'wolf chat turn', vote: 'vote', night: 'night action' };
+const FALLBACK = { bid: 'Declined the floor with empty text.', wolf_chat: 'Empty turn.',
+                   vote: 'Null target. Recorded as an abstention.', night: 'Null for every offered ability.' };
+const REVEAL_LABEL = { public: 'delivered live to everyone', discarded_bids: 'bidding',
+  confessional: 'confessionals', wolf_chat: 'wolf chat', night_choices: 'night choices and results',
+  failures: 'fallbacks', roles: 'roles and seed' };
 const HUES = [18, 42, 96, 352, 212, 320, 272, 150, 8];
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 /* Drawing rule. Not a secrecy rule — everything it can return is already local. */
 function visible(e) {
-  if (e.seq > state.cursor) return false;
+  if (e.cursor > state.cursor) return false;
   if (e.reveal === 'public') return true;
   return state.source === 'replay' && state.reveal === 'omniscient';
 }
-
-function shown() { return data().events.filter(visible); }
+const shown = () => data().events.filter(visible);
 
 /* Roles are drawn when the viewer asked for everything, or when the episode's own
-   public ending has been reached. The winning faction is derivable from per-seat
-   scores, so withholding roles after a published result would be theatre. */
+   public ending has been reached. Per-seat scores are faction scores, so withholding
+   roles after a published result would be theatre rather than secrecy. */
 function rolesKnown(evs) {
-  if (!seatsOf().some(s => 'role' in s)) return false;
+  if (!findKind('roles')) return false;
   if (state.source === 'replay' && state.reveal === 'omniscient') return true;
-  return evs.some(e => e.kind === 'outcome');
+  return evs.some(e => e.payload.kind === 'finished');
+}
+function roleOf(n) {
+  const ev = findKind('roles');
+  const row = ev && ev.payload.roles.find(r => r.slot === n);
+  return row || null;
 }
 
 function derive(evs) {
-  const S = seatsOf();
+  const R = ROSTER();
   const m = {
-    alive: S.map(() => true), died: S.map(() => null),
-    speaking: null, accused: S.map(() => 0),
-    lastBallot: S.map(() => undefined), spoke: S.map(() => 0),
+    alive: R.map(() => true), died: R.map(() => null),
+    speaking: null, accused: R.map(() => 0),
+    lastBallot: R.map(() => undefined), spoke: R.map(() => 0),
     day: 0, phase: 'waiting', roles: rolesKnown(evs), finished: false,
   };
   for (const e of evs) {
-    if (e.kind === 'phase') { m.day = e.day; m.phase = e.phase; m.speaking = null; }
-    if (e.kind === 'speech') { m.speaking = e.slot; m.spoke[e.slot]++; if (e.accusation !== null && e.accusation !== undefined) m.accused[e.accusation]++; }
-    if (e.kind === 'vote_close') { m.lastBallot = S.map(() => undefined); e.ballots.forEach(b => m.lastBallot[b.slot] = b.target); }
-    if (e.kind === 'elimination') { m.alive[e.slot] = false; m.died[e.slot] = { cause: e.cause, day: e.day }; if (m.speaking === e.slot) m.speaking = null; }
-    // a dawn announcement is how a night death becomes public; it is the same state change
-    if (e.kind === 'death_notice') { m.alive[e.slot] = false; m.died[e.slot] = { cause: 'night', day: e.day }; }
-    if (e.kind === 'outcome') { m.finished = true; m.phase = 'finished'; }
+    const p = e.payload;
+    if (p.kind === 'phase') { m.day = p.day; m.phase = p.phase; m.speaking = null; }
+    if (p.kind === 'speech') {
+      m.speaking = p.speech.slot; m.spoke[p.speech.slot]++;
+      if (p.speech.accusation !== null) m.accused[p.speech.accusation]++;
+    }
+    if (p.kind === 'ballots') { m.lastBallot = R.map(() => undefined); p.ballots.forEach(b => m.lastBallot[b.slot] = b.target); }
+    if (p.kind === 'elimination') {
+      m.alive[p.slot] = false;
+      m.died[p.slot] = { cause: p.cause, day: e.day };
+      if (m.speaking === p.slot) m.speaking = null;
+    }
+    if (p.kind === 'finished') { m.finished = true; m.phase = 'finished'; }
   }
   return m;
 }
@@ -506,38 +548,37 @@ function derive(evs) {
 /* ------------------------------------------------------------------ pieces */
 
 function avatar(n, cls) {
-  const s = seat(n);
-  if (s.kind === 'submitted')
+  if (!isBundled(n))
     return `<span class="avatar ${cls || ''}" data-kind="submitted" aria-hidden="true">${esc(String(n))}</span>`;
-  return `<span class="avatar ${cls || ''}" style="--av:hsl(${HUES[n]} 46% 66%)" aria-hidden="true">${esc(s.name[0])}</span>`;
+  return `<span class="avatar ${cls || ''}" style="--av:hsl(${HUES[n]} 46% 66%)" aria-hidden="true">${esc(nameOf(n)[0])}</span>`;
 }
 
 function roleBadge(n) {
-  const r = seat(n).role;
-  if (!r) return '';
-  return `<span class="badge" data-faction="${FACTION[r]}">${esc(ROLE_LABEL[r])}</span>`;
+  const r = roleOf(n);
+  return r ? `<span class="badge" data-faction="${esc(r.faction)}">${esc(ROLE_LABEL[r.role] || r.role)}</span>` : '';
 }
 
 function renderSeats(m) {
-  const S = seatsOf();
-  document.getElementById('alive-count').textContent = `${m.alive.filter(Boolean).length} of ${S.length} alive`;
+  const R = ROSTER();
+  document.getElementById('alive-count').textContent = `${m.alive.filter(Boolean).length} of ${R.length} alive`;
 
-  document.getElementById('seats').innerHTML = S.map(s => {
+  document.getElementById('seats').innerHTML = R.map(s => {
     const n = s.slot, gone = m.died[n];
     let st;
-    if (gone) st = gone.cause === 'vote' ? `Voted out, day ${gone.day}` : `Lost in night ${gone.day - 1}`;
+    if (gone) st = gone.cause === 'vote' ? `Voted out, day ${gone.day}` : `Lost in night ${gone.day}`;
     else if (m.speaking === n) st = 'Has the floor';
     else if (m.lastBallot[n] !== undefined) st = m.lastBallot[n] === null ? 'Abstained' : `Voted ${nameOf(m.lastBallot[n])}`;
-    else st = s.kind === 'submitted' ? 'Submitted policy' : 'In the fold';
+    else st = isBundled(n) ? 'In the fold' : 'Submitted policy';
 
     const tail = [];
-    if (m.speaking === n && !gone) tail.push('<span class="badge" data-tone="lamp">Speaking</span>');
     if (m.roles) tail.push(roleBadge(n));
     else if (m.accused[n] > 0) tail.push(`<span class="badge" data-tone="quiet">${m.accused[n]}&times; named</span>`);
 
-    const detail = s.persona
-      ? `<p class="persona">${esc(s.persona)}</p>`
+    const persona = personaOf(n);
+    const detail = persona
+      ? `<p class="persona">${esc(persona)}</p>`
       : `<p>Submitted policy. This seat is known by its configured display name and nothing else &mdash; no personality, no provider, no model.</p>`;
+    const r = m.roles ? roleOf(n) : null;
 
     return `<li><details class="seat" data-alive="${!gone}" data-speaking="${m.speaking === n && !gone}">
       <summary>
@@ -549,49 +590,69 @@ function renderSeats(m) {
         <dl><dt>Seat</dt><dd>${n}</dd>
           <dt>Spoke</dt><dd>${m.spoke[n]} time${m.spoke[n] === 1 ? '' : 's'}</dd>
           <dt>Status</dt><dd>${esc(st)}</dd>
-          ${m.roles && s.role ? `<dt>Role</dt><dd>${esc(ROLE_LABEL[s.role])} &middot; ${FACTION[s.role] === 'wolf' ? 'Wolf faction' : 'Town'}</dd>` : ''}
+          ${r ? `<dt>Role</dt><dd>${esc(ROLE_LABEL[r.role])} &middot; ${r.faction === 'wolf' ? 'Wolf faction' : 'Town'}</dd>` : ''}
         </dl>
       </div>
     </details></li>`;
   }).join('');
 }
 
+/* Narration is added by the fold from phase and living count. It is presentation,
+   never a claim about rules. */
+function narrate(p, living) {
+  if (p.phase === 'vote') return 'The village votes. Ballots are sealed until the window closes.';
+  if (p.phase === 'night') return 'Night falls. The village sleeps.';
+  if (p.day === 1) return `Day 1. Nine in the fold. ${Math.round(p.durationMs / 8000)} windows to speak.`;
+  return `Day ${p.day}. ${living} remain.`;
+}
+
+/* The winning bid's text is committed directly as the speech (architecture design
+   §5), so a selected bid is matched to its speech by author and text. */
+function winningReason(sp, all) {
+  const b = all.find(x => x.payload.kind === 'bid' && x.payload.selected
+    && x.payload.slot === sp.slot && x.payload.bid.text === sp.text);
+  return b ? b.payload.bid.reason : null;
+}
+
 function speechBeat(e, all) {
-  const meta = [];
-  if (e.accusation !== null && e.accusation !== undefined)
-    meta.push(`<span class="badge" data-tone="quiet">Names ${esc(nameOf(e.accusation))}</span>`);
-  const src = e.replyTo ? all.find(x => x.seq === e.replyTo) : null;
+  const sp = e.payload.speech;
+  const src = sp.replyTo ? all.find(x => x.id === sp.replyTo) : null;
+  const why = winningReason(sp, all);
+  const meta = (sp.accusation !== null || why)
+    ? `<div class="meta">${sp.accusation !== null ? `<span class="badge" data-tone="quiet">Names ${esc(nameOf(sp.accusation))}</span>` : ''}${why ? `<span class="badge" data-tone="seal">Took the floor: ${esc(why)}</span>` : ''}</div>` : '';
   return `<article class="beat speech">
-    ${avatar(e.slot)}
+    ${avatar(sp.slot)}
     <div>
       <div class="hdr">
-        <span class="nm">${esc(nameOf(e.slot))}</span>
-        <span class="seat-no">Seat ${e.slot}</span>
-        ${src ? `<span class="reply">&#8618; replying to ${esc(nameOf(src.slot))}</span>` : ''}
+        <span class="nm">${esc(nameOf(sp.slot))}</span>
+        <span class="seat-no">Seat ${sp.slot}</span>
+        ${src ? `<span class="reply">&#8618; replying to ${esc(nameOf(src.payload.speech.slot))}</span>` : ''}
       </div>
-      <p class="body">${esc(e.text)}</p>
-      ${meta.length ? `<div class="meta">${meta.join('')}</div>` : ''}
+      <p class="body">${esc(sp.text)}</p>${meta}
     </div>
   </article>`;
 }
 
 function tallyBeat(e) {
+  const p = e.payload;
   const counts = new Map();
   let abstain = 0;
-  e.ballots.forEach(b => b.target === null ? abstain++ : counts.set(b.target, (counts.get(b.target) || 0) + 1));
+  p.ballots.forEach(b => b.target === null ? abstain++ : counts.set(b.target, (counts.get(b.target) || 0) + 1));
   const rows = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0]);
   if (abstain) rows.push(['abstain', abstain]);
   const top = Math.max(1, ...rows.map(r => r[1]));
+  const majority = Math.floor(p.ballots.length / 2) + 1;   // derived by the fold
   return `<section class="beat tally">
-    <h3>Ballots &middot; day ${e.day} &middot; majority ${e.majority} of ${e.ballots.length}</h3>
+    <h3>Ballots &middot; day ${e.day} &middot; majority ${majority} of ${p.ballots.length}${
+      p.resolution === 'majority' ? '' : ' &middot; ' + esc(p.resolution.replace(/_/g, ' '))}</h3>
     <div class="bars">${rows.map(([t, c]) => `
-      <div class="bar" data-out="${t === e.eliminated}" data-abstain="${t === 'abstain'}">
+      <div class="bar" data-out="${t === p.eliminated}" data-abstain="${t === 'abstain'}">
         <span class="n">${t === 'abstain' ? 'Abstained' : esc(nameOf(t))}</span>
         <span class="track"><span class="fill" style="width:${(c / top) * 100}%"></span></span>
         <span class="c">${c}</span>
       </div>`).join('')}
     </div>
-    <div class="ballots">${e.ballots.map(b => `
+    <div class="ballots">${p.ballots.map(b => `
       <span class="ballot" data-abstain="${b.target === null}">
         ${esc(nameOf(b.slot))} <span class="arrow">&rarr;</span> ${b.target === null ? 'no one' : esc(nameOf(b.target))}
       </span>`).join('')}
@@ -599,13 +660,13 @@ function tallyBeat(e) {
   </section>`;
 }
 
-function knell(e, rolesShown) {
-  const night = e.kind === 'death_notice';
-  const txt = night
-    ? `At first light, <b>${esc(nameOf(e.slot))}</b> was gone.`
-    : `<b>${esc(nameOf(e.slot))}</b> was voted out of the fold.`;
-  return `<article class="beat knell" data-cause="${night ? 'night' : 'vote'}">
-    <span class="glyph" aria-hidden="true">${night ? '&#9790;' : '&#10005;'}</span>
+function knell(slots, cause, rolesShown) {
+  const who = slots.map(nameOf).map(esc).map(n => `<b>${n}</b>`).join(' and ');
+  const txt = cause === 'wolf'
+    ? `At first light, ${who} was gone.`
+    : `${who} was voted out of the fold.`;
+  return `<article class="beat knell" data-cause="${cause === 'wolf' ? 'night' : 'vote'}">
+    <span class="glyph" aria-hidden="true">${cause === 'wolf' ? '&#9790;' : '&#10005;'}</span>
     <span class="txt">${txt}${rolesShown ? '' : ' <span style="color:var(--text-faint)">Their role stays secret until the episode ends.</span>'}</span>
   </article>`;
 }
@@ -613,8 +674,7 @@ function knell(e, rolesShown) {
 function sealed(tag, inner, note) {
   return `<section class="beat sealed">
     <div class="hdr"><h3>${esc(tag)}</h3><span class="badge" data-tone="seal">Hidden during play</span></div>
-    ${inner}
-    ${note ? `<p class="note">${esc(note)}</p>` : ''}
+    ${inner}${note ? `<p class="note">${esc(note)}</p>` : ''}
   </section>`;
 }
 
@@ -625,135 +685,172 @@ function lineOf(n, main, sub) {
     ${sub ? `<div class="sub">${sub}</div>` : ''}
   </div></li>`;
 }
+const plainLine = html => `<li class="line" style="grid-template-columns:1fr"><p class="txt">${html}</p></li>`;
 
-/* Consecutive private events of the same kind are one panel, not one panel each.
-   A wolf conversation reads as a conversation; five headers read as a log file. */
+/* Consecutive private events of the same kind become one panel. A wolf conversation
+   reads as a conversation; five headers read as a log file. */
 function coalesce(evs) {
-  const GROUPABLE = { wolf_chat: 1, night_action: 1, deliberation: 1 };
+  const GROUP = { wolf_chat: 1, night_choices: 1, confessional: 1, bid: 1, night_outcome: 1 };
   const out = [];
   for (const e of evs) {
+    const k = e.payload.kind;
     const prev = out[out.length - 1];
-    const same = prev && prev.kind === e.kind && prev.day === e.day && prev.phase === e.phase
-      && (e.kind !== 'deliberation' || prev.label === e.label);
-    if (GROUPABLE[e.kind] && same) { prev.group.push(e); continue; }
-    out.push(GROUPABLE[e.kind] ? { ...e, group: [e] } : e);
+    const same = prev && prev.payload.kind === k && prev.day === e.day && prev.phase === e.phase
+      && (k !== 'confessional' || prev.payload.requestKind === e.payload.requestKind)
+      && (k !== 'bid' || prev.payload.window === e.payload.window);
+    if (GROUP[k] && same) { prev.group.push(e); continue; }
+    out.push(GROUP[k] ? { ...e, group: [e] } : e);
   }
   return out;
 }
 
 function revealParts(e) {
-  switch (e.kind) {
+  const p = e.payload;
+  switch (p.kind) {
     case 'wolf_chat':
       return { title: 'Wolf channel',
-        inner: `<ul>${e.group.map(w => lineOf(w.slot, esc(w.text), `Turn ${w.turn}`)).join('')}</ul>`,
-        note: 'Delivered only to the living wolf faction, one turn at a time.' };
+        inner: `<ul>${e.group.map((w, i) => lineOf(w.payload.slot, esc(w.payload.text), `Turn ${i + 1}`)).join('')}</ul>`,
+        note: 'Delivered only to the living wolf faction at emission, one turn at a time.' };
 
-    case 'bids':
-      return { title: `${e.items.length} bids not taken · window ${e.window}`,
-        inner: `<ul>${e.items.map(b => lineOf(b.slot, esc(b.text),
-          `Ranked ${b.rank} &middot; urgency ${b.urgency} &middot; ${esc(b.reason)}`)).join('')}</ul>`,
-        note: e.note };
-
-    case 'deliberation':
-      return { title: e.label === 'Confessional' ? 'Confessionals' : 'Why they voted',
-        inner: `<ul>${e.group.map(i => lineOf(i.slot, esc(i.text))).join('')}</ul>`,
-        note: 'Written by each policy for the audience as part of a committed action. Not model reasoning.' };
-
-    case 'night_action':
-      return { title: 'Night actions',
-        inner: `<ul>${e.group.map(n => {
-          const acts = n.actions.filter(a => a.target !== null)
-            .map(a => `<strong>${ABILITY[a.ability]}</strong> &rarr; ${esc(nameOf(a.target))}`).join(' &nbsp;·&nbsp; ');
-          const passed = n.actions.filter(a => a.target === null).map(a => ABILITY[a.ability]).join(', ');
-          return lineOf(n.slot, acts || '<strong>Passed</strong>', passed ? `Offered but passed: ${passed}` : '');
-        }).join('')}</ul>`,
-        note: 'Every living seat received the night request at the same moment, including seats with nothing to do.' };
-
-    case 'night_pass':
-      return { title: 'Nothing to do',
-        inner: `<p class="txt" style="margin:0;color:var(--text-dim);font-family:var(--voice);font-size:15px">${e.slots.map(nameOf).map(esc).join(', ')} had no ability to use.</p>`,
-        note: e.note };
-
-    case 'night_result': {
-      const v = { wolf: 'Wolf', not_wolf: 'Not a wolf', no_result: 'No result' }[e.result];
-      return { title: 'Private result',
-        inner: `<ul>${lineOf(e.slot, `<strong>${ABILITY[e.ability]} ${esc(nameOf(e.target))}</strong> &rarr; <span class="verdict" data-v="${e.result}">${v}</span>`)}</ul>`,
-        note: e.note };
+    case 'bid': {
+      const rows = e.group.map(b => b.payload).sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99));
+      // Nothing was discarded: the winning text is already on the floor as public
+      // speech, and its reason rides with that beat instead.
+      if (!rows.some(b => !b.selected)) return null;
+      return { title: `${rows.filter(b => !b.selected).length} bids not taken · day ${e.day} · window ${p.window}`,
+        inner: `<ul>${rows.map(b => lineOf(b.slot, esc(b.bid.text),
+          `Ranked ${b.rank} &middot; urgency ${b.bid.urgency} &middot; ${esc(b.bid.reason)}` +
+          (b.selected ? ' &middot; <b style="color:var(--lamp)">took the floor</b>' : ''))).join('')}</ul>`,
+        note: 'Ranked on public evidence only: speech count, direct reply, urgency, rotating seat priority. The winning text is committed directly, not generated again.' };
     }
 
-    case 'resolution':
+    case 'confessional':
+      return { title: p.requestKind === 'vote' ? 'Why they voted' : 'Confessionals',
+        inner: `<ul>${e.group.map(c => lineOf(c.payload.slot, esc(c.payload.text),
+          `Authored with their ${esc(REQUEST_KIND[c.payload.requestKind] || c.payload.requestKind)}`)).join('')}</ul>`,
+        note: 'Written by each policy for the audience as part of a committed action. Not model reasoning.' };
+
+    case 'night_choices': {
+      const acted = e.group.filter(g => g.payload.actions.length);
+      const idle = e.group.filter(g => !g.payload.actions.length).map(g => g.payload.slot);
+      const rows = acted.map(g => {
+        const a = g.payload.actions;
+        const used = a.filter(x => x.target !== null)
+          .map(x => `<strong>${ABILITY[x.ability]}</strong> &rarr; ${esc(nameOf(x.target))}`).join(' &nbsp;·&nbsp; ');
+        const passed = a.filter(x => x.target === null).map(x => ABILITY[x.ability]).join(', ');
+        return lineOf(g.payload.slot, used || '<strong>Passed</strong>', passed ? `Offered but passed: ${passed}` : '');
+      }).join('');
+      const tail = idle.length
+        ? plainLine(`<span style="color:var(--text-faint)">${idle.map(nameOf).map(esc).join(', ')} had no ability to use.</span>`) : '';
+      return { title: 'Night actions', inner: `<ul>${rows}${tail}</ul>`,
+        note: 'Every living seat received the night request at the same moment, including seats with nothing to do.' };
+    }
+
+    case 'night_outcome':
       return { title: 'How the night resolved',
-        inner: `<p class="txt" style="margin:0;color:var(--text-dim);font-family:var(--voice);font-size:15px">${esc(e.text)}</p>`,
-        note: null };
+        inner: `<ul>${e.group.map(g => {
+          const o = g.payload;
+          const actor = o.actor === null ? 'the wolf faction' : esc(nameOf(o.actor));
+          const target = o.target === null ? 'no one' : esc(nameOf(o.target));
+          const tone = o.outcome !== 'applied' ? 'var(--text-faint)'
+            : o.ability === 'kill' ? 'var(--wolf)' : 'var(--text-dim)';
+          return plainLine(`<strong>${ABILITY[o.ability]}</strong> &middot; ${actor} &rarr; ${target}
+            &middot; <span style="color:${tone}">${esc(OUTCOME[o.outcome] || o.outcome)}</span>`);
+        }).join('')}</ul>`,
+        note: 'Server-only while the episode ran. Blocks resolve before the kill nomination tally.' };
+
+    case 'private_result':
+      return { title: 'Private result',
+        inner: `<ul>${lineOf(p.slot, `<strong>${ABILITY[p.result.ability]} ${esc(nameOf(p.result.target))}</strong>
+          &rarr; <span class="verdict" data-v="${esc(p.result.result)}">${esc(RESULT_WORD[p.result.result])}</span>`)}</ul>`,
+        note: 'A seat killed before resolution receives no_result on the wire. Why it is empty is recorded above, server-side.' };
 
     case 'failure':
       return { title: 'Fallback',
-        inner: `<ul>${lineOf(e.slot, `<strong>${esc(e.request)} &middot; ${esc(e.code)}</strong> &mdash; ${esc(e.fallback)}`,
-          e.provenance === 'server_fallback'
-            ? 'The game applied a legal fallback'
-            : 'The policy reported a failure and supplied a legal action')}</ul>`,
-        note: e.note };
+        inner: `<ul>${lineOf(p.slot, `<strong>${esc(p.requestKind)} &middot; ${esc(p.code)}</strong> &mdash; ${esc(FALLBACK[p.requestKind] || 'Legal fallback applied.')}`,
+          (p.source === 'game' ? 'The game applied a legal fallback' : 'The policy reported a failure and supplied a legal action')
+          + ` &middot; attempt ${p.attempt} &middot; ${esc(p.disposition)}`)}</ul>`,
+        note: 'Publicly this is indistinguishable from a deliberate choice. That is the accepted cost.' };
   }
   return null;
 }
 
-function revealBeat(e) { const p = revealParts(e); return p ? sealed(p.title, p.inner, p.note) : ''; }
+function revealBeat(e) { const r = revealParts(e); return r ? sealed(r.title, r.inner, r.note) : ''; }
 
-/* A night has no public content to interleave with, so it is one scene. */
+/* A night has no public content to interleave with, so its private material is one
+   scene rather than six stacked panels. */
 function nightScene(banner, body) {
   const sects = body.map(e => {
-    const p = revealParts(e);
-    return p ? `<div class="sect"><h4>${esc(p.title)}</h4>${p.inner}${p.note ? `<p class="note">${esc(p.note)}</p>` : ''}</div>` : '';
+    const r = revealParts(e);
+    return r ? `<div class="sect"><h4>${esc(r.title)}</h4>${r.inner}${r.note ? `<p class="note">${esc(r.note)}</p>` : ''}</div>` : '';
   }).join('');
   return `<section class="beat scene">
     <header>
       <span class="mark">Night ${banner.day}</span>
-      <span class="narr">${esc(banner.text)}</span>
+      <span class="narr">Night falls. The village sleeps.</span>
       <span class="badge" data-tone="seal">Hidden during play</span>
     </header>${sects}</section>`;
 }
 
 function outcomeBeat(e) {
+  const r = e.payload.result;
+  const HEAD = { town_win: 'The flock holds.', wolf_win: 'The wolves keep the fold.',
+                 draw: 'The village never settled it.' };
+  const WHY = { wolves_eliminated: 'Both wolves are gone.',
+                wolf_parity: 'The wolves reached parity.',
+                day_cap: 'The day cap arrived with no faction ahead. Every seat scores zero.' };
   return `<section class="beat outcome">
-    <h2>${esc(e.headline)}</h2>
-    <p class="detail">${esc(e.detail)}</p>
-    <div class="roster">${e.scores.map(s => `
-      <div class="rrow">${avatar(s.slot)}<span class="nm">${esc(nameOf(s.slot))}</span>
-        ${roleBadge(s.slot)}<span class="sc">${s.score}</span></div>`).join('')}
+    <h2>${esc(HEAD[r.outcome] || r.outcome)}</h2>
+    <p class="detail">${esc(WHY[r.reason] || r.reason)} ${r.daysCompleted} night${r.daysCompleted === 1 ? '' : 's'} completed.</p>
+    <div class="roster">${r.scores.map((sc, slot) => `
+      <div class="rrow">${avatar(slot)}<span class="nm">${esc(nameOf(slot))}</span>
+        ${roleBadge(slot)}<span class="sc">${sc}</span></div>`).join('')}
     </div>
   </section>`;
 }
 
-function holdBeat() {
+function holdBeat(durationMs) {
   return `<div class="beat hold">
     <p class="big">The village sleeps. Nothing is published until dawn.</p>
-    <p class="why">The night runs its full fixed length whether or not anyone acts. No pending-action count, no readiness, no timing &mdash; and no gap in the event sequence. A night in which nothing happened must look exactly like this one.</p>
+    <p class="why">The night runs its full ${Math.round(durationMs / 1000)} seconds whether or not anyone acts. No pending-action count, no readiness, no timing &mdash; and no gap in the cursor sequence. A night in which nothing happened must look exactly like this one.</p>
   </div>`;
 }
 
 function renderFloor(rawEvs, m) {
   const evs = coalesce(rawEvs);
   const out = [];
+  let living = ROSTER().length;
   let i = 0;
+
   while (i < evs.length) {
-    const e = evs[i];
-    if (e.kind === 'phase' && e.phase === 'night') {
-      const body = [];
+    const e = evs[i], p = e.payload;
+
+    if (p.kind === 'phase' && p.phase === 'night') {
+      const priv = [], pub = [];
       let j = i + 1;
-      while (j < evs.length && evs[j].day === e.day && evs[j].phase === 'night') body.push(evs[j++]);
-      out.push(body.length
-        ? nightScene(e, body)
-        : `<div class="beat phase" data-phase="night"><span class="mark">Night ${e.day}</span><span class="narr">${esc(e.text)}</span></div>` + holdBeat());
+      while (j < evs.length && evs[j].day === e.day && evs[j].phase === 'night') {
+        (evs[j].reveal === 'public' ? pub : priv).push(evs[j]); j++;
+      }
+      out.push(priv.length
+        ? nightScene(p, priv)
+        : `<div class="beat phase" data-phase="night"><span class="mark">Night ${p.day}</span><span class="narr">Night falls. The village sleeps.</span></div>` + holdBeat(p.durationMs));
+      for (const pe of pub) {
+        if (pe.payload.kind === 'night_resolved') { out.push(knell(pe.payload.eliminated, 'wolf', m.roles)); living -= pe.payload.eliminated.length; }
+      }
       i = j; continue;
     }
-    if (e.kind === 'phase') {
-      const label = e.phase === 'vote' ? 'The vote' : e.phase === 'finished' ? 'Finished' : `Day ${e.day}`;
-      out.push(`<div class="beat phase" data-phase="${e.phase}"><span class="mark">${esc(label)}</span><span class="narr">${esc(e.text)}</span></div>`);
+
+    if (p.kind === 'started') { i++; continue; }
+    else if (p.kind === 'seed' || p.kind === 'roles') { i++; continue; }
+    else if (p.kind === 'phase') {
+      const label = p.phase === 'vote' ? 'The vote' : `Day ${p.day}`;
+      out.push(`<div class="beat phase" data-phase="${esc(p.phase)}"><span class="mark">${esc(label)}</span><span class="narr">${esc(narrate(p, living))}</span></div>`);
     }
-    else if (e.kind === 'speech') out.push(speechBeat(e, rawEvs));
-    else if (e.kind === 'vote_close') out.push(tallyBeat(e));
-    else if (e.kind === 'elimination' || e.kind === 'death_notice') out.push(knell(e, m.roles));
-    else if (e.kind === 'outcome') out.push(outcomeBeat(e));
+    else if (p.kind === 'speech') out.push(speechBeat(e, rawEvs));
+    else if (p.kind === 'ballots') out.push(tallyBeat(e));
+    else if (p.kind === 'elimination') { if (p.cause === 'vote') { out.push(knell([p.slot], 'vote', m.roles)); living--; } }
+    else if (p.kind === 'night_resolved') out.push(knell(p.eliminated, 'wolf', m.roles));
+    else if (p.kind === 'finished') out.push(outcomeBeat(e));
     else out.push(revealBeat(e));
     i++;
   }
@@ -767,34 +864,35 @@ function renderCensus() {
   const by = {};
   for (const e of d.events) by[e.reveal] = (by[e.reveal] || 0) + 1;
   const priv = d.events.length - (by.public || 0);
-  const roles = d.seats.some(s => 'role' in s);
+  const roles = Boolean(findKind('roles'));
+  const artifact = d.schema || d.protocol;
 
   document.getElementById('protohint').innerHTML =
-    `<code>${esc(d.projection)}</code> &middot; ${d.events.length} events &middot; `
+    `<code>${esc(artifact)}</code> &middot; ${d.events.length} events &middot; `
     + `<b style="color:${priv ? 'var(--seal)' : 'var(--town)'}">${priv} private</b> &middot; `
-    + `roles on roster: <b style="color:${roles ? 'var(--seal)' : 'var(--town)'}">${roles ? 'yes' : 'no'}</b>`;
-
-  const rows = Object.entries(by).map(([k, v]) =>
-    `<tr><td><code>${esc(k)}</code></td><td>${v}</td><td>${esc(REVEAL_LABEL[k] || k)}</td></tr>`).join('');
+    + `roles in bytes: <b style="color:${roles ? 'var(--seal)' : 'var(--town)'}">${roles ? 'yes' : 'no'}</b>`;
 
   document.getElementById('census').innerHTML = `
     <table>
-      <tr><th>Artifact</th><td colspan="2"><code>${esc(d.projection)}</code> &middot; ${JSON.stringify(d).length} bytes &middot; ${d.complete ? 'complete' : 'in progress'}</td></tr>
-      <tr><th>Roles</th><td colspan="2">${roles ? 'present on the roster from the first frame' : 'not present in these bytes at all'}</td></tr>
-      ${rows}
+      <tr><th>Artifact</th><td colspan="2"><code>${esc(artifact)}</code> &middot; ${JSON.stringify(d).length} bytes &middot; ${d.complete ? 'complete' : 'in progress'}${d.revealPolicy ? ' &middot; <code>' + esc(d.revealPolicy) + '</code>' : ''}</td></tr>
+      <tr><th>Roles</th><td colspan="2">${roles ? 'present from the first frame' : 'not present in these bytes at all'}</td></tr>
+      ${Object.entries(by).map(([k, v]) =>
+        `<tr><td><code>${esc(k)}</code></td><td>${v}</td><td>${esc(REVEAL_LABEL[k] || k)}</td></tr>`).join('')}
     </table>
     <p style="margin:0">${roles
-      ? 'This bundle contains every revealed category. Switching Reveal to <b>As it aired</b> changes what is drawn, not what the viewer holds — it is a viewing preference, never a secrecy boundary. Secrecy happened server-side, in <code>project.mjs</code>, before these bytes existed.'
-      : 'Nothing private reached this browser. There is no role, no wolf chat, no confessional and no sequence gap to count — the live artifact was projected before serialization.'}</p>`;
+      ? 'This bundle contains every allowlisted reveal category. Switching Reveal to <b>As it aired</b> changes what is drawn, not what the viewer holds &mdash; a viewing preference, never a secrecy boundary. Secrecy happened server-side, in <code>project.mjs</code>, before these bytes existed. The seed is in here too and is never drawn.'
+      : 'Nothing private reached this browser. No role, no wolf chat, no confessional, no internal <code>seq</code>, and no cursor gap to count &mdash; the live packet was projected before serialization.'}</p>`;
 
-  const deps = document.getElementById('deps');
-  deps.innerHTML = (d.reconciliationNotes || []).map(n => `<li>${esc(n)}</li>`).join('');
+  document.getElementById('deps').innerHTML =
+    (CAST_CATALOGUE.notes || []).map(n => `<li>${esc(n)}</li>`).join('');
 }
 
 function renderChrome(m) {
   const d = data(), live = state.source === 'live';
-  document.getElementById('ep-title').textContent = d.title;
-  document.getElementById('ep-sub').textContent = `${d.episodeId} · ${d.variant}`;
+  const started = findKind('started');
+  document.getElementById('ep-sub').textContent =
+    [d.episodeId, started && started.payload.rulesVersion, d.maxDays ? `maxDays ${d.maxDays}` : null]
+      .filter(Boolean).join(' · ');
 
   const st = document.getElementById('status');
   st.dataset.live = String(live);
@@ -814,8 +912,9 @@ function renderChrome(m) {
   ['play', 'prev', 'next', 'tlabel'].forEach(id => { document.getElementById(id).hidden = live; });
   document.querySelector('.timeline').hidden = live;
   document.getElementById('livebar').hidden = !live;
+
   const scrub = document.getElementById('scrub');
-  scrub.max = maxSeq(); scrub.value = Math.min(state.cursor, maxSeq());
+  scrub.max = maxCursor(); scrub.value = Math.min(state.cursor, maxCursor());
   document.getElementById('tlabel').textContent =
     m.finished ? 'End of episode' : m.phase === 'night' ? `Night ${m.day}` : m.phase === 'vote' ? `Day ${m.day} · vote` : `Day ${m.day}`;
   document.getElementById('play').textContent = state.playing ? '❚❚' : '▶';
@@ -823,16 +922,16 @@ function renderChrome(m) {
   const segs = [];
   for (const e of d.events) {
     const k = e.day + ':' + e.phase, last = segs[segs.length - 1];
-    if (last && last.k === k) { last.n++; last.end = e.seq; }
-    else segs.push({ k, n: 1, phase: e.phase, end: e.seq });
+    if (last && last.k === k) { last.n++; last.end = e.cursor; }
+    else segs.push({ k, n: 1, phase: e.phase, end: e.cursor });
   }
   document.getElementById('segments').innerHTML = segs.map(x =>
-    `<span class="sgm" data-phase="${x.phase}" data-past="${state.cursor >= x.end}" style="flex:${x.n}"></span>`).join('');
+    `<span class="sgm" data-phase="${esc(x.phase)}" data-past="${state.cursor >= x.end}" style="flex:${x.n}"></span>`).join('');
 }
 
 function render() {
   if (state.source === 'live') { state.reveal = 'aired'; state.cursor = Infinity; }
-  state.cursor = Math.min(state.cursor, maxSeq());
+  state.cursor = Math.min(state.cursor, maxCursor());
   const evs = shown();
   const m = derive(evs);
   renderChrome(m);
@@ -851,7 +950,7 @@ document.querySelectorAll('.seg[data-kind="reveal"] button').forEach(b =>
   b.addEventListener('click', () => { state.reveal = b.value; render(); }));
 
 const scrub = document.getElementById('scrub');
-const step = d => { state.cursor = Math.max(1, Math.min(maxSeq(), state.cursor + d)); render(); };
+const step = d => { state.cursor = Math.max(1, Math.min(maxCursor(), state.cursor + d)); render(); };
 scrub.addEventListener('input', () => { state.cursor = +scrub.value; state.playing = false; render(); });
 document.getElementById('prev').addEventListener('click', () => step(-1));
 document.getElementById('next').addEventListener('click', () => step(1));
@@ -859,7 +958,7 @@ document.getElementById('play').addEventListener('click', () => { state.playing 
 
 setInterval(() => {
   if (!state.playing || state.source === 'live') return;
-  if (state.cursor >= maxSeq()) { state.playing = false; render(); return; }
+  if (state.cursor >= maxCursor()) { state.playing = false; render(); return; }
   state.cursor++; render();
 }, 1400);
 
@@ -869,7 +968,7 @@ addEventListener('keydown', ev => {
   else if (ev.key === 'ArrowLeft') step(-1);
   else if (ev.key === ' ') { ev.preventDefault(); state.playing = !state.playing; render(); }
   else if (ev.key === 'Home') { state.cursor = 1; render(); }
-  else if (ev.key === 'End') { state.cursor = maxSeq(); render(); }
+  else if (ev.key === 'End') { state.cursor = maxCursor(); render(); }
 });
 
 /* deep links, for capturing evidence at exact states */

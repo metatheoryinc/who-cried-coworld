@@ -131,7 +131,11 @@ type Phase = 'waiting' | 'day' | 'vote' | 'night' | 'finished';
 type Ability = 'kill' | 'block' | 'inspect' | 'protect';
 type Code = 'timeout' | 'disconnected' | 'malformed' | 'illegal'
   | 'refused' | 'provider_error' | 'throttled' | 'version';
-type PublicSeat = { slot: Slot; name: string; alive: boolean };
+type Presentation = { kind: 'character'; characterId: string; persona: string }
+  | { kind: 'neutral' };
+type PublicSeat = {
+  slot: Slot; name: string; alive: boolean; presentation: Presentation;
+};
 type Choice = { ability: Ability; targets: Slot[]; allowPass: true };
 type PrivateResult = {
   day: number; ability: 'inspect'; target: Slot;
@@ -141,6 +145,8 @@ type VoteRow = { slot: Slot; target: Slot | null };
 ```
 
 Names are 1–80 Unicode code points and are escaped as plain text; duplicates are valid. Days are integers 0–32 (0 only in waiting). IDs are opaque game-issued strings of 1–80 ASCII alphanumeric/`_-` characters. Text is bounded by Unicode code points and encoded byte limits, with NUL and control characters other than newline rejected. Action message <=8 KiB UTF-8; speech <=480 characters; authored `summary`/`reason` <=240 characters. Entire observation <=512 KiB; runtime retains up to 128 most recent permitted speech events per observation, plus complete structured public vote history and private result ledger. Journal and replay have separate bounded limits below.
+
+`Presentation` is trusted public game configuration, not a policy claim or a hidden game role. Character objects require exactly their three declared fields; neutral objects require only `kind`. `characterId` is 1–48 ASCII characters matching `/^[a-z0-9][a-z0-9_-]*$/`. `persona` is 1–240 Unicode code points and follows the text control-character and plain-text rendering rules above. No coercion, unknown keys, null entries, or malformed fallback-to-neutral is permitted. Unknown artwork for a valid character ID may use a neutral visual mark without changing its metadata.
 
 ### Observation and request
 
@@ -165,7 +171,7 @@ type Observation = {
 };
 ```
 
-`roster` has exactly nine rows in slot order. `teammates` is empty for Town; Wolves receive both faction identities (including self and later-dead teammates) from their initial knowledge. Only living seats receive action observations. Death grants no new private knowledge and ends action requests. `privateResults` contains only the authenticated seat's permitted inspection results; a killed-before-resolution inspection contributes no new result entry. No generic roles map is present. Own ability outcomes are restricted by the rules spec; the observation does not expose omniscient block/protection/kill success reasons.
+`roster` has exactly nine rows in slot order, each with required normalized `presentation`. The identical field is present in the public `started` roster and the Inspection roster through its shared Observation type. `teammates` is empty for Town; Wolves receive both faction identities (including self and later-dead teammates) from their initial knowledge. Only living seats receive action observations. Death grants no new private knowledge and ends action requests. `privateResults` contains only the authenticated seat's permitted inspection results; a killed-before-resolution inspection contributes no new result entry. No generic roles map is present. Own ability outcomes are restricted by the rules spec; the observation does not expose omniscient block/protection/kill success reasons.
 
 `observationId` and `requestId` use independent per-seat counters/opaque IDs, never private global journal indices. One outstanding request per seat. The observation is a complete bounded snapshot; reconnect does not require delta catch-up or a second state authority. `remainingMs` is a nonnegative integer measured from a monotonic game deadline when sending, not client wall time. The game owns the deadline even if the client ignores it. Retry uses the same request and observation IDs, fresh remaining budget, and `attempt=1`. Limits and lists are authority granted to this request; the server still checks legality against its stored phase snapshot.
 
@@ -244,7 +250,7 @@ Public bids collect concurrently; select at most one valid nonempty bid per wind
 
 Wolf conversation is two rounds in ascending living Wolf slot order. Each response is committed before the next request is built. Fill remaining allotted turns with silence; do not use natural-language “plan locked” detection to control rules. Confessionals ride in action summaries; they do not add model requests or timers. Policy-level prompts may use the benchmark's personality, win condition, visible roster/history, urgency, concise speech, and private ledgers, but none of its omniscient state object or raw production logs.
 
-Bundled Bedrock policy: read `BEDROCK_MODEL`; hosted endpoint comes from `AWS_ENDPOINT_URL_BEDROCK_RUNTIME`, use InvokeModel. Distinguish local direct credentials from hosted sidecar configuration. At most two provider attempts within an 8-second request, reserving 500 ms for serialization/send; cap each attempt by remaining request budget and disable independent SDK retry multiplication. Retry transient throttle/transport errors once only if budget remains, honoring retry-after within that budget. Authentication/config errors do not retry. Validate model output locally into this exact wire shape; no permissive JSON repair in the game. On exhaustion submit a legal action and typed report. Missing hosted sidecar is a configuration/infrastructure finding, not evidence of model strategy. Keep model selection, personality, and provider in policy configuration.
+Bundled Bedrock policy: read `BEDROCK_MODEL`; hosted endpoint comes from `AWS_ENDPOINT_URL_BEDROCK_RUNTIME`, use InvokeModel. Distinguish local direct credentials from hosted sidecar configuration. At most two provider attempts within an 8-second request, reserving 500 ms for serialization/send; cap each attempt by remaining request budget and disable independent SDK retry multiplication. Retry transient throttle/transport errors once only if budget remains, honoring retry-after within that budget. Authentication/config errors do not retry. Validate model output locally into this exact wire shape; no permissive JSON repair in the game. On exhaustion submit a legal action and typed report. Missing hosted sidecar is a configuration/infrastructure finding, not evidence of model strategy. Keep model selection, policy behavior, and provider in policy configuration. The bundled show policy may use its seat's public presentation persona as role-play context; that persona is not an instruction that changes game rules or a promise that a replacement policy adopts it.
 
 ## 6. Event schema and audience enforcement: `wcw.events/1`
 
@@ -373,6 +379,7 @@ The game-owned concrete config uses this closed shape; validate supplied fields 
 ```typescript
 type GameConfig = {
   tokens: string[]; players: { name: string }[];
+  presentation?: Presentation[];
   seed?: string; maxDays?: number;
   player_connect_timeout_seconds?: number;
   windowMs?: number;
@@ -380,6 +387,10 @@ type GameConfig = {
 ```
 
 Tokens are nine nonempty, distinct opaque strings, used only for auth. Players are nine names (the §4 limits apply). Seed is 32 lowercase hex digits when supplied. `maxDays` defaults to 8, integer 1–32; `player_connect_timeout_seconds` defaults to 180, integer 1–180; `windowMs` defaults to 8000, integer 100–8000. All six public, four private, vote, and action windows use this duration. Validate `connectSeconds + maxDays * 12 * windowMs / 1000 + 30 <= 978`; illegal config fails before readiness. A fast fixture can set `windowMs=100` with the same deterministic scripted policies. These config fields are game-owned, not additions to Coworld's manifest model.
+
+`presentation`, when supplied, is exactly nine valid `Presentation` objects in slot order. If omitted, normalize to nine separate `{kind:'neutral'}` entries. Reject wrong lengths, null/partial arrays, missing character fields, unknown fields, out-of-bound text, and invalid IDs before readiness; absence is the only defaulting case. Keep this top-level game-owned array separate from runner-overwritten `players[].name`. Once normalized, carry it unchanged in every `PublicSeat` and construct it field by field in projection/export. It is fixed for the episode, with no character-assignment event or second catalogue authority.
+
+The Manager accepted this presentation boundary on 2026-09-15. Character assignment belongs to the public seat/variant configuration and must be independent of secret role shuffling. The display name can change or collide without changing presentation. Neither character nor neutral asserts bundled/submitted provenance, model/provider identity, or compliance with a persona. External policies may occupy the same configured character seat without game changes. Never derive persona from display name, accept identity self-report, or include dynamic asset URLs. A trusted `characterId` may select existing bundled assets; the renderer reads the supplied persona rather than looking it up by name. Missing presentation config renders every seat neutral.
 
 Use the current manifest schema to author one game and at least one bundled player, tags (at least three), at least one variant, public docs/protocol references, config/results schemas, and a nine-seat certification fixture. Omit a commissioner and optional roles unless a separate accepted need exists. Do not author `game.version` in the build template; let the build hydrate it. Game config has required `tokens:string[9]`, declared `players:{name:string}[9]`, seed optional, and bounded time/day settings. Authored variants/certification configs omit tokens; runner injects them. `certification.players` explicitly seats nine runnable references; every declared baseline runnable must run. Include a no-model scripted player; keep the show player free of external provider calls in certification via an explicitly named mock mode, with real Bedrock proof a separate rung.
 
@@ -411,6 +422,7 @@ These are required implementation evidence, not checks this documentation task c
 | Reliability | Missing client, late action, malformed frames, provider refusal/throttle, reconnect, invalid flood all reach legal fallback within unchanged budgets |
 | Privacy | Sentinel secrets in every private field; inspect raw `/global`, seat snapshots, logs, replay bytes; vary hidden roles/actions and assert equal permitted projections except allowed effects |
 | Timing privacy | Night duration, public cursors, waiting packets, and alive-seat request cadence do not reveal private actor count/response timing |
+| Presentation identity | Omitted array normalizes nine neutral seats; supplied array requires nine strict variants and bounded ID/persona; started/Observation/Inspection/replay preserve metadata; renamed or duplicate display names and replacement policies do not change it; role seed changes do not change character assignment; unknown nested fields and dynamic URLs are rejected |
 | Seer death | Killed before inspection: no private_result or dead-seat update; server actor_dead exports postgame. Living blocked Seer: private bare no_result, causal blocked evidence server/replay only |
 | Reveal | Export excludes credentials/prompts/raw reasoning/diagnostics/unknown payloads; role reveal only in completed artifact; dead seat gets no privileged stream |
 | Replay parity | Capture live public events; export/reload/fold public subset; assert identical presentation at each public cursor and final score; no policy or domain execution in viewer |

@@ -20,6 +20,7 @@ The [v1 product contract](../product/v1-contract.md) is accepted product directi
 | Failure/time | Bounded requests/fallbacks; maxDays defaults to 8, then draw with all scores 0 | Day cap accepted; budget details proposed | Closes unbounded abstention gap in source games |
 | Night resolution | Block first; discard blocked kill nominations; seeded sorted-target tie break; no last-voter actor | Accepted Manager decision | Replaces Tofu arrival-order execution |
 | Seer resolution and death | Killed before inspection: server-only actor_dead evidence; living blocked Seer: bare private no_result | Accepted Manager revision | Supersedes earlier killed-Seer private no_result instruction |
+| Seat identity | Trusted config assigns public character or neutral presentation independently of occupying policy and secret role | Accepted Manager decision | Replaces name-based persona/provenance inference |
 | Protocol | Strict `wcw.player/1`, `wcw.events/1`, `wcw.replay/1` | Proposed technical design | No backward compatibility obligation to source protocols |
 
 Exact design: [Who Cried Wolf Coworld system and protocol](../plans/2026-09-15-who-cried-wolf-coworld-design.md).
@@ -68,6 +69,14 @@ Resolve Alchemist blocks first; remove blocked actors' kill nominations before t
 **Decision (Manager revision, 2026-09-15):** If the Seer dies before inspection resolves, do not emit a live `private_result` or send a new dead-seat update. Emit only server-audience `night_outcome` with ability `inspect`, the Seer actor, attempted target, and outcome `actor_dead`, revealable postgame under `night_choices`. A replay beat may describe this as “no result—the Seer died before resolution.” A living blocked Seer still receives bare `PrivateResult.result='no_result'`; its causal `blocked` evidence remains server/replay-only.
 
 **Supersession and reasoning:** This replaces the earlier instruction to deliver a private no-result after the Seer's death. Death ends private updates, so no closure exception, extra control message, or dead-policy delivery path is needed. The journal records what failed; the renderer explains that evidence without inventing a private result that was never delivered.
+
+## Public character identity
+
+**Decision (Manager, 2026-09-15):** An optional top-level game config `presentation` array has exactly nine entries in slot order when present; absent config normalizes all seats to `{kind:'neutral'}`. A character entry is exactly `{kind:'character', characterId, persona}`. The shared `PublicSeat.presentation` field is required after normalization and travels in started, observation, and inspection rosters. Runner-overwritten `players[].name` remains a separate display label.
+
+**Reasoning and consequences:** A character is public role-play copy assigned to a seat/variant, independent of secret role assignment. It says nothing about the occupying policy package, model, or provider; external policies can occupy character seats unchanged. Neither a display-name match nor self-report establishes identity/provenance. Character IDs may select bundled visual assets; no dynamic URLs or name-keyed persona catalogue is needed. Neutral presentation is the default, not a claim that a policy was externally submitted. The show policy may use the configured persona as context; game rules and policy replaceability remain unchanged.
+
+Exact variant validation and bounds live in the system design's player primitive and config sections. This explicitly replaces the prototype's earlier bundled/submitted axis and name-based persona lookup.
 
 ## Open reconciliation
 

@@ -8,7 +8,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { JOURNAL, EPISODE, CAST, PRESENTATION_CONFIG } from './episode-source.mjs';
-import { projectLive, projectReplay, census, assertMatrix, MATRIX } from './project.mjs';
+import { projectLive, projectReplay, census, assertMatrix, MATRIX,
+  presentation, normalizePresentation } from './project.mjs';
 
 /* The six private categories the accepted export allowlist permits, plus public. */
 const REPLAY_ALLOWLIST = [
@@ -100,9 +101,11 @@ const chars = roster.filter(r => r.presentation.kind === 'character');
 assert(roster.length === 9 && roster.every(r => r.presentation
   && ['character', 'neutral'].includes(r.presentation.kind)),
   'every PublicSeat carries a presentation of kind character or neutral');
-assert(roster.every((r, i) => (PRESENTATION_CONFIG[i] ? r.presentation.kind === 'character'
-  : r.presentation.kind === 'neutral')),
-  'an unconfigured slot normalizes to neutral rather than being omitted');
+assert(roster.every((r, i) => JSON.stringify(r.presentation) === JSON.stringify(PRESENTATION_CONFIG[i])),
+  'each normalized presentation is carried into its PublicSeat unchanged');
+assert(normalizePresentation(undefined).length === 9
+  && normalizePresentation(undefined).every(v => v.kind === 'neutral'
+    && Object.keys(v).length === 1), 'omitted config normalizes to nine separate neutral seats');
 assert(chars.every(r => ID_RE.test(r.presentation.characterId) && cp(r.presentation.characterId) <= 48
   && cp(r.presentation.characterId) >= 1), 'every characterId matches /^[a-z0-9][a-z0-9_-]*$/ within 48 characters');
 assert(chars.every(r => cp(r.presentation.persona) >= 1 && cp(r.presentation.persona) <= 240),
@@ -118,6 +121,28 @@ assert(!chars.some(r => NAMES.has(r.presentation.characterId)),
 assert(JSON.stringify(roster) === JSON.stringify(
   projectReplay(EPISODE, JOURNAL, REPLAY_ALLOWLIST).events.find(e => e.payload.kind === 'started').payload.roster),
   'live and replay see the same presentation; it is not a reveal category');
+
+/* Absence is the ONLY defaulting case. Everything else must fail loudly at the boundary,
+   because a malformed presentation quietly rendered neutral is a config bug nobody sees. */
+const rejects = (label, value, fn = presentation) => {
+  try { fn(value); return false; } catch { return true; }
+};
+assert(rejects('extra key', { kind: 'character', characterId: 'a', persona: 'p', smuggled: 1 }),
+  'presentation with an unknown key is rejected, not silently stripped');
+assert(rejects('partial character', { kind: 'character', characterId: 'a' }),
+  'a character missing persona is rejected, not defaulted to neutral');
+assert(rejects('bad id', { kind: 'character', characterId: '-Bad_ID', persona: 'p' })
+  && rejects('long id', { kind: 'character', characterId: 'a'.repeat(49), persona: 'p' }),
+  'characterId must match /^[a-z0-9][a-z0-9_-]*$/ within 48 characters, or it is rejected');
+assert(rejects('empty persona', { kind: 'character', characterId: 'a', persona: '' })
+  && rejects('long persona', { kind: 'character', characterId: 'a', persona: 'x'.repeat(241) }),
+  'persona outside 1-240 code points is rejected');
+assert(rejects('null', null) && rejects('unknown kind', { kind: 'mascot' })
+  && rejects('fat neutral', { kind: 'neutral', persona: 'p' }),
+  'null, an unknown kind, and a neutral carrying extra fields are all rejected');
+assert(rejects('short array', [{ kind: 'neutral' }], normalizePresentation)
+  && rejects('hole', Array.from({ length: 9 }, (_, i) => (i === 2 ? null : { kind: 'neutral' })), normalizePresentation),
+  'a supplied config must be exactly nine valid entries: wrong lengths and holes are rejected');
 
 /* The export guard must actually refuse, not merely exist. */
 const refuses = (label, mutate) => {
@@ -140,8 +165,6 @@ const spikeArrays = p => {
   for (const key of ['roster', 'ballots', 'actions', 'scores', 'roles', 'eliminated']) {
     if (Array.isArray(p[key])) out[key] = p[key].map(spike);
   }
-  /* roster[].presentation is nested twice; spike it too. */
-  if (Array.isArray(p.roster)) out.roster = out.roster.map(r => ({ ...r, presentation: spike(r.presentation) }));
   if (p.bid) out.bid = spike(p.bid);
   if (p.result) out.result = spike(p.result);
   if (p.result?.scores) out.result = { ...out.result, scores: p.result.scores.map(spike) };

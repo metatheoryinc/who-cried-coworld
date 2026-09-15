@@ -19,6 +19,8 @@
  * renderer still implements the beat; build-fixtures.mjs asserts the absence deliberately.
  */
 
+import { normalizePresentation } from './project.mjs';
+
 const RULES = 'wcw.rules/1-standard-9';
 
 export const CAST = [
@@ -39,20 +41,22 @@ const FACTION = { wolf: 'wolf', alchemist: 'wolf', seer: 'town', guard: 'town', 
  * loaded by the page. The game normalizes it into each `PublicSeat.presentation`; a missing
  * entry becomes {kind:'neutral'}. A character is a role-play identity assigned to the seat,
  * not a claim about which policy occupies it, and it is never matched from the display name.
- * Slots 2 and 8 are left unconfigured on purpose, to exercise the neutral default.
+ * A supplied array is exactly nine valid entries in slot order — absence is the only
+ * defaulting case, so slots 2 and 8 are written out as explicit neutrals rather than holes.
  */
 export const PRESENTATION_CONFIG = [
   { kind: 'character', characterId: 'hedge-keeper',  persona: 'Anxious hedge-keeper. Counts the flock twice, then counts again.' },
   { kind: 'character', characterId: 'schoolteacher', persona: 'Retired schoolteacher. Asks one question more than is comfortable.' },
-  undefined,
+  { kind: 'neutral' },
   { kind: 'character', characterId: 'neighbour',     persona: 'Warm, generous, remembers every birthday in the village.' },
   { kind: 'character', characterId: 'night-watch',   persona: 'Night watch. Speaks rarely and plainly.' },
   { kind: 'character', characterId: 'stallholder',   persona: 'Runs the market stall. Trades in rumour as much as wool.' },
   { kind: 'character', characterId: 'apothecary',    persona: 'Village apothecary. Fond of precision, impatient with feeling.' },
   { kind: 'character', characterId: 'youngest',      persona: 'Youngest of the flock. Earnest to a fault.' },
-  undefined,
+  { kind: 'neutral' },
 ];
-const presentationFor = slot => PRESENTATION_CONFIG[slot] || { kind: 'neutral' };
+/* Normalized once, before readiness, then carried unchanged into every PublicSeat. */
+const SEAT_PRESENTATION = normalizePresentation(PRESENTATION_CONFIG);
 
 let seq = 0;
 const J = [];
@@ -66,7 +70,7 @@ const seats = (...slots) => ({ kind: 'seats', slots: [...slots].sort((a, b) => a
 /* public */
 const started = () => push(0, 'waiting', PUB, 'public',
   { kind: 'started', rulesVersion: RULES, roster: CAST.map(c =>
-    ({ slot: c.slot, name: c.name, alive: true, presentation: presentationFor(c.slot) })) });
+    ({ slot: c.slot, name: c.name, alive: true, presentation: SEAT_PRESENTATION[c.slot] })) });
 const phase = (day, p, durationMs) => push(day, p, PUB, 'public', { kind: 'phase', phase: p, day, durationMs });
 const speech = (day, slot, text, replyTo, accusation, id) =>
   push(day, 'day', PUB, 'public', { kind: 'speech', speech: { slot, text, replyTo, accusation } }, id);

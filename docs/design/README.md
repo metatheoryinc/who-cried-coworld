@@ -9,7 +9,7 @@
 ## Prototype
 
 ```
-node docs/design/prototype/build-fixtures.mjs   # rebuild the projections; runs 38 schema and privacy assertions
+node docs/design/prototype/build-fixtures.mjs   # rebuild the projections; runs 45 schema and privacy assertions
 node docs/design/check.mjs                      # links, code fences, evidence references
 bash docs/design/capture.sh                     # regenerate every capture in evidence/
 open docs/design/prototype/index.html

@@ -46,11 +46,44 @@ export const MATRIX = {
   seed:          { audience: ['server'], reveal: ['roles'] },
 };
 
-/* `presentation` is nested two levels deep inside `started`, so it gets its own constructor.
-   Anything the config happened to carry alongside these fields stops here. */
-const presentation = v => (v && v.kind === 'character'
-  ? { kind: 'character', characterId: String(v.characterId), persona: String(v.persona) }
-  : { kind: 'neutral' });
+/*
+ * `presentation` is the one field the architecture forbids coercing: "no coercion, unknown
+ * keys, null entries, or malformed fallback-to-neutral is permitted", and a normalized value
+ * is carried UNCHANGED into every PublicSeat. So this is a strict validator that constructs,
+ * not a coercer that rescues. A malformed presentation is a configuration bug and must fail
+ * loudly at the boundary — quietly rendering it neutral would hide it behind a plausible seat.
+ */
+const CHARACTER_ID = /^[a-z0-9][a-z0-9_-]*$/;
+export function presentation(v) {
+  if (!v || typeof v !== 'object' || Array.isArray(v))
+    throw new Error('presentation is required on every seat');
+  const keys = Object.keys(v).sort().join(',');
+  if (v.kind === 'neutral') {
+    if (keys !== 'kind') throw new Error('a neutral presentation carries only `kind`');
+    return { kind: 'neutral' };
+  }
+  if (v.kind !== 'character') throw new Error('presentation.kind must be "character" or "neutral"');
+  if (keys !== 'characterId,kind,persona')
+    throw new Error('a character presentation carries exactly kind, characterId and persona');
+  if (typeof v.characterId !== 'string' || v.characterId.length < 1 || v.characterId.length > 48
+    || !CHARACTER_ID.test(v.characterId))
+    throw new Error('characterId must be 1-48 ASCII characters matching /^[a-z0-9][a-z0-9_-]*$/');
+  const persona = [...(typeof v.persona === 'string' ? v.persona : '')];
+  if (typeof v.persona !== 'string' || persona.length < 1 || persona.length > 240)
+    throw new Error('persona must be 1-240 Unicode code points');
+  return { kind: 'character', characterId: v.characterId, persona: v.persona };
+}
+
+/**
+ * GameConfig.presentation -> nine normalized entries. Absence is the ONLY defaulting case:
+ * a supplied array must be exactly nine valid objects in slot order.
+ */
+export function normalizePresentation(config) {
+  if (config === undefined) return Array.from({ length: 9 }, () => ({ kind: 'neutral' }));
+  if (!Array.isArray(config) || config.length !== 9)
+    throw new Error('GameConfig.presentation, when supplied, is exactly nine entries in slot order');
+  return config.map(presentation);
+}
 
 const str = v => String(v);
 const num = v => Number(v);

@@ -2,6 +2,8 @@
 # Regenerates every capture in evidence/ from the prototype. Run: bash docs/design/capture.sh
 # Headless Chrome clamps the viewport to a 500px minimum, so --window-size=390 really is 500.
 # --virtual-time-budget lets the floor's deferred scroll pin settle before the shot.
+# --force-prefers-reduced-motion freezes the live status pulse, so captures are byte-stable
+# (and the prototype already honours that preference, so this is a real rendered state).
 set -euo pipefail
 CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -11,6 +13,7 @@ OUT="$HERE/evidence"
 shot () { # shot <file> <window-size> <query>
   "$CHROME" --headless --disable-gpu --hide-scrollbars --force-color-profile=srgb \
     --force-device-scale-factor=2 --virtual-time-budget=4000 \
+    --force-prefers-reduced-motion=reduce \
     --window-size="$2" --screenshot="$OUT/$1" "$PAGE?$3" >/dev/null 2>&1
   echo "  $1  ($2)  ?$3"
 }

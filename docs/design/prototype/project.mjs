@@ -46,6 +46,12 @@ export const MATRIX = {
   seed:          { audience: ['server'], reveal: ['roles'] },
 };
 
+/* `presentation` is nested two levels deep inside `started`, so it gets its own constructor.
+   Anything the config happened to carry alongside these fields stops here. */
+const presentation = v => (v && v.kind === 'character'
+  ? { kind: 'character', characterId: String(v.characterId), persona: String(v.persona) }
+  : { kind: 'neutral' });
+
 const str = v => String(v);
 const num = v => Number(v);
 const orNull = v => (v === null || v === undefined ? null : Number(v));
@@ -55,11 +61,13 @@ const txtOrNull = v => (v === null || v === undefined ? null : String(v));
  * Per-kind payload projectors. Each CONSTRUCTS a fresh payload and coerces every leaf.
  * A shallow `{...pick(payload, allowed)}` would not give this property: `roster`,
  * `ballots`, `actions`, `scores`, `roles` and `bid` are nested structures, and the copy
- * would carry whatever else those objects happened to hold.
+ * would carry whatever else those objects happened to hold. `roster[].presentation` is
+ * nested twice over and is constructed by its own projector.
  */
 export const PAYLOADS = {
   started: p => ({ kind: 'started', rulesVersion: str(p.rulesVersion),
-    roster: p.roster.map(r => ({ slot: num(r.slot), name: str(r.name), alive: Boolean(r.alive) })) }),
+    roster: p.roster.map(r => ({ slot: num(r.slot), name: str(r.name), alive: Boolean(r.alive),
+      presentation: presentation(r.presentation) })) }),
 
   phase: p => ({ kind: 'phase', phase: str(p.phase), day: num(p.day), durationMs: num(p.durationMs) }),
 

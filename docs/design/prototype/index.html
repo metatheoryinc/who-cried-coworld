@@ -145,7 +145,7 @@ button { font: inherit; color: inherit; }
   width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center;
   font: 600 14px var(--voice); color: #14111a; background: var(--av, #8d86a0);
 }
-.avatar[data-kind="submitted"] {
+.avatar[data-kind="neutral"] {
   color: var(--text-dim); background: transparent;
   border: 1px dashed var(--line); font-family: var(--ui); font-size: 11px; letter-spacing: .02em;
 }
@@ -168,7 +168,8 @@ button { font: inherit; color: inherit; }
 
 .seat .detail { padding: 0 var(--s3) var(--s3); border-top: 1px solid var(--line-soft); margin-top: var(--s1); padding-top: var(--s3); }
 .seat .detail p { margin: 0 0 var(--s2); font-size: 12.5px; color: var(--text-dim); }
-.seat .detail p.persona { font-family: var(--voice); font-style: italic; color: var(--text-dim); }
+.seat .detail p.persona { font-family: var(--voice); font-style: italic; color: var(--text-dim); margin-bottom: 4px; }
+.seat .detail p.caveat  { font-size: 11.5px; color: var(--text-faint); }
 .seat .detail dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 3px var(--s3); font-size: 12px; }
 .seat .detail dt { color: var(--text-faint); }
 .seat .detail dd { margin: 0; color: var(--text-dim); }
@@ -376,7 +377,7 @@ button { font: inherit; color: inherit; }
 </div>
 
 <details class="deps">
-  <summary>What this browser is holding &middot; unreconciled dependencies</summary>
+  <summary>What this browser is holding &middot; settled decisions</summary>
   <div class="in">
     <div id="census"></div>
     <ul id="deps"></ul>
@@ -428,7 +429,7 @@ button { font: inherit; color: inherit; }
 
 <script src="fixtures/live-public.js"></script>
 <script src="fixtures/replay-export.js"></script>
-<script src="fixtures/cast.js"></script>
+<script src="fixtures/notes.js"></script>
 <script>
 /* ============================================================================
    Presentation fold.
@@ -479,13 +480,15 @@ const findKind = k => data().events.find(e => e.payload.kind === k);
 const ROSTER = () => (findKind('started') || { payload: { roster: [] } }).payload.roster;
 const seat = n => ROSTER()[n] || { slot: n, name: 'Seat ' + n };
 const nameOf = n => seat(n).name;
-const personaOf = n => CAST_CATALOGUE.personas[nameOf(n)] || null;
-const isBundled = n => Boolean(personaOf(n));
+/* Presentation arrives on the seat itself, normalized by the game from trusted config.
+   The display name is player data and must never select a persona. */
+const presentationOf = n => seat(n).presentation || { kind: 'neutral' };
+const isCharacter = n => presentationOf(n).kind === 'character';
 
 const ROLE_LABEL = { wolf: 'Wolf', alchemist: 'Alchemist', seer: 'Seer', guard: 'Guard', sheep: 'Sheep' };
 const ABILITY = { kill: 'Kill', block: 'Block', inspect: 'Inspect', protect: 'Protect' };
 const OUTCOME = { applied: 'took effect', blocked: 'blocked', protected: 'stopped by protection',
-                  passed: 'passed', actor_dead: 'the actor did not live to receive it' };
+                  passed: 'passed', actor_dead: 'no result \u2014 the actor died before it resolved' };
 const RESULT_WORD = { wolf: 'Wolf', not_wolf: 'Not a wolf', no_result: 'No result' };
 const REQUEST_KIND = { bid: 'bid', wolf_chat: 'wolf chat turn', vote: 'vote', night: 'night action' };
 const FALLBACK = { bid: 'Declined the floor with empty text.', wolf_chat: 'Empty turn.',
@@ -548,8 +551,8 @@ function derive(evs) {
 /* ------------------------------------------------------------------ pieces */
 
 function avatar(n, cls) {
-  if (!isBundled(n))
-    return `<span class="avatar ${cls || ''}" data-kind="submitted" aria-hidden="true">${esc(String(n))}</span>`;
+  if (!isCharacter(n))
+    return `<span class="avatar ${cls || ''}" data-kind="neutral" aria-hidden="true">${esc(String(n))}</span>`;
   return `<span class="avatar ${cls || ''}" style="--av:hsl(${HUES[n]} 46% 66%)" aria-hidden="true">${esc(nameOf(n)[0])}</span>`;
 }
 
@@ -568,16 +571,17 @@ function renderSeats(m) {
     if (gone) st = gone.cause === 'vote' ? `Voted out, day ${gone.day}` : `Lost in night ${gone.day}`;
     else if (m.speaking === n) st = 'Has the floor';
     else if (m.lastBallot[n] !== undefined) st = m.lastBallot[n] === null ? 'Abstained' : `Voted ${nameOf(m.lastBallot[n])}`;
-    else st = isBundled(n) ? 'In the fold' : 'Submitted policy';
+    else st = 'In the fold';   /* the rail carries no presentation class at all */
 
     const tail = [];
     if (m.roles) tail.push(roleBadge(n));
     else if (m.accused[n] > 0) tail.push(`<span class="badge" data-tone="quiet">${m.accused[n]}&times; named</span>`);
 
-    const persona = personaOf(n);
-    const detail = persona
-      ? `<p class="persona">${esc(persona)}</p>`
-      : `<p>Submitted policy. This seat is known by its configured display name and nothing else &mdash; no personality, no provider, no model.</p>`;
+    const pres = presentationOf(n);
+    const detail = pres.kind === 'character'
+      ? `<p class="persona">${esc(pres.persona)}</p>
+         <p class="caveat">A character the game assigned to this seat. Not a claim about which policy plays it.</p>`
+      : `<p>No character is configured for this seat. It is known by its display name and seat number, and nothing else.</p>`;
     const r = m.roles ? roleOf(n) : null;
 
     return `<li><details class="seat" data-alive="${!gone}" data-speaking="${m.speaking === n && !gone}">
@@ -757,13 +761,14 @@ function revealParts(e) {
           return plainLine(`<strong>${ABILITY[o.ability]}</strong> &middot; ${actor} &rarr; ${target}
             &middot; <span style="color:${tone}">${esc(OUTCOME[o.outcome] || o.outcome)}</span>`);
         }).join('')}</ul>`,
-        note: 'Server-only while the episode ran. Blocks resolve before the kill nomination tally.' };
+        note: 'Server-only while the episode ran. Blocks resolve before the kill nomination tally. '
+            + 'An actor killed before resolution is sent nothing at all, so this row is the only record that the action happened.' };
 
     case 'private_result':
       return { title: 'Private result',
         inner: `<ul>${lineOf(p.slot, `<strong>${ABILITY[p.result.ability]} ${esc(nameOf(p.result.target))}</strong>
           &rarr; <span class="verdict" data-v="${esc(p.result.result)}">${esc(RESULT_WORD[p.result.result])}</span>`)}</ul>`,
-        note: 'A seat killed before resolution receives no_result on the wire. Why it is empty is recorded above, server-side.' };
+        note: 'Only a living actor is sent a result. A blocked inspection returns No result with no reason attached, and the reason is recorded above, server-side.' };
 
     case 'failure':
       return { title: 'Fallback',
@@ -884,7 +889,7 @@ function renderCensus() {
       : 'Nothing private reached this browser. No role, no wolf chat, no confessional, no internal <code>seq</code>, and no cursor gap to count &mdash; the live packet was projected before serialization.'}</p>`;
 
   document.getElementById('deps').innerHTML =
-    (CAST_CATALOGUE.notes || []).map(n => `<li>${esc(n)}</li>`).join('');
+    (typeof DESIGN_NOTES === 'undefined' ? [] : DESIGN_NOTES).map(n => `<li>${esc(n)}</li>`).join('');
 }
 
 function renderChrome(m) {

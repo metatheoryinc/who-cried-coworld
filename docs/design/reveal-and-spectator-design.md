@@ -4,7 +4,8 @@ Owner: [Who Cried Wolf Design Recovery](agent:mt-port-designer-recovery), acting
 [Who Cried Wolf Designer](agent:mt-port-designer) seat. Reconciled by
 [Engineering Manager](agent:engineering-manager-4) on 2026-09-15.
 
-Status: **reconciled**. No open architecture or rules dependencies. This document is the canonical
+Status: **reconciled**, including the two architecture amendments of 2026-09-15 (§10.1). No open
+architecture or rules dependencies. This document is the canonical
 UI contract for the spectator surface; build against it rather than inventing a second one.
 
 **It is not a wire contract.** The authoritative event, viewer, replay and results schemas are
@@ -92,7 +93,8 @@ we do not have.
 | Accepted public speech | shown | shown | shown | shown | `public` |
 | Ballots and resolution | shown at window close | same | same | same | `public` |
 | Submitted night choices | hidden | acting seat | hidden | shown | `night_choices` |
-| Private Seer result | hidden | acting seat | hidden | shown | `night_choices` |
+| Private Seer result | hidden | the acting seat, **while it lives** | hidden | shown | `night_choices` |
+| An inspection whose actor died before it resolved | hidden | **not emitted to anyone, not even the actor** | hidden | shown, as the night outcome | `night_choices` |
 | Night outcome detail | hidden | hidden | hidden | shown | `night_choices` |
 | Eliminations, night resolution, result | shown | shown | shown | shown | `public` |
 | Role on death | hidden | hidden | hidden | shown | `roles` |
@@ -165,14 +167,14 @@ One component. States are additive, never encoded by colour alone.
 
 | State | Signal |
 | --- | --- |
-| In the fold | full colour identity mark, name, `Seat N` |
+| In the fold | identity mark, name, `Seat N`; the mark is a coloured monogram for a character seat and a dashed slot number for a neutral one (§6) |
 | Has the floor | lamp-tinted card and left wash, status line reads `Has the floor` |
 | Named by others | `N× named` counter badge |
 | Voted | status line reads `Voted <name>` / `Abstained` |
 | Voted out | desaturated mark, struck name, `Voted out, day N` |
 | Lost at night | desaturated mark, struck name, `Lost in night N` |
 | Role known | faction-coloured role badge **with the role word**, dimmed when dead |
-| Expanded | persona or submitted-policy note, seat, speech count, status, role when known |
+| Expanded | the character's persona and its caveat, or the neutral note; then seat, speech count, status, and role when known |
 
 There is deliberately no "Speaking" badge: the card's tint and status line already say it, and a third
 chip crowded the name out at rail width. Two signals for one state was one too many.
@@ -223,22 +225,40 @@ for anyone who wants it before the bundle lands.
 `durationMs`. The night runs its full fixed length whether or not anyone acts.
 
 **Everything:** the night becomes a **scene** — one container with a sticky header, holding the wolf
-channel, night actions, seats with nothing to do, confessionals, the private result, and how the
-night resolved. This is the one place the design departs from "reveals appear inline", and it earns
+channel, night actions, seats with nothing to do, confessionals, and how the night resolved. This is the one place the design departs from "reveals appear inline", and it earns
 it: a night has *no* public content to interleave with, so six separate sealed cards read as a stack
 of admin panels rather than as a night. Evidence: `01-replay-omniscient-night1.png`.
 
 The public dawn beat stays **outside** the scene, so the public spine of the episode is identical in
 both reveal modes.
 
-### 5.4 Failure
+### 5.4 The result that never arrives
+
+An inspection can fail to produce a result in two different ways, and the design treats them
+differently because the *game* treats them differently.
+
+| Case | What the actor is sent | What the replay shows |
+| --- | --- | --- |
+| **Blocked, and still alive** | a bare `private_result` of `No result`, with no reason attached | the `Private result` panel, plus the block in *How the night resolved* |
+| **Killed before it resolved** | **nothing at all** — no `private_result`, no seat-directed update | one row in *How the night resolved*: `Inspect · Coriander → Hollis · no result — the actor died before it resolved` |
+
+The killed case is the stricter one and it is the one that matters here. There is no event to hide,
+so there is nothing for a client to leak: the actor's own lane is silent, which is exactly what §3
+means by *hidden is a property of the bytes*. The audience still learns what happened, in the one
+place that records it, and learns it only after the episode is over.
+
+The distinction is worth the two treatments. "You were stopped" and "you did not live to find out"
+are different facts about the night, and collapsing them into one blank result would quietly rewrite
+the story the replay is there to tell. Evidence: `01-replay-omniscient-night1.png`.
+
+### 5.5 Failure
 
 A fallback is never dressed as strategy. The sealed beat names the request kind, the code, the legal
 fallback the game applied, the attempt, the disposition, and the provenance — `source: 'game'` reads
 *The game applied a legal fallback*, `source: 'policy_report'` reads *The policy reported a failure
 and supplied a legal action*. Evidence: `11-replay-omniscient-fallback.png`.
 
-### 5.5 Bounded deliberation, and what is never shown
+### 5.6 Bounded deliberation, and what is never shown
 
 Deliberation means **explicit, bounded, game-facing text a policy authored for the audience**: a bid's
 `reason`, a `confessional` attached to a committed action, wolf chat. Every panel carrying it says so
@@ -252,23 +272,53 @@ The seed is emitted and exported post-game but never drawn (§3.1).
 
 ## 6. Identity
 
-- **Every seat** shows the display name and `Seat N` from the `started` roster. Slot is the identity;
-  the name is configuration.
-- **Bundled cast** seats get a coloured monogram mark and a one-line persona in the expanded card.
-- **Submitted policies** get a dashed, uncoloured slot mark and an explicit note: *"Submitted policy.
-  This seat is known by its configured display name and nothing else — no personality, no provider,
-  no model."*
-- **Model and provider identity appear nowhere in the spectator surface, in any mode.** The product
-  contract makes them configuration rather than seat identity. If tournament attribution is wanted
-  later, that is a product decision, not a renderer change.
+A seat has two independent identities, and the surface must never let one imply the other.
 
-**Persona is presentation configuration, not episode data.** The wire roster carries `slot`, `name`
-and `alive` and nothing else, and it should stay that way — a persona is published product copy that
-ships with the viewer, not game state. The prototype models this as `fixtures/cast.js`, a catalogue
-keyed by display name; a seat absent from the catalogue renders as a submitted policy. Known
-limitation: a submitted policy configured with a bundled cast member's display name would inherit that
-persona. Low-stakes and cosmetic today; if it ever matters, the fix is to key the catalogue on a
-manifest-provided policy identifier rather than on the display name. Evidence: `09-seat-identity.png`.
+- **Who is playing** — the display name from the `started` roster, plus `Seat N`. Slot is the
+  identity; the name is player-supplied configuration.
+- **Who they are playing** — the seat's **presentation**, a required field on every `PublicSeat`:
+
+```
+presentation : {kind:'character', characterId, persona} | {kind:'neutral'}
+```
+
+It originates in trusted `GameConfig.presentation[9]`; the game normalizes it into the roster, and a
+slot with no entry arrives as `{kind:'neutral'}` rather than being omitted. The viewer reads it off
+the seat and never resolves it itself.
+
+A **character** is a role-play identity the game assigned to a seat or variant. It is *not* a claim
+about which policy package, model or provider occupies that seat: an externally submitted policy may
+be seated into a configured character and plays it unchanged. Where no trusted presentation exists,
+the seat renders **neutral** — and neutral is the default, not an error state.
+
+| | Character seat | Neutral seat |
+| --- | --- | --- |
+| Mark | coloured monogram | dashed, uncoloured slot number |
+| Expanded card | the one-line persona, then *"A character the game assigned to this seat. Not a claim about which policy plays it."* | *"No character is configured for this seat. It is known by its display name and seat number, and nothing else."* |
+| Seat rail status | identical — see below | identical |
+
+**The rail carries no presentation class at all.** A seat's status line says only what that seat has
+*done* — has the floor, voted X, abstained, lost in night 2, or simply *In the fold*. An earlier
+draft used the resting status to mark which seats were "bundled", which quietly turned a
+presentation choice into a visible tier. It is gone. The distinction now lives in the seat mark and
+in the expanded card, where a viewer has actually asked the question.
+
+**Two things the surface must never do.**
+
+1. **Never resolve presentation from the display name.** The name is user-controlled; matching on it
+   would let a submitted policy inherit a character by naming itself after one. The binding is
+   `slot → presentation`, made by the game before the roster is serialized. `build-fixtures.mjs`
+   asserts that no `characterId` is a display name, and the prototype's config lives in
+   `episode-source.mjs` — an input to the game, never loaded by the page.
+2. **Never accept self-reported provider or model identity, and never show it.** Model and provider
+   appear nowhere in the spectator surface, in any mode. If tournament attribution is ever wanted,
+   that is a product decision with its own trusted source — not a renderer change.
+
+**Presentation is not a reveal category.** It is public seat data: live and replay see exactly the
+same presentation, and an assertion compares the two rosters to prove it. There is nothing here to
+hide, because a character is a costume the game handed out, not a fact about the player wearing it.
+Because it is nested twice over inside `started`, `project.mjs` gives it its own constructor and the
+sentinel run spikes it directly (§10.1 property 3). Evidence: `09-seat-identity.png`.
 
 ## 7. Accessibility
 
@@ -341,6 +391,10 @@ The authoritative definitions are the architecture design §6–7: the `wcw.even
 and `Payload` union, the `wcw.viewer/1` packet, the `wcw.replay/1` bundle, and `wcw.results/1`. This
 document does not restate them and must never be read as a second enumeration of them.
 
+Two amendments landed after this document was first reconciled and are folded in here: the
+killed-Seer inspection lifecycle (`design/architecture:e76e876`, §5.4) and the required
+`PublicSeat.presentation` field (`design/architecture:097b737`, §6).
+
 `prototype/project.mjs` is design evidence *shaped to* that contract. Its `PAYLOADS` map holds one
 projector per accepted payload kind; `MATRIX` encodes the accepted audience/reveal table and is
 asserted against the fixture. If the architecture design changes, that file is what goes stale.
@@ -351,9 +405,10 @@ Six properties of projection the renderer depends on, all of them already requir
    would itself disclose that something happened and how much of it.
 2. **Cross-references use public IDs.** `speech.replyTo` resolves within the same projection or is
    null. Public speech IDs live in their own namespace, independent of private emission.
-3. **Payloads are constructed, not copied** — field by field, including inside `roster`, `ballots`,
-   `actions`, `scores`, `roles` and `bid`. A shallow allowlist is not sufficient; nested objects carry
-   whatever else they hold.
+3. **Payloads are constructed, not copied** — field by field, including inside `roster`,
+   `roster[].presentation`, `ballots`, `actions`, `scores`, `roles` and `bid`. A shallow allowlist is
+   not sufficient; nested objects carry whatever else they hold, and `presentation` arrives from game
+   configuration two levels down.
 4. **No `roles` or `seed` event reaches a live projection.**
 5. **The replay declares `complete: true` and `revealPolicy`** only after validation, so the renderer
    never implies a result that does not exist and can state what policy produced the bytes it holds.
@@ -362,7 +417,8 @@ Six properties of projection the renderer depends on, all of them already requir
    category, unique roster slots, scores covering the roster as 0 or 1, and an outcome/reason pair
    fixed by the union. A bundle that cannot be validated is a visible failure, never a truncated
    artifact still claiming to be complete.
-6. **The roster arrives in `started`,** so the fold has identity before any beat is drawn.
+6. **The roster arrives in `started`,** carrying each seat's `slot`, `name`, `alive` and
+   `presentation`, so the fold has both identities (§6) before any beat is drawn.
 
 ### 10.2 Payload kind → beat
 
@@ -370,7 +426,7 @@ The fold's entire responsibility, in one table.
 
 | Accepted payload kind | Beat | Fold adds |
 | --- | --- | --- |
-| `started` | — (seeds the roster) | matches display names to the cast catalogue |
+| `started` | — (seeds the roster) | reads each seat's `presentation` off the roster; never matches on the name |
 | `phase` | `PhaseBanner`; a night becomes `NightScene` or `NightHold` | narration; the hold quotes `durationMs` |
 | `speech` | `SpeechBeat` | resolves `replyTo` to a name; attaches the selected bid's `reason` when revealed |
 | `ballots` | `VoteTally` | derives the majority threshold from ballot count |
@@ -382,7 +438,7 @@ The fold's entire responsibility, in one table.
 | `wolf_chat` | `SealedBeat` "Wolf channel" | numbers turns by order within the night |
 | `night_choices` | `SealedBeat` "Night actions" | splits actors from seats with nothing to do |
 | `night_outcome` | `SealedBeat` "How the night resolved" | — |
-| `private_result` | `SealedBeat` "Private result" | — |
+| `private_result` | `SealedBeat` "Private result" | emitted only to a living actor; a killed actor's inspection appears solely as its `night_outcome` (§5.4) |
 | `failure` | `SealedBeat` "Fallback" | names the legal fallback implied by `requestKind` |
 | `roles` | — (unlocks role badges) | gates on reveal mode or terminal result |
 | `seed` | — (never drawn) | — |
@@ -394,7 +450,8 @@ The fold's entire responsibility, in one table.
 ```
 every journal event satisfies the accepted audience/reveal matrix
 journal events declare wcw.events/1
-the fixture exercises every accepted payload kind
+the fixture exercises every accepted payload kind except private_result
+no private_result is staged: a killed Seer gets none, and no living Seer is blocked here
 live artifact is a wcw.viewer/1 reset packet
 live projection carries only public events
 live projection carries no roles and no seed
@@ -411,11 +468,18 @@ replay carries roles from the first frame, so the spoiler toggle is presentation
 no never-category event is exported
 results agree with the accepted wcw.results/1 shape
 scores are faction scores in slot order
-a Seer killed before resolution receives wire-level no_result
-the cause is retained server-side as night_outcome actor_dead
+a Seer killed before resolution leaves one server-audience night_outcome actor_dead, exported under night_choices
+the killed Seer receives nothing after it: no private_result, no seat-directed update
 eliminations carry no role, so roles stay hidden on death
 the Alchemist submits kill and block together, either nullable
 every public night declares the same fixed duration
+every PublicSeat carries a presentation of kind character or neutral
+an unconfigured slot normalizes to neutral rather than being omitted
+every characterId matches /^[a-z0-9][a-z0-9_-]*$/ within 48 characters
+every persona is 1 to 240 Unicode code points
+a neutral seat carries no characterId and no persona
+no characterId is a display name, so a seat can never inherit a character by naming itself after one
+live and replay see the same presentation; it is not a reveal category
 export refuses a bundle with no finished event
 export refuses a bundle with no started event
 export refuses a bundle whose outcome and reason disagree
@@ -425,8 +489,8 @@ the sentinel run still produced a real projection
 ```
 
 The sentinel assertions inject a value at the top level of every event and inside every nested
-`roster` / `ballots` / `actions` / `scores` / `roles` / `bid` / `result` / `speech` object, then prove
-it appears in neither artifact. The check for private authored text deliberately exempts a *selected*
+`roster` / `roster[].presentation` / `ballots` / `actions` / `scores` / `roles` / `bid` / `result` /
+`speech` object, then prove it appears in neither artifact. The check for private authored text deliberately exempts a *selected*
 bid, whose text is committed directly as the public speech.
 
 These are prototype-weight checks. Their job is to make the design's privacy claim falsifiable today
@@ -439,7 +503,8 @@ because each one is visible in the design.
 
 | Decision | Effect on this design |
 | --- | --- |
-| A Seer killed before resolution receives wire-level `no_result`; the cause is retained server-side | the private-result beat shows `No result`, and the adjacent `night_outcome` row reads `Inspect · Coriander → Hollis · the actor did not live to receive it`. The audience learns she died before it resolved, and that the game never computed it |
+| A Seer killed before inspection resolution is sent **nothing** — no `private_result`, no seat-directed update. The only record is a server-audience `night_outcome(inspect, actor_dead)`, exported under `night_choices`. A living blocked Seer still receives a bare `private_result` of `no_result` | §5.4 carries both cases. The killed case produces no private beat at all; the night's resolution panel reads `Inspect · Coriander → Hollis · no result — the actor died before it resolved` |
+| `PublicSeat` requires `presentation` — `{kind:'character', characterId, persona}` or `{kind:'neutral'}` — normalized by the game from `GameConfig.presentation[9]`, never inferred from the display name, and never a claim about the occupying policy, model or provider. `characterId` matches `/^[a-z0-9][a-z0-9_-]*$/` within 48 characters; `persona` is 1–240 code points | §6 was rewritten around it. The "bundled vs submitted" axis is gone from the surface, including from the seat rail's resting status. Six assertions cover the shape, the neutral default and the no-name-matching rule |
 | Roles stay hidden on death until the terminal outcome | the knell carries "Their role stays secret until the episode ends" while roles are unknown, and drops it once they are. No `roleRevealedAt` field is needed |
 | The Alchemist submits `kill` and `block` together, either nullable; blocks resolve before the kill nomination tally | the night-actions panel shows a composite row with "Offered but passed", and the resolution panel is ordered block → protect → kill |
 | The public night runs a fixed duration regardless of what is submitted | §3.2 and §5.3 hold. The hold card quotes the declared `durationMs` |
@@ -447,9 +512,13 @@ because each one is visible in the design.
 
 Remaining limitations, which are not dependencies:
 
-- The cast catalogue is keyed by display name (§6). Cosmetic collision risk, noted with its fix.
-- The fixture is an abridged three-day episode built as design evidence. It exercises every accepted
-  payload kind, but its mechanics are illustrative — do not derive a rules test from it.
+- **`private_result` is not staged.** Under the settled lifecycle its only remaining case is a
+  *living blocked* Seer, and this episode has one Seer who dies on night 1. Restaging it would mean
+  rewriting both nights and the day-2 spine that the killed case exists to demonstrate, so the
+  absence is asserted rather than papered over, and the renderer still implements the beat (§5.4).
+  A rules-level fixture should cover it.
+- The fixture is an abridged three-day episode built as design evidence. Its mechanics are
+  illustrative — do not derive a rules test from it.
 - Playback durations are not yet tuned against the architecture's suggested values (speech 4s, phase
   1s, ballots/elimination/night summary 2s, finished 4s, reveals 0s). They are presentation
   configuration and belong to this seat; the prototype uses a flat step for scrubbing evidence.
@@ -460,18 +529,19 @@ A build satisfies this design when each is demonstrable.
 
 | # | Acceptance | Evidence |
 | --- | --- | --- |
-| A1 | Live bytes contain no role, no seed, no private event, no internal `seq`, and no cursor gap | assertions 4–12; `07-holdings-live.png` |
-| A2 | A sentinel nested field injected into any authored payload is absent from both projections | assertions 25–27 |
+| A1 | Live bytes contain no role, no seed, no private event, no internal `seq`, and no cursor gap | assertions 5–13; `07-holdings-live.png` |
+| A2 | A sentinel nested field injected into any authored payload, `roster[].presentation` included, is absent from both projections | assertions 36–38 |
 | A3 | Live and replay render through the same components; the only difference is the projection and the transport | `02-live-public-night1.png` vs `03-replay-asaired-day2.png` |
 | A4 | A public night shows the hold state and is indistinguishable from a night in which nothing happened | `02-live-public-night1.png` |
-| A5 | Everything-mode shows wolf chat, night actions, passes, confessionals, the private result and the night outcome at their original moment | `01-replay-omniscient-night1.png` |
+| A5 | Everything-mode shows wolf chat, night actions, passes, confessionals and the night outcome at their original moment | `01-replay-omniscient-night1.png` |
 | A6 | Bids not taken reveal with rank, urgency and authored reason, mark who took the floor, and say the ranking used public evidence only | `04-replay-omniscient-day2.png` |
 | A7 | A timeout renders publicly as an abstention and reveals code, source, attempt and disposition only in replay | `11-replay-omniscient-fallback.png` |
 | A8 | Roles appear in the as-aired replay exactly at the outcome beat, in rail and floor together | `05-replay-outcome.png` |
-| A9 | Bundled and submitted seats are distinguishable, and no model or provider name appears anywhere | `09-seat-identity.png` |
+| A9 | Character and neutral seats are distinguishable in the seat mark and the expanded card, the seat rail's status line carries no presentation class, and no model or provider name appears anywhere | assertions 26–32; `09-seat-identity.png` |
 | A10 | No horizontal page scroll and no clipped content from 500px to 1440px | `06-live-narrow.png`, `10-replay-medium.png` |
 | A11 | Nothing conveys alive/dead, faction, abstention or night outcome by colour alone | §4.1, all captures |
 | A12 | The UI states what the browser is holding, and never implies the spoiler toggle is a boundary | `07-holdings-live.png`, `08-holdings-replay.png` |
+| A13 | An inspection whose actor died before it resolved produces no private beat, and reads as `no result — the actor died before it resolved` in the night's resolution panel | assertions 21–22; `01-replay-omniscient-night1.png` |
 
 ---
 
@@ -485,5 +555,5 @@ Tofu Tech's client and the benchmark's web app were read as references only. Not
 - **From the benchmark:** the shape of the behaviour — typed bids with urgency and reason, floor
   arbitration, sequential wolf chat, audience-tagged events. Its producer console (channel tabs,
   controller scores, approve/edit/regenerate, raw provider response) is explicitly **not** the model
-  for a spectator surface, and its `rawOpenRouterResponse` field is exactly the class of payload §5.5
+  for a spectator surface, and its `rawOpenRouterResponse` field is exactly the class of payload §5.6
   forbids.

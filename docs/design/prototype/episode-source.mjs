@@ -13,6 +13,10 @@
  *            | discarded_bids | failures | never
  *
  * Abridged design evidence, not a rules fixture.
+ *
+ * One accepted payload kind is absent: `private_result`. Its only remaining case is a
+ * living blocked Seer, and this three-day episode has one Seer who dies on night 1. The
+ * renderer still implements the beat; build-fixtures.mjs asserts the absence deliberately.
  */
 
 const RULES = 'wcw.rules/1-standard-9';
@@ -30,6 +34,26 @@ export const CAST = [
 ];
 const FACTION = { wolf: 'wolf', alchemist: 'wolf', seer: 'town', guard: 'town', sheep: 'town' };
 
+/*
+ * GameConfig.presentation[9] — trusted game configuration, an input to the game and never
+ * loaded by the page. The game normalizes it into each `PublicSeat.presentation`; a missing
+ * entry becomes {kind:'neutral'}. A character is a role-play identity assigned to the seat,
+ * not a claim about which policy occupies it, and it is never matched from the display name.
+ * Slots 2 and 8 are left unconfigured on purpose, to exercise the neutral default.
+ */
+export const PRESENTATION_CONFIG = [
+  { kind: 'character', characterId: 'hedge-keeper',  persona: 'Anxious hedge-keeper. Counts the flock twice, then counts again.' },
+  { kind: 'character', characterId: 'schoolteacher', persona: 'Retired schoolteacher. Asks one question more than is comfortable.' },
+  undefined,
+  { kind: 'character', characterId: 'neighbour',     persona: 'Warm, generous, remembers every birthday in the village.' },
+  { kind: 'character', characterId: 'night-watch',   persona: 'Night watch. Speaks rarely and plainly.' },
+  { kind: 'character', characterId: 'stallholder',   persona: 'Runs the market stall. Trades in rumour as much as wool.' },
+  { kind: 'character', characterId: 'apothecary',    persona: 'Village apothecary. Fond of precision, impatient with feeling.' },
+  { kind: 'character', characterId: 'youngest',      persona: 'Youngest of the flock. Earnest to a fault.' },
+  undefined,
+];
+const presentationFor = slot => PRESENTATION_CONFIG[slot] || { kind: 'neutral' };
+
 let seq = 0;
 const J = [];
 const push = (day, phase, audience, reveal, payload, publicId) => {
@@ -41,7 +65,8 @@ const seats = (...slots) => ({ kind: 'seats', slots: [...slots].sort((a, b) => a
 
 /* public */
 const started = () => push(0, 'waiting', PUB, 'public',
-  { kind: 'started', roster: CAST.map(c => ({ slot: c.slot, name: c.name, alive: true })), rulesVersion: RULES });
+  { kind: 'started', rulesVersion: RULES, roster: CAST.map(c =>
+    ({ slot: c.slot, name: c.name, alive: true, presentation: presentationFor(c.slot) })) });
 const phase = (day, p, durationMs) => push(day, p, PUB, 'public', { kind: 'phase', phase: p, day, durationMs });
 const speech = (day, slot, text, replyTo, accusation, id) =>
   push(day, 'day', PUB, 'public', { kind: 'speech', speech: { slot, text, replyTo, accusation } }, id);
@@ -62,8 +87,6 @@ const nightChoices = (day, slot, actions) =>
   push(day, 'night', seats(slot), 'night_choices', { kind: 'night_choices', slot, actions });
 const nightOutcome = (day, ability, actor, target, outcome) =>
   push(day, 'night', SRV, 'night_choices', { kind: 'night_outcome', ability, actor, target, outcome });
-const privateResult = (day, slot, result) =>
-  push(day, 'night', seats(slot), 'night_choices', { kind: 'private_result', slot, result });
 const failure = (day, p, slot, requestKind, code, source, disposition, attempt) =>
   push(day, p, seats(slot), 'failures', { kind: 'failure', slot, requestKind, code, source, disposition, attempt });
 const roles = (day) => push(day, 'finished', SRV, 'roles',
@@ -131,8 +154,10 @@ confessional(1, 'night', 1, 'night', 'Hollis. If it comes back wolf I say it at 
 nightOutcome(1, 'block', 6, 4, 'applied');
 nightOutcome(1, 'protect', 4, 1, 'blocked');
 nightOutcome(1, 'kill', null, 1, 'applied');
+/* Coriander inspected Hollis and was killed before it resolved. Per the settled lifecycle
+   she receives nothing at all — no private_result, no seat-directed update. This
+   server-audience row is the only record that the inspection ever existed. */
 nightOutcome(1, 'inspect', 1, 6, 'actor_dead');
-privateResult(1, 1, { day: 1, ability: 'inspect', target: 6, result: 'no_result' });
 elimination(1, 'night', 1, 'wolf');
 nightResolved(1, [1]);
 
@@ -203,7 +228,8 @@ export const EPISODE = {
   /* Exclusive: events at or after this seq have not happened yet. Set inside Night 1. */
   liveHorizon: J.find(e => e.payload.kind === 'phase' && e.payload.phase === 'night' && e.day === 1).seq + 1,
   reconciliationNotes: [
-    'Settled 2026-09-15: a Seer killed before resolution receives wire-level no_result; the cause is retained server-side and appears in replay as night_outcome actor_dead.',
+    'Settled 2026-09-15: a Seer killed before inspection resolution receives nothing — no private_result, no seat-directed update. The only record is server-audience night_outcome(inspect, actor_dead), exported under night_choices. A living blocked Seer still receives a bare private_result of no_result.',
+    'Settled 2026-09-15: every PublicSeat carries presentation — {kind:character, characterId, persona} or {kind:neutral}. It comes from trusted GameConfig.presentation[9], defaults to neutral, is never derived from the display name, and never asserts which policy, model or provider occupies the seat.',
     'Settled 2026-09-15: roles stay hidden on death until the terminal outcome.',
     'Settled 2026-09-15: the Alchemist submits kill and block together, either nullable, with blocks resolved before the kill nomination tally.',
     'Settled 2026-09-15: the public night runs a fixed duration regardless of what is submitted.',

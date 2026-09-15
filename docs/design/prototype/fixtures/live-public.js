@@ -19,47 +19,88 @@ const LIVE_PUBLIC = {
           {
             "slot": 0,
             "name": "Bramble",
-            "alive": true
+            "alive": true,
+            "presentation": {
+              "kind": "character",
+              "characterId": "hedge-keeper",
+              "persona": "Anxious hedge-keeper. Counts the flock twice, then counts again."
+            }
           },
           {
             "slot": 1,
             "name": "Coriander",
-            "alive": true
+            "alive": true,
+            "presentation": {
+              "kind": "character",
+              "characterId": "schoolteacher",
+              "persona": "Retired schoolteacher. Asks one question more than is comfortable."
+            }
           },
           {
             "slot": 2,
             "name": "Quillon",
-            "alive": true
+            "alive": true,
+            "presentation": {
+              "kind": "neutral"
+            }
           },
           {
             "slot": 3,
             "name": "Elowen",
-            "alive": true
+            "alive": true,
+            "presentation": {
+              "kind": "character",
+              "characterId": "neighbour",
+              "persona": "Warm, generous, remembers every birthday in the village."
+            }
           },
           {
             "slot": 4,
             "name": "Fennimore",
-            "alive": true
+            "alive": true,
+            "presentation": {
+              "kind": "character",
+              "characterId": "night-watch",
+              "persona": "Night watch. Speaks rarely and plainly."
+            }
           },
           {
             "slot": 5,
             "name": "Garnet",
-            "alive": true
+            "alive": true,
+            "presentation": {
+              "kind": "character",
+              "characterId": "stallholder",
+              "persona": "Runs the market stall. Trades in rumour as much as wool."
+            }
           },
           {
             "slot": 6,
             "name": "Hollis",
-            "alive": true
+            "alive": true,
+            "presentation": {
+              "kind": "character",
+              "characterId": "apothecary",
+              "persona": "Village apothecary. Fond of precision, impatient with feeling."
+            }
           },
           {
             "slot": 7,
             "name": "Isolde",
-            "alive": true
+            "alive": true,
+            "presentation": {
+              "kind": "character",
+              "characterId": "youngest",
+              "persona": "Youngest of the flock. Earnest to a fault."
+            }
           },
           {
             "slot": 8,
             "name": "Marlowe",
-            "alive": true
+            "alive": true,
+            "presentation": {
+              "kind": "neutral"
+            }
           }
         ]
       }

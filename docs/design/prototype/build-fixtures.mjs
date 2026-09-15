@@ -7,7 +7,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { JOURNAL, EPISODE, CAST } from './episode-source.mjs';
+import { JOURNAL, EPISODE, CAST, PRESENTATION_CONFIG } from './episode-source.mjs';
 import { projectLive, projectReplay, census, assertMatrix, MATRIX } from './project.mjs';
 
 /* The six private categories the accepted export allowlist permits, plus public. */
@@ -25,8 +25,13 @@ try { assertMatrix(JOURNAL); assert(true, 'every journal event satisfies the acc
 catch (e) { assert(false, 'audience/reveal matrix: ' + e.message); }
 
 assert(JOURNAL.every(e => e.schema === 'wcw.events/1'), 'journal events declare wcw.events/1');
-assert(Object.keys(MATRIX).every(k => JOURNAL.some(e => e.payload.kind === k)),
-  'the fixture exercises every accepted payload kind');
+/* `private_result` is deliberately unexercised: its only remaining case is a LIVING
+   blocked Seer, and this episode's one Seer dies on night 1. Asserted, not ignored. */
+const UNSTAGED = ['private_result'];
+assert(Object.keys(MATRIX).filter(k => !UNSTAGED.includes(k)).every(k => JOURNAL.some(e => e.payload.kind === k)),
+  'the fixture exercises every accepted payload kind except private_result');
+assert(!JOURNAL.some(e => e.payload.kind === 'private_result'),
+  'no private_result is staged: a killed Seer gets none, and no living Seer is blocked here');
 
 const live = projectLive(EPISODE, JOURNAL, EPISODE.liveHorizon);
 const replay = projectReplay(EPISODE, JOURNAL, REPLAY_ALLOWLIST);
@@ -71,11 +76,12 @@ assert(replay.result.scores.every((s, i) =>
   s === (['wolf', 'alchemist'].includes(CAST[i].role) ? 0 : 1)), 'scores are faction scores in slot order');
 
 /* ------------------------------------------- settled rules reflected in the fixture -- */
-const seerResult = JOURNAL.find(e => e.payload.kind === 'private_result');
-assert(seerResult.payload.result.result === 'no_result',
-  'a Seer killed before resolution receives wire-level no_result');
-assert(JOURNAL.some(e => e.payload.kind === 'night_outcome' && e.payload.outcome === 'actor_dead'
-  && e.audience.kind === 'server'), 'the cause is retained server-side as night_outcome actor_dead');
+const inspect = JOURNAL.find(e => e.payload.kind === 'night_outcome' && e.payload.ability === 'inspect');
+assert(inspect && inspect.payload.outcome === 'actor_dead' && inspect.audience.kind === 'server'
+  && inspect.reveal === 'night_choices',
+  'a Seer killed before resolution leaves one server-audience night_outcome actor_dead, exported under night_choices');
+assert(!JOURNAL.some(e => e.audience.kind === 'seats' && e.audience.slots.includes(inspect.payload.actor)
+  && e.seq >= inspect.seq), 'the killed Seer receives nothing after it: no private_result, no seat-directed update');
 assert(!live.events.some(e => e.payload.kind === 'elimination' && e.payload.role),
   'eliminations carry no role, so roles stay hidden on death');
 const alch = JOURNAL.find(e => e.payload.kind === 'night_choices' && e.payload.slot === 6);
@@ -84,6 +90,34 @@ assert(alch.payload.actions.length === 2 && alch.payload.actions.some(a => a.abi
   'the Alchemist submits kill and block together, either nullable');
 assert(JOURNAL.filter(e => e.payload.kind === 'phase' && e.payload.phase === 'night')
   .every(e => e.payload.durationMs === 40000), 'every public night declares the same fixed duration');
+
+/* ------------------------------------------------------- presentation identity -- */
+const ID_RE = /^[a-z0-9][a-z0-9_-]*$/;
+const cp = t => [...t].length;
+const roster = live.events.find(e => e.payload.kind === 'started').payload.roster;
+const chars = roster.filter(r => r.presentation.kind === 'character');
+
+assert(roster.length === 9 && roster.every(r => r.presentation
+  && ['character', 'neutral'].includes(r.presentation.kind)),
+  'every PublicSeat carries a presentation of kind character or neutral');
+assert(roster.every((r, i) => (PRESENTATION_CONFIG[i] ? r.presentation.kind === 'character'
+  : r.presentation.kind === 'neutral')),
+  'an unconfigured slot normalizes to neutral rather than being omitted');
+assert(chars.every(r => ID_RE.test(r.presentation.characterId) && cp(r.presentation.characterId) <= 48
+  && cp(r.presentation.characterId) >= 1), 'every characterId matches /^[a-z0-9][a-z0-9_-]*$/ within 48 characters');
+assert(chars.every(r => cp(r.presentation.persona) >= 1 && cp(r.presentation.persona) <= 240),
+  'every persona is 1 to 240 Unicode code points');
+assert(roster.every(r => r.presentation.kind === 'character'
+  || (r.presentation.characterId === undefined && r.presentation.persona === undefined)),
+  'a neutral seat carries no characterId and no persona');
+
+/* The binding is slot -> presentation, from trusted config. Nothing resolves by name. */
+const NAMES = new Set(CAST.map(c => c.name));
+assert(!chars.some(r => NAMES.has(r.presentation.characterId)),
+  'no characterId is a display name, so a seat can never inherit a character by naming itself after one');
+assert(JSON.stringify(roster) === JSON.stringify(
+  projectReplay(EPISODE, JOURNAL, REPLAY_ALLOWLIST).events.find(e => e.payload.kind === 'started').payload.roster),
+  'live and replay see the same presentation; it is not a reveal category');
 
 /* The export guard must actually refuse, not merely exist. */
 const refuses = (label, mutate) => {
@@ -106,6 +140,8 @@ const spikeArrays = p => {
   for (const key of ['roster', 'ballots', 'actions', 'scores', 'roles', 'eliminated']) {
     if (Array.isArray(p[key])) out[key] = p[key].map(spike);
   }
+  /* roster[].presentation is nested twice; spike it too. */
+  if (Array.isArray(p.roster)) out.roster = out.roster.map(r => ({ ...r, presentation: spike(r.presentation) }));
   if (p.bid) out.bid = spike(p.bid);
   if (p.result) out.result = spike(p.result);
   if (p.result?.scores) out.result = { ...out.result, scores: p.result.scores.map(spike) };
@@ -130,20 +166,10 @@ const emit = (file, name, value) => {
 emit('live-public.js', 'LIVE_PUBLIC', live);
 emit('replay-export.js', 'REPLAY_EXPORT', replay);
 
-/* Presentation configuration, not episode data. See §6 of the design guide. */
-emit('cast.js', 'CAST_CATALOGUE', {
-  note: 'Ships with the viewer, keyed by display name. A seat absent from this catalogue renders as a submitted policy.',
-  personas: {
-    Bramble:   'Anxious hedge-keeper. Counts the flock twice, then counts again.',
-    Coriander: 'Retired schoolteacher. Asks one question more than is comfortable.',
-    Elowen:    'Warm, generous, remembers every birthday in the village.',
-    Fennimore: 'Night watch. Speaks rarely and plainly.',
-    Garnet:    'Runs the market stall. Trades in rumour as much as wool.',
-    Hollis:    'Village apothecary. Fond of precision, impatient with feeling.',
-    Isolde:    'Youngest of the flock. Earnest to a fault.',
-  },
-  notes: EPISODE.reconciliationNotes,
-});
+/* Prototype chrome: the settled decisions the holdings drawer lists. Presentation is NOT
+   emitted here — it reaches the viewer on `started.roster[].presentation`, like the product. */
+emit('notes.js', 'DESIGN_NOTES', EPISODE.reconciliationNotes);
+fs.rmSync(path.join(dir, 'cast.js'), { force: true });
 
 console.log('');
 console.log('live   ' + JSON.stringify(census(live)));

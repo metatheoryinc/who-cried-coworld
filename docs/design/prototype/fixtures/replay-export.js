@@ -23,47 +23,88 @@ const REPLAY_EXPORT = {
           {
             "slot": 0,
             "name": "Bramble",
-            "alive": true
+            "alive": true,
+            "presentation": {
+              "kind": "character",
+              "characterId": "hedge-keeper",
+              "persona": "Anxious hedge-keeper. Counts the flock twice, then counts again."
+            }
           },
           {
             "slot": 1,
             "name": "Coriander",
-            "alive": true
+            "alive": true,
+            "presentation": {
+              "kind": "character",
+              "characterId": "schoolteacher",
+              "persona": "Retired schoolteacher. Asks one question more than is comfortable."
+            }
           },
           {
             "slot": 2,
             "name": "Quillon",
-            "alive": true
+            "alive": true,
+            "presentation": {
+              "kind": "neutral"
+            }
           },
           {
             "slot": 3,
             "name": "Elowen",
-            "alive": true
+            "alive": true,
+            "presentation": {
+              "kind": "character",
+              "characterId": "neighbour",
+              "persona": "Warm, generous, remembers every birthday in the village."
+            }
           },
           {
             "slot": 4,
             "name": "Fennimore",
-            "alive": true
+            "alive": true,
+            "presentation": {
+              "kind": "character",
+              "characterId": "night-watch",
+              "persona": "Night watch. Speaks rarely and plainly."
+            }
           },
           {
             "slot": 5,
             "name": "Garnet",
-            "alive": true
+            "alive": true,
+            "presentation": {
+              "kind": "character",
+              "characterId": "stallholder",
+              "persona": "Runs the market stall. Trades in rumour as much as wool."
+            }
           },
           {
             "slot": 6,
             "name": "Hollis",
-            "alive": true
+            "alive": true,
+            "presentation": {
+              "kind": "character",
+              "characterId": "apothecary",
+              "persona": "Village apothecary. Fond of precision, impatient with feeling."
+            }
           },
           {
             "slot": 7,
             "name": "Isolde",
-            "alive": true
+            "alive": true,
+            "presentation": {
+              "kind": "character",
+              "characterId": "youngest",
+              "persona": "Youngest of the flock. Earnest to a fault."
+            }
           },
           {
             "slot": 8,
             "name": "Marlowe",
-            "alive": true
+            "alive": true,
+            "presentation": {
+              "kind": "neutral"
+            }
           }
         ]
       }
@@ -863,24 +904,6 @@ const REPLAY_EXPORT = {
       "cursor": 46,
       "day": 1,
       "phase": "night",
-      "reveal": "night_choices",
-      "payload": {
-        "kind": "private_result",
-        "slot": 1,
-        "result": {
-          "day": 1,
-          "ability": "inspect",
-          "target": 6,
-          "result": "no_result"
-        }
-      }
-    },
-    {
-      "schema": "wcw.events/1",
-      "id": "x47",
-      "cursor": 47,
-      "day": 1,
-      "phase": "night",
       "reveal": "public",
       "payload": {
         "kind": "elimination",
@@ -890,8 +913,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x48",
-      "cursor": 48,
+      "id": "x47",
+      "cursor": 47,
       "day": 1,
       "phase": "night",
       "reveal": "public",
@@ -904,8 +927,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x49",
-      "cursor": 49,
+      "id": "x48",
+      "cursor": 48,
       "day": 2,
       "phase": "day",
       "reveal": "public",
@@ -918,8 +941,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x50",
-      "cursor": 50,
+      "id": "x49",
+      "cursor": 49,
       "day": 2,
       "phase": "day",
       "reveal": "discarded_bids",
@@ -943,7 +966,7 @@ const REPLAY_EXPORT = {
     {
       "schema": "wcw.events/1",
       "id": "s6",
-      "cursor": 51,
+      "cursor": 50,
       "day": 2,
       "phase": "day",
       "reveal": "public",
@@ -959,8 +982,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x52",
-      "cursor": 52,
+      "id": "x51",
+      "cursor": 51,
       "day": 2,
       "phase": "day",
       "reveal": "discarded_bids",
@@ -984,7 +1007,7 @@ const REPLAY_EXPORT = {
     {
       "schema": "wcw.events/1",
       "id": "s7",
-      "cursor": 53,
+      "cursor": 52,
       "day": 2,
       "phase": "day",
       "reveal": "public",
@@ -1000,8 +1023,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x54",
-      "cursor": 54,
+      "id": "x53",
+      "cursor": 53,
       "day": 2,
       "phase": "day",
       "reveal": "discarded_bids",
@@ -1024,8 +1047,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x55",
-      "cursor": 55,
+      "id": "x54",
+      "cursor": 54,
       "day": 2,
       "phase": "day",
       "reveal": "discarded_bids",
@@ -1048,8 +1071,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x56",
-      "cursor": 56,
+      "id": "x55",
+      "cursor": 55,
       "day": 2,
       "phase": "day",
       "reveal": "discarded_bids",
@@ -1073,7 +1096,7 @@ const REPLAY_EXPORT = {
     {
       "schema": "wcw.events/1",
       "id": "s8",
-      "cursor": 57,
+      "cursor": 56,
       "day": 2,
       "phase": "day",
       "reveal": "public",
@@ -1089,8 +1112,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x58",
-      "cursor": 58,
+      "id": "x57",
+      "cursor": 57,
       "day": 2,
       "phase": "vote",
       "reveal": "public",
@@ -1103,8 +1126,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x59",
-      "cursor": 59,
+      "id": "x58",
+      "cursor": 58,
       "day": 2,
       "phase": "vote",
       "reveal": "confessional",
@@ -1117,8 +1140,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x60",
-      "cursor": 60,
+      "id": "x59",
+      "cursor": 59,
       "day": 2,
       "phase": "vote",
       "reveal": "public",
@@ -1160,8 +1183,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x61",
-      "cursor": 61,
+      "id": "x60",
+      "cursor": 60,
       "day": 2,
       "phase": "vote",
       "reveal": "public",
@@ -1173,8 +1196,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x62",
-      "cursor": 62,
+      "id": "x61",
+      "cursor": 61,
       "day": 2,
       "phase": "night",
       "reveal": "public",
@@ -1187,8 +1210,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x63",
-      "cursor": 63,
+      "id": "x62",
+      "cursor": 62,
       "day": 2,
       "phase": "night",
       "reveal": "wolf_chat",
@@ -1200,8 +1223,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x64",
-      "cursor": 64,
+      "id": "x63",
+      "cursor": 63,
       "day": 2,
       "phase": "night",
       "reveal": "night_choices",
@@ -1222,8 +1245,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x65",
-      "cursor": 65,
+      "id": "x64",
+      "cursor": 64,
       "day": 2,
       "phase": "night",
       "reveal": "night_choices",
@@ -1240,6 +1263,19 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
+      "id": "x65",
+      "cursor": 65,
+      "day": 2,
+      "phase": "night",
+      "reveal": "night_choices",
+      "payload": {
+        "kind": "night_choices",
+        "slot": 2,
+        "actions": []
+      }
+    },
+    {
+      "schema": "wcw.events/1",
       "id": "x66",
       "cursor": 66,
       "day": 2,
@@ -1247,7 +1283,7 @@ const REPLAY_EXPORT = {
       "reveal": "night_choices",
       "payload": {
         "kind": "night_choices",
-        "slot": 2,
+        "slot": 7,
         "actions": []
       }
     },
@@ -1260,7 +1296,7 @@ const REPLAY_EXPORT = {
       "reveal": "night_choices",
       "payload": {
         "kind": "night_choices",
-        "slot": 7,
+        "slot": 8,
         "actions": []
       }
     },
@@ -1268,19 +1304,6 @@ const REPLAY_EXPORT = {
       "schema": "wcw.events/1",
       "id": "x68",
       "cursor": 68,
-      "day": 2,
-      "phase": "night",
-      "reveal": "night_choices",
-      "payload": {
-        "kind": "night_choices",
-        "slot": 8,
-        "actions": []
-      }
-    },
-    {
-      "schema": "wcw.events/1",
-      "id": "x69",
-      "cursor": 69,
       "day": 2,
       "phase": "night",
       "reveal": "night_choices",
@@ -1294,8 +1317,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x70",
-      "cursor": 70,
+      "id": "x69",
+      "cursor": 69,
       "day": 2,
       "phase": "night",
       "reveal": "night_choices",
@@ -1309,8 +1332,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x71",
-      "cursor": 71,
+      "id": "x70",
+      "cursor": 70,
       "day": 2,
       "phase": "night",
       "reveal": "night_choices",
@@ -1324,8 +1347,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x72",
-      "cursor": 72,
+      "id": "x71",
+      "cursor": 71,
       "day": 2,
       "phase": "night",
       "reveal": "public",
@@ -1337,8 +1360,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x73",
-      "cursor": 73,
+      "id": "x72",
+      "cursor": 72,
       "day": 2,
       "phase": "night",
       "reveal": "public",
@@ -1351,8 +1374,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x74",
-      "cursor": 74,
+      "id": "x73",
+      "cursor": 73,
       "day": 3,
       "phase": "day",
       "reveal": "public",
@@ -1365,8 +1388,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x75",
-      "cursor": 75,
+      "id": "x74",
+      "cursor": 74,
       "day": 3,
       "phase": "day",
       "reveal": "discarded_bids",
@@ -1390,7 +1413,7 @@ const REPLAY_EXPORT = {
     {
       "schema": "wcw.events/1",
       "id": "s9",
-      "cursor": 76,
+      "cursor": 75,
       "day": 3,
       "phase": "day",
       "reveal": "public",
@@ -1406,8 +1429,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x77",
-      "cursor": 77,
+      "id": "x76",
+      "cursor": 76,
       "day": 3,
       "phase": "day",
       "reveal": "discarded_bids",
@@ -1431,7 +1454,7 @@ const REPLAY_EXPORT = {
     {
       "schema": "wcw.events/1",
       "id": "s10",
-      "cursor": 78,
+      "cursor": 77,
       "day": 3,
       "phase": "day",
       "reveal": "public",
@@ -1447,8 +1470,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x79",
-      "cursor": 79,
+      "id": "x78",
+      "cursor": 78,
       "day": 3,
       "phase": "day",
       "reveal": "discarded_bids",
@@ -1472,7 +1495,7 @@ const REPLAY_EXPORT = {
     {
       "schema": "wcw.events/1",
       "id": "s11",
-      "cursor": 80,
+      "cursor": 79,
       "day": 3,
       "phase": "day",
       "reveal": "public",
@@ -1488,8 +1511,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x81",
-      "cursor": 81,
+      "id": "x80",
+      "cursor": 80,
       "day": 3,
       "phase": "vote",
       "reveal": "public",
@@ -1502,8 +1525,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x82",
-      "cursor": 82,
+      "id": "x81",
+      "cursor": 81,
       "day": 3,
       "phase": "vote",
       "reveal": "confessional",
@@ -1516,8 +1539,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x83",
-      "cursor": 83,
+      "id": "x82",
+      "cursor": 82,
       "day": 3,
       "phase": "vote",
       "reveal": "public",
@@ -1551,8 +1574,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x84",
-      "cursor": 84,
+      "id": "x83",
+      "cursor": 83,
       "day": 3,
       "phase": "vote",
       "reveal": "public",
@@ -1564,8 +1587,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x85",
-      "cursor": 85,
+      "id": "x84",
+      "cursor": 84,
       "day": 3,
       "phase": "finished",
       "reveal": "public",
@@ -1593,8 +1616,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x86",
-      "cursor": 86,
+      "id": "x85",
+      "cursor": 85,
       "day": 3,
       "phase": "finished",
       "reveal": "roles",
@@ -1651,8 +1674,8 @@ const REPLAY_EXPORT = {
     },
     {
       "schema": "wcw.events/1",
-      "id": "x87",
-      "cursor": 87,
+      "id": "x86",
+      "cursor": 86,
       "day": 3,
       "phase": "finished",
       "reveal": "roles",

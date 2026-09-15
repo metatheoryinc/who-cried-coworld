@@ -72,5 +72,17 @@ if (fs.existsSync(assetReadme)) {
   }
 }
 
+const prototype = fs.readFileSync('docs/design/prototype/index.html', 'utf8');
+const VISUAL_HOOKS = [
+  ['class="world-layer"', 'game-first world layer'],
+  ['data-world=', 'phase-aware world state'],
+  ['assets/wcw/title_logo.png', 'original title artwork'],
+  ['assets/wcw/player-card/base_playercard.png', 'original player-card artwork'],
+  ['ROLE_ART', 'original role artwork mapping'],
+];
+for (const [needle, label] of VISUAL_HOOKS) {
+  if (!prototype.includes(needle)) bad.push(`prototype visual hook missing: ${label}`);
+}
+
 if (bad.length) { console.error(bad.join('\n')); process.exit(1); }
 console.log('ok    links, fences and evidence references all resolve');

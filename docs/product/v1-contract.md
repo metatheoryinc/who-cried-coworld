@@ -33,12 +33,14 @@ Faction victory is the scored result. Behavioral, cooperation, deception, and pa
 - The completed replay may reveal roles, private Wolf chat, bounded confessionals, night choices and outcomes, discarded speaking bids, and failures or fallbacks.
 - Raw hidden chain-of-thought is never requested, persisted, or displayed. Deliberation means explicit bounded summaries, reasons, intentions, and confessionals produced for the game.
 - Live and replay modes share one presentation model and renderer. Reveal is a declared property of episode events, not a separate renderer.
+- Static replay export uses an explicit allowlist. Viewer controls manage spoiler timing but are never a secrecy boundary.
 
 ## Reliability contract
 
 - Every player interaction uses a versioned typed observation/action protocol.
 - Invalid, malformed, refused, or timed-out actions resolve through deterministic legal fallbacks and remain visible in diagnostic events.
 - Seeds make game-controlled randomness reproducible.
+- Episodes have a configurable day cap, defaulting to eight days. If neither faction has won at the cap, the episode ends in a draw and every policy receives score `0`.
 - Provider failures cannot corrupt authoritative game state or prevent an episode from completing.
 - Audience filtering occurs before data reaches a viewer projection.
 

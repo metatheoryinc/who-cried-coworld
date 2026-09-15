@@ -83,6 +83,12 @@ Slots are integers 0–8; identities never depend on display names or provider/m
 
 The rules-parity specification owns detailed Tofu mechanics after reconciliation. Source evidence requires explicit treatment of majority/abstention, seeded Wolf kill ties, Alchemist's kill plus block, Seer death-before-investigation, no self-targeting, and death secrecy. Do not silently substitute benchmark plurality voting or doctor self-protection. Pending protocol drafts allow the server to enumerate exact legal targets/abilities; none of these choices requires clients to implement rules.
 
+### Settled Seer result delivery
+
+The Manager's revised decision on 2026-09-15 supersedes the earlier killed-Seer private `no_result` instruction. If the Seer is dead when inspection would resolve, compute no alignment, emit no live `private_result`, and send no new dead-seat update. Record only server-audience `night_outcome` with `{ability:'inspect', actor:<seer>, target:<attempted target>, outcome:'actor_dead'}`, revealable after completion under `night_choices`. The replay fold may explain this evidence as “no result—the Seer died before resolution”; it must not synthesize a delivered `private_result`.
+
+If the Seer is alive but blocked, emit bare `PrivateResult.result='no_result'` only to that seat, without a causal field, and retain `night_outcome(..., outcome:'blocked')` for server/postgame reveal. Check death before the blocked branch when both apply. No new control message or dead-seat exception is introduced.
+
 ### Bounded orchestration recommendation
 
 A cycle is day discussion, simultaneous vote, day resolution/victory check, night Wolf discussion, simultaneous night actions, night resolution/victory check. Day 1 begins with discussion, matching current Tofu production behavior; older first-night tests are stale. A phase boundary commits all simultaneous choices in slot order, not network arrival order. The Manager accepted this night adaptation on 2026-09-15: resolve blocks first, remove blocked actors' kill nominations, tally remaining living Wolf/Alchemist nominations, and select among sorted tied targets using labeled seeded randomness. No valid nomination means no kill. There is no last-arriving execution actor. Guard protection then applies to the selected attack; Seer results follow deaths. This replaces Tofu's transport-sensitive last-voter execution rule.
@@ -159,7 +165,7 @@ type Observation = {
 };
 ```
 
-`roster` has exactly nine rows in slot order. `teammates` is empty for Town; Wolves receive both faction identities (including self and later-dead teammates) from their initial knowledge. Only living seats receive action observations. Death grants no new private knowledge and ends action requests. `privateResults` contains only the authenticated seat's permitted inspection results. No generic roles map is present. Own ability outcomes are restricted by the rules spec; the observation does not expose omniscient block/protection/kill success reasons.
+`roster` has exactly nine rows in slot order. `teammates` is empty for Town; Wolves receive both faction identities (including self and later-dead teammates) from their initial knowledge. Only living seats receive action observations. Death grants no new private knowledge and ends action requests. `privateResults` contains only the authenticated seat's permitted inspection results; a killed-before-resolution inspection contributes no new result entry. No generic roles map is present. Own ability outcomes are restricted by the rules spec; the observation does not expose omniscient block/protection/kill success reasons.
 
 `observationId` and `requestId` use independent per-seat counters/opaque IDs, never private global journal indices. One outstanding request per seat. The observation is a complete bounded snapshot; reconnect does not require delta catch-up or a second state authority. `remainingMs` is a nonnegative integer measured from a monotonic game deadline when sending, not client wall time. The game owns the deadline even if the client ignores it. Retry uses the same request and observation IDs, fresh remaining budget, and `attempt=1`. Limits and lists are authority granted to this request; the server still checks legality against its stored phase snapshot.
 
@@ -296,7 +302,7 @@ Store at most 20,000 events and 32 MiB of serialized journal/replay data under v
 | Authored confession/reason | Originating seat | confessional |
 | Wolf speech | Living Wolf seats at emission | wolf_chat |
 | Submitted night choices | Acting seat; faction kill sharing only if rules explicitly permit | night_choices |
-| Private Seer result | Acting seat | night_choices |
+| Private Seer result (only if living at inspection resolution) | Acting seat | night_choices |
 | Omniscient night resolution detail | Server | night_choices |
 | Failure/retry/fallback diagnostic | Acting seat | failures |
 | Roles and seed | Server | roles |
@@ -405,6 +411,7 @@ These are required implementation evidence, not checks this documentation task c
 | Reliability | Missing client, late action, malformed frames, provider refusal/throttle, reconnect, invalid flood all reach legal fallback within unchanged budgets |
 | Privacy | Sentinel secrets in every private field; inspect raw `/global`, seat snapshots, logs, replay bytes; vary hidden roles/actions and assert equal permitted projections except allowed effects |
 | Timing privacy | Night duration, public cursors, waiting packets, and alive-seat request cadence do not reveal private actor count/response timing |
+| Seer death | Killed before inspection: no private_result or dead-seat update; server actor_dead exports postgame. Living blocked Seer: private bare no_result, causal blocked evidence server/replay only |
 | Reveal | Export excludes credentials/prompts/raw reasoning/diagnostics/unknown payloads; role reveal only in completed artifact; dead seat gets no privileged stream |
 | Replay parity | Capture live public events; export/reload/fold public subset; assert identical presentation at each public cursor and final score; no policy or domain execution in viewer |
 | Browser | Static-only HTTP server and CORS replay; autoplay/pause/seek/speed/loop, resize, unknown/corrupt/missing/oversized replay visibly fail; no remote dependency |
@@ -436,4 +443,4 @@ Repository roots: `/Users/jt/projects/coworld`, `/Users/jt/projects/tofu-tech`, 
 
 The assessment's “one event log source of truth” wording is superseded by one game authority plus derived evidence. The benchmark's permissive JSON salvage, name-based targets, provider raw-response records, centralized model calls, and unbounded provider time do not carry over. Tofu's wall-clock last-kill-voter behavior is replaced by the accepted nomination tally; mutable vote timing requires the explicit final-response adaptation in the rules spec. These deviations are intentional recommendations, not accidental claims of full parity.
 
-Remaining work before implementation design acceptance: reconcile exact rule resolution/lock semantics with the rules-parity author, align final viewer payloads with spectator design, and attach their canonical committed records. The eight-day draw, export allowlist, root package layout, and blocked-actor nomination tally are settled. No schema migration/legacy client support is needed for this new game. Hosted live theater, credential use, publishing, and deployment remain outside this documentation assignment.
+Remaining work before implementation design acceptance: verify final rules and viewer handbacks use the settled immutable-response, floor-ranking, two-round Wolf-chat, and revised Seer-death semantics, then attach their canonical committed records. The eight-day draw, export allowlist, root package layout, and blocked-actor nomination tally are settled. No schema migration/legacy client support is needed for this new game. Hosted live theater, credential use, publishing, and deployment remain outside this documentation assignment.

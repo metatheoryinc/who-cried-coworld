@@ -19,6 +19,7 @@ The [v1 product contract](../product/v1-contract.md) is accepted product directi
 | Packaging | One root TypeScript package, one lockfile, one Dockerfile with game/player targets, static bundle | Accepted Manager decision | Replaces wholesale Tofu/benchmark imports |
 | Failure/time | Bounded requests/fallbacks; maxDays defaults to 8, then draw with all scores 0 | Day cap accepted; budget details proposed | Closes unbounded abstention gap in source games |
 | Night resolution | Block first; discard blocked kill nominations; seeded sorted-target tie break; no last-voter actor | Accepted Manager decision | Replaces Tofu arrival-order execution |
+| Seer resolution and death | Killed before inspection: server-only actor_dead evidence; living blocked Seer: bare private no_result | Accepted Manager revision | Supersedes earlier killed-Seer private no_result instruction |
 | Protocol | Strict `wcw.player/1`, `wcw.events/1`, `wcw.replay/1` | Proposed technical design | No backward compatibility obligation to source protocols |
 
 Exact design: [Who Cried Wolf Coworld system and protocol](../plans/2026-09-15-who-cried-wolf-coworld-design.md).
@@ -62,9 +63,15 @@ Historical context: [port assessment](../plans/2026-09-14-who-cried-wolf-coworld
 
 Resolve Alchemist blocks first; remove blocked actors' kill nominations before tallying. Living Wolf and Alchemist nominate; select a tied target using labeled seeded randomness over sorted targets; no valid nomination means no kill. This explicitly supersedes Tofu's last-arriving kill actor. The tradeoff is a documented parity deviation in return for reproducible simultaneous actions.
 
+## Seer resolution after death
+
+**Decision (Manager revision, 2026-09-15):** If the Seer dies before inspection resolves, do not emit a live `private_result` or send a new dead-seat update. Emit only server-audience `night_outcome` with ability `inspect`, the Seer actor, attempted target, and outcome `actor_dead`, revealable postgame under `night_choices`. A replay beat may describe this as “no result—the Seer died before resolution.” A living blocked Seer still receives bare `PrivateResult.result='no_result'`; its causal `blocked` evidence remains server/replay-only.
+
+**Supersession and reasoning:** This replaces the earlier instruction to deliver a private no-result after the Seer's death. Death ends private updates, so no closure exception, extra control message, or dead-policy delivery path is needed. The journal records what failed; the renderer explains that evidence without inventing a private result that was never delivered.
+
 ## Open reconciliation
 
-- Remaining exact deterministic rules, including final-response locking and inspection outcomes, must agree with the rules-parity specification. A timeout cannot claim a faction won when no victory condition holds.
+- Cross-document wording must agree with the settled immutable final-response and Seer resolution rules. A timeout cannot claim a faction won when no victory condition holds.
 - Align package paths and manifest packaging with runtime reconnaissance, and reveal fields with spectator design.
 - Fixed public night duration prevents private actor count/response timing from becoming an unintended observation. This costs idle time and must fit the hosted deadline.
 - Hosted startup failures and the public replay/tooling boundaries remain platform limitations; local completion is not hosted proof.

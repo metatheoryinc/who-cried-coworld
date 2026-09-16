@@ -1,4 +1,4 @@
-import {resolveInference} from '../../player/inference.js';
+import {resolveInference,type InferenceConfig} from '../../player/inference.js';
 import {bedrockCompletion,type BedrockSender} from '../../player/bedrock.js';
 import {moderatorPrompt,validateModeratorChoice,type Moderator} from '../domain/moderator.js';
 export type ModeratorLog=Record<string,unknown>;
@@ -7,7 +7,15 @@ export function createRuntimeModerator(env:NodeJS.ProcessEnv=process.env,onLog:(
  const mode=env.WCW_MODERATOR?.trim()||'auto';
  if(!['auto','off','llm'].includes(mode))throw Error('WCW_MODERATOR must be auto, off, or llm');
  if(mode==='off')return;
- const inference=resolveInference(env,'moderator');
+ let inference:InferenceConfig;
+ try{inference=resolveInference(env,'moderator');}
+ catch(error){
+  if(mode==='llm')throw error;
+  // An optional moderator must not prevent the game from listening. Player
+  // model settings are independent and may not be injected into the game pod.
+  try{onLog({outcome:'fallback',reason:'invalid_configuration',error:'Automatic moderator unavailable; check provider and model configuration. Using deterministic scheduling.'});}catch{}
+  return;
+ }
  const {key,model}=inference;
  if(inference.provider==='openrouter'&&!key){if(mode==='llm')throw Error('LLM moderator requires a runtime credential');return;}
  const provider=env.OPENROUTER_HOST_PROVIDER===undefined?'Cerebras':env.OPENROUTER_HOST_PROVIDER.trim();

@@ -19,9 +19,11 @@ credentials and region. There is no public-AWS retry if the sidecar fails.
 | `WCW_BEDROCK_MAX_TOKENS` | Player output ceiling, default 1,600, configurable from 1 to 16,384. Host stays capped at 600. |
 
 `AWS_ENDPOINT_URL_BEDROCK_RUNTIME` is the hosted signal. `USE_BEDROCK` alone selects
-direct AWS for local testing; it does not prove hosted access. Explicit Bedrock or
-sidecar detection without a model fails startup with a configuration error. The host
-can be disabled with `WCW_MODERATOR=off`. No automatic model-ID substitution occurs.
+direct AWS for local testing; it does not prove hosted access. Players using Bedrock without a model fail startup with a configuration error.
+The optional host (`WCW_MODERATOR=auto`) logs a configuration fallback and uses
+deterministic scheduling if its inference configuration is missing or invalid.
+`WCW_MODERATOR=llm` requires valid configuration and fails startup otherwise. The
+host can be disabled with `WCW_MODERATOR=off`. No automatic model-ID substitution occurs.
 OpenRouter settings, including the Gemini schema and DeepSeek output cap, remain
 unchanged. Bedrock uses portable Converse parameters rather than sending unsupported
 OpenRouter reasoning or response-format fields. JSON instructions and local action

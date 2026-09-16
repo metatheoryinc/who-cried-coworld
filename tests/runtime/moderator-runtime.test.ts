@@ -51,3 +51,22 @@ it('uses the game Bedrock endpoint and model without OpenRouter credentials',asy
  expect(http).not.toHaveBeenCalled();expect(send.mock.calls[0]![0].input).toMatchObject({modelId:'host-model',inferenceConfig:{maxTokens:600}});
  expect(log).toHaveBeenCalledWith(expect.objectContaining({provider:'bedrock',outcome:'selected'}));
 });
+it('starts a paced game with deterministic moderation when the sidecar has no host model',async()=>{
+ const log=vi.fn();
+ const config=GameConfig.parse({mode:'bots',tokens:Array.from({length:9},(_,i)=>`t${i}`),players:Array.from({length:9},(_,i)=>({name:`P${i}`}))});
+ const server=await startServer(config,{port:0,host:'127.0.0.1',moderatorEnvironment:{AWS_ENDPOINT_URL_BEDROCK_RUNTIME:'http://127.0.0.1:9100'},onModeratorLog:log});
+ try{
+  server.session.start(performance.now());
+  expect(server.session.pending.get(0)?.request.kind).toBe('bid');
+  expect(log).toHaveBeenCalledWith(expect.objectContaining({outcome:'fallback',reason:'invalid_configuration'}));
+ }finally{await server.close();}
+});
+it('still rejects missing Bedrock models when an LLM moderator is explicitly required',()=>{
+ expect(()=>createRuntimeModerator({WCW_MODERATOR:'llm',AWS_ENDPOINT_URL_BEDROCK_RUNTIME:'http://127.0.0.1:9100'})).toThrow('BEDROCK_MODEL');
+});
+it('keeps automatic configuration fallback safe even if logging fails',()=>{
+ const env={AWS_ENDPOINT_URL_BEDROCK_RUNTIME:'not-a-url-secret',BEDROCK_MODEL:'host'};
+ const log=vi.fn();expect(createRuntimeModerator(env,log)).toBeUndefined();
+ expect(JSON.stringify(log.mock.calls)).not.toContain('not-a-url-secret');
+ expect(createRuntimeModerator(env,()=>{throw Error('log unavailable');})).toBeUndefined();
+});

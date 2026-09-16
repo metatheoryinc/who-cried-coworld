@@ -47,12 +47,13 @@ Requires Docker and the local Coworld CLI. From a checkout with an origin remote
 
 ```sh
 DOCKER_DEFAULT_PLATFORM=linux/amd64 coworld build --project . --version 0.1.0
-DOCKER_DEFAULT_PLATFORM=linux/amd64 coworld run-episode dist/coworld_manifest.json -o artifacts/coworld --timeout-seconds 120
-DOCKER_DEFAULT_PLATFORM=linux/amd64 coworld certify dist/coworld_manifest.json --no-open-report --timeout-seconds 120
+DOCKER_DEFAULT_PLATFORM=linux/amd64 coworld run-episode dist/coworld_manifest.json -o artifacts/coworld --timeout-seconds 300
+DOCKER_DEFAULT_PLATFORM=linux/amd64 coworld certify dist/coworld_manifest.json --no-open-report --timeout-seconds 300
 ```
 
-The fixture uses 100ms decision windows for fast scripted tests; the normal
-variant uses 3.5-second windows. Build creates separate game and policy images and
+The fixture uses one-second decision windows so container scheduling does not
+turn smoke checks into timeout tests. The standard variant uses human-paced
+13-second speaking turns. Build creates separate game and policy images and
 a static replay viewer. Generated outputs are ignored by Git.
 
 If the source has no origin, Coworld build currently fails while collecting Git

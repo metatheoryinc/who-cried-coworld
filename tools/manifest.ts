@@ -4,7 +4,7 @@ import { GameConfig } from '../src/shared/config.js';
 import { Results } from '../src/shared/results.js';
 import {Action,Observation,Control} from '../src/shared/player.js';
 const players=Array.from({length:9},(_,i)=>({name:`Player ${i+1}`}));
-const config={mode:'fast',setup:'A1',players,seed:'000102030405060708090a0b0c0d0e0f',maxDays:8,windowMs:100,player_connect_timeout_seconds:30};
+const config={mode:'fast',setup:'A1',players,seed:'000102030405060708090a0b0c0d0e0f',maxDays:8,windowMs:1000,player_connect_timeout_seconds:30};
 const text=(value:string)=>({type:'text',value});
 const configSchema=z.toJSONSchema(GameConfig,{io:'input'});
 // Coworld inspects these common fields at the root when injecting seat tokens/names.

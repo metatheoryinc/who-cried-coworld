@@ -1,3 +1,5 @@
+> Historical rules/1 contract. The [NewD3 role port](newd3.md) supersedes fixed role composition, kill nomination semantics, chat scheduling, and timing below.
+
 # Who Cried Wolf Coworld v1 rules parity and verification specification
 
 Status: normative, reconciled input to Task 4 TDD. The accepted architecture owns wire and component boundaries; this specification supplies the detailed deterministic rules and verification cases.

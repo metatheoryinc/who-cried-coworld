@@ -10,6 +10,13 @@ The [v1 product contract](../product/v1-contract.md) is accepted product directi
 
 ## Current guidance
 
+Local human-play feasibility is now backed by the
+[verified Pudge Wars experiment](../plans/2026-09-15-pudge-local-play-test.md):
+a direct launcher runs a local game with one authenticated browser seat and one
+bot, without the full Metta platform. This is implementation evidence for future
+WCW human controls; it does not by itself change the accepted v1 scope or prove
+the hosted lobby workflow.
+
 | Concern | Decision | Status | Earlier guidance |
 | --- | --- | --- | --- |
 | State and events | Game process owns one state; append-only events are derived evidence | Accepted product/task constraint | Clarifies assessment's ambiguous “source of episode truth” |

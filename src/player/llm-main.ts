@@ -1,0 +1,10 @@
+import {resolveInference} from './inference.js';
+import {runPlayerClient} from './client.js';
+import {llmAction} from './policy.js';
+const url=process.env.COWORLD_PLAYER_WS_URL;
+if(!url)throw Error('Missing COWORLD_PLAYER_WS_URL');
+const inference=resolveInference();
+const personality=process.env.WCW_PLAYER_PROMPT;
+const client=runPlayerClient(url,(o,signal)=>llmAction(o,{...inference,personality,onLog:row=>console.log(JSON.stringify({event:'player_attempt',...row}))},signal));
+process.once('SIGTERM',client.stop);process.once('SIGINT',client.stop);
+client.done.catch(()=>{console.error('LLM player failed');process.exitCode=1;});

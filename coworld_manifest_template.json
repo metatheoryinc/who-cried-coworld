@@ -1,0 +1,1127 @@
+{
+  "episode_timeout_minutes": 40,
+  "tags": [
+    "mafia",
+    "social-deduction",
+    "multiplayer",
+    "turn-based"
+  ],
+  "game": {
+    "name": "Mafia: Who Cried Wolf?",
+    "description": "Nine-seat Mafia with wolves in sheep’s clothing, private team chats, secret roles, and a replay that reveals the whole story. Also play with friends on Discord at https://whocriedwolf.gg/.",
+    "owner": "jt",
+    "runnable": {
+      "type": "game",
+      "image": "{{GAME_IMAGE}}",
+      "run": [
+        "node",
+        "build/game.mjs"
+      ]
+    },
+    "config_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "default": "fast",
+              "type": "string",
+              "const": "fast"
+            },
+            "humanSlot": {
+              "default": 0,
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 8
+            },
+            "humanTimers": {
+              "default": {
+                "transitionMs": 5000,
+                "dayMs": 150000,
+                "voteMs": 45000,
+                "coordinationMs": 30000,
+                "nightMs": 45000
+              },
+              "type": "object",
+              "properties": {
+                "transitionMs": {
+                  "default": 5000,
+                  "type": "integer",
+                  "minimum": 100,
+                  "maximum": 10000
+                },
+                "dayMs": {
+                  "default": 150000,
+                  "type": "integer",
+                  "minimum": 600,
+                  "maximum": 180000
+                },
+                "voteMs": {
+                  "default": 45000,
+                  "type": "integer",
+                  "minimum": 100,
+                  "maximum": 45000
+                },
+                "coordinationMs": {
+                  "default": 30000,
+                  "type": "integer",
+                  "minimum": 200,
+                  "maximum": 30000
+                },
+                "nightMs": {
+                  "default": 45000,
+                  "type": "integer",
+                  "minimum": 100,
+                  "maximum": 45000
+                }
+              },
+              "additionalProperties": false
+            },
+            "tokens": {
+              "minItems": 9,
+              "maxItems": 9,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "players": {
+              "minItems": 9,
+              "maxItems": 9,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "presentation": {
+              "default": [
+                {
+                  "kind": "neutral"
+                },
+                {
+                  "kind": "neutral"
+                },
+                {
+                  "kind": "neutral"
+                },
+                {
+                  "kind": "neutral"
+                },
+                {
+                  "kind": "neutral"
+                },
+                {
+                  "kind": "neutral"
+                },
+                {
+                  "kind": "neutral"
+                },
+                {
+                  "kind": "neutral"
+                },
+                {
+                  "kind": "neutral"
+                }
+              ],
+              "minItems": 9,
+              "maxItems": 9,
+              "type": "array",
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "neutral"
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "character"
+                      },
+                      "characterId": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9][a-z0-9_-]{0,47}$"
+                      },
+                      "persona": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "characterId",
+                      "persona"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            },
+            "setup": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "A1",
+                    "A2",
+                    "A3",
+                    "B1",
+                    "B2",
+                    "B3",
+                    "C1",
+                    "C2",
+                    "C3"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "const": "random"
+                }
+              ]
+            },
+            "roles": {
+              "default": [
+                "wolf",
+                "alchemist",
+                "seer",
+                "guard",
+                "sheep",
+                "sheep",
+                "sheep",
+                "sheep",
+                "sheep"
+              ],
+              "minItems": 9,
+              "maxItems": 9,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "wolf",
+                  "alchemist",
+                  "track_reader",
+                  "seer",
+                  "guard",
+                  "chef",
+                  "dairy_maid",
+                  "priest",
+                  "noble",
+                  "sheep",
+                  "jester"
+                ]
+              }
+            },
+            "seed": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{32}$"
+            },
+            "maxDays": {
+              "default": 8,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 32
+            },
+            "player_connect_timeout_seconds": {
+              "default": 180,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 180
+            },
+            "windowMs": {
+              "default": 3500,
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 8000
+            }
+          },
+          "required": [
+            "tokens",
+            "players"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "const": "bots"
+            },
+            "humanSlot": {
+              "default": -1,
+              "type": "number",
+              "const": -1
+            },
+            "humanTimers": {
+              "default": {
+                "transitionMs": 5000,
+                "dayMs": 150000,
+                "voteMs": 45000,
+                "coordinationMs": 30000,
+                "nightMs": 45000
+              },
+              "type": "object",
+              "properties": {
+                "transitionMs": {
+                  "default": 5000,
+                  "type": "integer",
+                  "minimum": 100,
+                  "maximum": 10000
+                },
+                "dayMs": {
+                  "default": 150000,
+                  "type": "integer",
+                  "minimum": 600,
+                  "maximum": 180000
+                },
+                "voteMs": {
+                  "default": 45000,
+                  "type": "integer",
+                  "minimum": 100,
+                  "maximum": 45000
+                },
+                "coordinationMs": {
+                  "default": 30000,
+                  "type": "integer",
+                  "minimum": 200,
+                  "maximum": 30000
+                },
+                "nightMs": {
+                  "default": 45000,
+                  "type": "integer",
+                  "minimum": 100,
+                  "maximum": 45000
+                }
+              },
+              "additionalProperties": false
+            },
+            "tokens": {
+              "minItems": 9,
+              "maxItems": 9,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "players": {
+              "minItems": 9,
+              "maxItems": 9,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "presentation": {
+              "default": [
+                {
+                  "kind": "neutral"
+                },
+                {
+                  "kind": "neutral"
+                },
+                {
+                  "kind": "neutral"
+                },
+                {
+                  "kind": "neutral"
+                },
+                {
+                  "kind": "neutral"
+                },
+                {
+                  "kind": "neutral"
+                },
+                {
+                  "kind": "neutral"
+                },
+                {
+                  "kind": "neutral"
+                },
+                {
+                  "kind": "neutral"
+                }
+              ],
+              "minItems": 9,
+              "maxItems": 9,
+              "type": "array",
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "neutral"
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "character"
+                      },
+                      "characterId": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9][a-z0-9_-]{0,47}$"
+                      },
+                      "persona": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "characterId",
+                      "persona"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            },
+            "setup": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "A1",
+                    "A2",
+                    "A3",
+                    "B1",
+                    "B2",
+                    "B3",
+                    "C1",
+                    "C2",
+                    "C3"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "const": "random"
+                }
+              ]
+            },
+            "roles": {
+              "default": [
+                "wolf",
+                "alchemist",
+                "seer",
+                "guard",
+                "sheep",
+                "sheep",
+                "sheep",
+                "sheep",
+                "sheep"
+              ],
+              "minItems": 9,
+              "maxItems": 9,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "wolf",
+                  "alchemist",
+                  "track_reader",
+                  "seer",
+                  "guard",
+                  "chef",
+                  "dairy_maid",
+                  "priest",
+                  "noble",
+                  "sheep",
+                  "jester"
+                ]
+              }
+            },
+            "seed": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{32}$"
+            },
+            "maxDays": {
+              "default": 8,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 32
+            },
+            "player_connect_timeout_seconds": {
+              "default": 30,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 180
+            },
+            "windowMs": {
+              "default": 3500,
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 8000
+            }
+          },
+          "required": [
+            "mode",
+            "tokens",
+            "players"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "const": "human"
+            },
+            "humanSlot": {
+              "default": 0,
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 8
+            },
+            "humanTimers": {
+              "default": {
+                "transitionMs": 5000,
+                "dayMs": 150000,
+                "voteMs": 45000,
+                "coordinationMs": 30000,
+                "nightMs": 45000
+              },
+              "type": "object",
+              "properties": {
+                "transitionMs": {
+                  "default": 5000,
+                  "type": "integer",
+                  "minimum": 100,
+                  "maximum": 10000
+                },
+                "dayMs": {
+                  "default": 150000,
+                  "type": "integer",
+                  "minimum": 600,
+                  "maximum": 180000
+                },
+                "voteMs": {
+                  "default": 45000,
+                  "type": "integer",
+                  "minimum": 100,
+                  "maximum": 45000
+                },
+                "coordinationMs": {
+                  "default": 30000,
+                  "type": "integer",
+                  "minimum": 200,
+                  "maximum": 30000
+                },
+                "nightMs": {
+                  "default": 45000,
+                  "type": "integer",
+                  "minimum": 100,
+                  "maximum": 45000
+                }
+              },
+              "additionalProperties": false
+            },
+            "tokens": {
+              "minItems": 9,
+              "maxItems": 9,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "players": {
+              "minItems": 9,
+              "maxItems": 9,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "presentation": {
+              "default": [
+                {
+                  "kind": "neutral"
+                },
+                {
+                  "kind": "neutral"
+                },
+                {
+                  "kind": "neutral"
+                },
+                {
+                  "kind": "neutral"
+                },
+                {
+                  "kind": "neutral"
+                },
+                {
+                  "kind": "neutral"
+                },
+                {
+                  "kind": "neutral"
+                },
+                {
+                  "kind": "neutral"
+                },
+                {
+                  "kind": "neutral"
+                }
+              ],
+              "minItems": 9,
+              "maxItems": 9,
+              "type": "array",
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "neutral"
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "character"
+                      },
+                      "characterId": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9][a-z0-9_-]{0,47}$"
+                      },
+                      "persona": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "characterId",
+                      "persona"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            },
+            "setup": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "A1",
+                    "A2",
+                    "A3",
+                    "B1",
+                    "B2",
+                    "B3",
+                    "C1",
+                    "C2",
+                    "C3"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "const": "random"
+                }
+              ]
+            },
+            "roles": {
+              "default": [
+                "wolf",
+                "alchemist",
+                "seer",
+                "guard",
+                "sheep",
+                "sheep",
+                "sheep",
+                "sheep",
+                "sheep"
+              ],
+              "minItems": 9,
+              "maxItems": 9,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "wolf",
+                  "alchemist",
+                  "track_reader",
+                  "seer",
+                  "guard",
+                  "chef",
+                  "dairy_maid",
+                  "priest",
+                  "noble",
+                  "sheep",
+                  "jester"
+                ]
+              }
+            },
+            "seed": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{32}$"
+            },
+            "maxDays": {
+              "default": 8,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 32
+            },
+            "player_connect_timeout_seconds": {
+              "default": 30,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 180
+            },
+            "windowMs": {
+              "default": 3500,
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 8000
+            }
+          },
+          "required": [
+            "mode",
+            "tokens",
+            "players"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "type": "object",
+      "required": [
+        "tokens",
+        "players"
+      ],
+      "properties": {
+        "tokens": {
+          "minItems": 9,
+          "maxItems": 9,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "players": {
+          "minItems": 9,
+          "maxItems": 9,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    "results_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "schema": {
+          "type": "string",
+          "const": "wcw.results/1"
+        },
+        "rulesVersion": {
+          "type": "string",
+          "pattern": "^[\\x21-\\x7e]{1,80}$"
+        },
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "town_win",
+            "wolf_win",
+            "jester_win",
+            "draw"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "wolves_eliminated",
+            "wolf_parity",
+            "jester_voted_out",
+            "day_cap"
+          ]
+        },
+        "daysCompleted": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 32
+        },
+        "scores": {
+          "minItems": 9,
+          "maxItems": 9,
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      },
+      "required": [
+        "schema",
+        "rulesVersion",
+        "outcome",
+        "reason",
+        "daysCompleted",
+        "scores"
+      ],
+      "additionalProperties": false
+    },
+    "protocols": {
+      "player": {
+        "type": "text",
+        "value": "Connect to COWORLD_PLAYER_WS_URL. wcw.player/1: receive ready then observation. Reply with action copying episodeId, requestId and observationId, a legal body matching request.kind, and report:null. bid: wantsToSpeak, urgency 0..3, text <=480, replyTo/accusation nullable, reason <=240. vote: target or null, summary <=240. wolf_chat/noble_chat: text <=480, summary <=240. night: ordered actions [{ability,target|null,killer?}] matching offered choices, summary <=240. First valid reply locks; one correction retry. end contains results; exit cleanly. Complete observation, action, and control schemas are included in the player-schemas documentation page."
+      },
+      "global": {
+        "type": "text",
+        "value": "GET /client/global with read-only /global WebSocket. wcw.viewer/1 reset/events packets contain recipient-local cursors and public events. Static replay bundle accepts #replay=URL or ?replay=URL. In mode human, /client/player?slot=N&token=T controls the reserved humanSlot over /human. Other seats use /player. Human mode is locally tested; hosted seating requires a separate integration test."
+      }
+    },
+    "docs": {
+      "readme": {
+        "type": "text",
+        "value": "# Mafia: Who Cried Wolf?\n\nNine players. A village full of secrets. Wolves hiding among the sheep.\n\nA social-deduction game for independent AI policies, with private team conversations,\npublic debate, secret night abilities, and majority votes. Read the room, challenge\nclaims, and decide whom to trust.\n\n**Play with friends on Discord:** [Who Cried Wolf?](https://whocriedwolf.gg/)\nis also a party game that runs inside a Discord voice channel. Visit the website\nto launch the Discord activity and browse its roles. This Coworld package is the\nnine-seat NewD3 adaptation; its rules and timing are described below.\n\n## Rules and objectives\n\nThe standard game secretly selects one of nine NewD3 setups: two Wolves and seven\nTown players, with different combinations of special roles. Role assignments and\nthe selected setup are private. Each player sees their own role and authorized\nprivate information. Wolves know their pack; Nobles know their fellow Nobles.\n\nDiscuss during the day, then vote. A strict majority of living players is needed\nto eliminate someone. Without a majority, nobody is eliminated. At night, Wolves\ncoordinate a target and a killer; special roles block, protect, or gather information.\nWolves and Nobles can also coordinate privately during daytime discussion.\n\nTown wins when every Wolf is eliminated. Wolves win when they reach parity with\nTown. A game unresolved after eight nights is a draw. Each member of the winning\nfaction scores 1, including eliminated teammates; others score 0. Draws score 0.\nCustom decks may include the Trickster, who wins by being voted out during the day.\nThe published NewD3 variants do not contain the Trickster.\n\n## Roles\n\n- **Wolf:** participates in the pack's night kill.\n- **Alchemist:** a Wolf who also blocks one player's night action.\n- **Track Reader:** a Wolf who learns a target's role; ordinary Wolf and Sheep both read as vanilla.\n- **Sheep:** a Town player relying on discussion and votes.\n- **Seer:** investigates alignment.\n- **Guard:** protects another player from the night kill.\n- **Chef:** jails a player, blocking their action and protecting them.\n- **Dairy Maid:** reveals her Town identity to a chosen recipient.\n- **Priest:** learns whom a player actually visited.\n- **Noble:** knows and privately coordinates with other Nobles.\n\nNight resolution applies blocking, jailing, protection, the selected killer's attack,\nand information results. A blocked killer prevents the pack's kill. Submitted\nobservations list the legal abilities and targets; those choices are authoritative.\n\n## Variants and pacing\n\n- **standard — NewD3 · Nine policy players:** random setup, fresh randomness,\n  13-second speaking turns, 150-second discussion, 45-second vote, 30-second private\n  night coordination, and 45-second night-action phase. Transitions take five seconds.\n- **human — NewD3 · One human + eight policies:** the same pacing, with seat 0\n  reserved for the browser player. This is locally implemented; hosted human seating\n  still needs integration verification.\n- **reproducible — NewD3 A2 · Reproducible fixture:** paced policy game with fixed\n  setup and seed for comparisons. Randomness is reproducible; LLM responses are not.\n- **smoke — Scripted protocol check:** fast, seeded game for package verification,\n  not an LLM performance benchmark.\n\nA neutral moderator allocates the speaking turns. It may use a runtime-configured\nLLM; without credentials, or if selection fails, deterministic scheduling keeps\nplay moving. This is distinct from the policies that decide each player's actions.\n\n## Policy guidance and baselines\n\nReason from the information in your seat's observation. Refer to players by their\ndisplay names in conversation; use numeric slot IDs in action fields. Back claims\nwith public evidence, consider counterarguments, and coordinate privately only\nthrough your authorized channels. The host does not establish anyone's innocence.\n\nThe **scripted** baseline always uses deterministic legal actions without an LLM.\nThe **llm** baseline is a standalone OpenRouter/Bedrock client. On Softmax it detects the hosted\nBedrock endpoint and uses `BEDROCK_MODEL`; explicit backend selection uses\n`WCW_LLM_PROVIDER`. OpenRouter is configured per seat by\n`WCW_MODEL`, with optional `WCW_PLAYER_PROMPT` personality text and a runtime\n`OPENROUTER_API_KEY`. In OpenRouter mode without credentials it uses scripted actions. Provider failures\nreceive bounded retries and then a legal pass. Keys are not included in the package.\nA named variant chooses game rules, not the roster's model providers.\n\nLive player views reveal only permitted information. The public spectator hides\nprivate roles and chats. The completed replay lets viewers explicitly reveal all\nroles, private chats, decisions, and results.\n"
+      },
+      "pages": [
+        {
+          "id": "player-schemas",
+          "title": "Player protocol JSON schemas",
+          "content": {
+            "type": "text",
+            "value": "The authenticated WebSocket exchanges ready, observation, action, receipt, and end messages. Copy request identifiers exactly. All messages are JSON text. Observation and control messages come from the game; actions come from the policy.\n\n## Observation\n\n```json\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"type\": \"object\",\n  \"properties\": {\n    \"protocol\": {\n      \"type\": \"string\",\n      \"const\": \"wcw.player/1\"\n    },\n    \"type\": {\n      \"type\": \"string\",\n      \"const\": \"observation\"\n    },\n    \"episodeId\": {\n      \"type\": \"string\",\n      \"pattern\": \"^[A-Za-z0-9_-]{1,80}$\"\n    },\n    \"observationId\": {\n      \"type\": \"string\",\n      \"pattern\": \"^[A-Za-z0-9_-]{1,80}$\"\n    },\n    \"requestId\": {\n      \"type\": \"string\",\n      \"pattern\": \"^[A-Za-z0-9_-]{1,80}$\"\n    },\n    \"attempt\": {\n      \"anyOf\": [\n        {\n          \"type\": \"number\",\n          \"const\": 0\n        },\n        {\n          \"type\": \"number\",\n          \"const\": 1\n        }\n      ]\n    },\n    \"remainingMs\": {\n      \"type\": \"integer\",\n      \"minimum\": 0,\n      \"maximum\": 45000\n    },\n    \"phase\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"waiting\",\n        \"day\",\n        \"vote\",\n        \"night\",\n        \"finished\"\n      ]\n    },\n    \"day\": {\n      \"type\": \"integer\",\n      \"minimum\": 0,\n      \"maximum\": 32\n    },\n    \"self\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"slot\": {\n          \"type\": \"integer\",\n          \"minimum\": 0,\n          \"maximum\": 8\n        },\n        \"role\": {\n          \"type\": \"string\",\n          \"enum\": [\n            \"wolf\",\n            \"alchemist\",\n            \"track_reader\",\n            \"seer\",\n            \"guard\",\n            \"chef\",\n            \"dairy_maid\",\n            \"priest\",\n            \"noble\",\n            \"sheep\",\n            \"jester\"\n          ]\n        },\n        \"faction\": {\n          \"type\": \"string\",\n          \"enum\": [\n            \"wolf\",\n            \"town\",\n            \"solo\"\n          ]\n        },\n        \"alive\": {\n          \"type\": \"boolean\",\n          \"const\": true\n        }\n      },\n      \"required\": [\n        \"slot\",\n        \"role\",\n        \"faction\",\n        \"alive\"\n      ],\n      \"additionalProperties\": false\n    },\n    \"roster\": {\n      \"minItems\": 9,\n      \"maxItems\": 9,\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"slot\": {\n            \"type\": \"integer\",\n            \"minimum\": 0,\n            \"maximum\": 8\n          },\n          \"name\": {\n            \"type\": \"string\"\n          },\n          \"alive\": {\n            \"type\": \"boolean\"\n          },\n          \"presentation\": {\n            \"oneOf\": [\n              {\n                \"type\": \"object\",\n                \"properties\": {\n                  \"kind\": {\n                    \"type\": \"string\",\n                    \"const\": \"neutral\"\n                  }\n                },\n                \"required\": [\n                  \"kind\"\n                ],\n                \"additionalProperties\": false\n              },\n              {\n                \"type\": \"object\",\n                \"properties\": {\n                  \"kind\": {\n                    \"type\": \"string\",\n                    \"const\": \"character\"\n                  },\n                  \"characterId\": {\n                    \"type\": \"string\",\n                    \"pattern\": \"^[a-z0-9][a-z0-9_-]{0,47}$\"\n                  },\n                  \"persona\": {\n                    \"type\": \"string\"\n                  }\n                },\n                \"required\": [\n                  \"kind\",\n                  \"characterId\",\n                  \"persona\"\n                ],\n                \"additionalProperties\": false\n              }\n            ]\n          }\n        },\n        \"required\": [\n          \"slot\",\n          \"name\",\n          \"alive\",\n          \"presentation\"\n        ],\n        \"additionalProperties\": false\n      }\n    },\n    \"teammates\": {\n      \"maxItems\": 3,\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"slot\": {\n            \"type\": \"integer\",\n            \"minimum\": 0,\n            \"maximum\": 8\n          },\n          \"role\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"wolf\",\n              \"alchemist\",\n              \"track_reader\",\n              \"noble\"\n            ]\n          }\n        },\n        \"required\": [\n          \"slot\",\n          \"role\"\n        ],\n        \"additionalProperties\": false\n      }\n    },\n    \"privateResults\": {\n      \"maxItems\": 288,\n      \"type\": \"array\",\n      \"items\": {\n        \"oneOf\": [\n          {\n            \"type\": \"object\",\n            \"properties\": {\n              \"day\": {\n                \"type\": \"integer\",\n                \"minimum\": 0,\n                \"maximum\": 32\n              },\n              \"ability\": {\n                \"type\": \"string\",\n                \"const\": \"inspect\"\n              },\n              \"target\": {\n                \"type\": \"integer\",\n                \"minimum\": 0,\n                \"maximum\": 8\n              },\n              \"result\": {\n                \"type\": \"string\",\n                \"enum\": [\n                  \"wolf\",\n                  \"not_wolf\",\n                  \"no_result\"\n                ]\n              }\n            },\n            \"required\": [\n              \"day\",\n              \"ability\",\n              \"target\",\n              \"result\"\n            ],\n            \"additionalProperties\": false\n          },\n          {\n            \"type\": \"object\",\n            \"properties\": {\n              \"day\": {\n                \"type\": \"integer\",\n                \"minimum\": 0,\n                \"maximum\": 32\n              },\n              \"ability\": {\n                \"type\": \"string\",\n                \"const\": \"check\"\n              },\n              \"target\": {\n                \"type\": \"integer\",\n                \"minimum\": 0,\n                \"maximum\": 8\n              },\n              \"result\": {\n                \"anyOf\": [\n                  {\n                    \"type\": \"string\",\n                    \"enum\": [\n                      \"wolf\",\n                      \"alchemist\",\n                      \"track_reader\",\n                      \"seer\",\n                      \"guard\",\n                      \"chef\",\n                      \"dairy_maid\",\n                      \"priest\",\n                      \"noble\",\n                      \"sheep\",\n                      \"jester\"\n                    ]\n                  },\n                  {\n                    \"type\": \"string\",\n                    \"const\": \"vanilla\"\n                  },\n                  {\n                    \"type\": \"string\",\n                    \"const\": \"no_result\"\n                  }\n                ]\n              }\n            },\n            \"required\": [\n              \"day\",\n              \"ability\",\n              \"target\",\n              \"result\"\n            ],\n            \"additionalProperties\": false\n          },\n          {\n            \"type\": \"object\",\n            \"properties\": {\n              \"day\": {\n                \"type\": \"integer\",\n                \"minimum\": 0,\n                \"maximum\": 32\n              },\n              \"ability\": {\n                \"type\": \"string\",\n                \"const\": \"inform\"\n              },\n              \"target\": {\n                \"type\": \"integer\",\n                \"minimum\": 0,\n                \"maximum\": 8\n              },\n              \"result\": {\n                \"type\": \"string\",\n                \"const\": \"town\"\n              }\n            },\n            \"required\": [\n              \"day\",\n              \"ability\",\n              \"target\",\n              \"result\"\n            ],\n            \"additionalProperties\": false\n          },\n          {\n            \"type\": \"object\",\n            \"properties\": {\n              \"day\": {\n                \"type\": \"integer\",\n                \"minimum\": 0,\n                \"maximum\": 32\n              },\n              \"ability\": {\n                \"type\": \"string\",\n                \"const\": \"track\"\n              },\n              \"target\": {\n                \"type\": \"integer\",\n                \"minimum\": 0,\n                \"maximum\": 8\n              },\n              \"result\": {\n                \"anyOf\": [\n                  {\n                    \"maxItems\": 9,\n                    \"type\": \"array\",\n                    \"items\": {\n                      \"type\": \"integer\",\n                      \"minimum\": 0,\n                      \"maximum\": 8\n                    }\n                  },\n                  {\n                    \"type\": \"string\",\n                    \"const\": \"no_result\"\n                  }\n                ]\n              }\n            },\n            \"required\": [\n              \"day\",\n              \"ability\",\n              \"target\",\n              \"result\"\n            ],\n            \"additionalProperties\": false\n          }\n        ]\n      }\n    },\n    \"votes\": {\n      \"maxItems\": 32,\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"day\": {\n            \"type\": \"integer\",\n            \"minimum\": 0,\n            \"maximum\": 32\n          },\n          \"ballots\": {\n            \"maxItems\": 9,\n            \"type\": \"array\",\n            \"items\": {\n              \"type\": \"object\",\n              \"properties\": {\n                \"slot\": {\n                  \"type\": \"integer\",\n                  \"minimum\": 0,\n                  \"maximum\": 8\n                },\n                \"target\": {\n                  \"anyOf\": [\n                    {\n                      \"type\": \"integer\",\n                      \"minimum\": 0,\n                      \"maximum\": 8\n                    },\n                    {\n                      \"type\": \"null\"\n                    }\n                  ]\n                }\n              },\n              \"required\": [\n                \"slot\",\n                \"target\"\n              ],\n              \"additionalProperties\": false\n            }\n          },\n          \"eliminated\": {\n            \"anyOf\": [\n              {\n                \"type\": \"integer\",\n                \"minimum\": 0,\n                \"maximum\": 8\n              },\n              {\n                \"type\": \"null\"\n              }\n            ]\n          }\n        },\n        \"required\": [\n          \"day\",\n          \"ballots\",\n          \"eliminated\"\n        ],\n        \"additionalProperties\": false\n      }\n    },\n    \"transcript\": {\n      \"maxItems\": 128,\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"schema\": {\n            \"type\": \"string\",\n            \"const\": \"wcw.events/1\"\n          },\n          \"id\": {\n            \"type\": \"string\",\n            \"pattern\": \"^[A-Za-z0-9_-]{1,80}$\"\n          },\n          \"cursor\": {\n            \"type\": \"integer\",\n            \"minimum\": 1,\n            \"maximum\": 20000\n          },\n          \"day\": {\n            \"type\": \"integer\",\n            \"minimum\": 0,\n            \"maximum\": 32\n          },\n          \"phase\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"waiting\",\n              \"day\",\n              \"vote\",\n              \"night\",\n              \"finished\"\n            ]\n          },\n          \"reveal\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"public\",\n              \"roles\",\n              \"wolf_chat\",\n              \"noble_chat\",\n              \"confessional\",\n              \"night_choices\",\n              \"discarded_bids\",\n              \"failures\"\n            ]\n          },\n          \"payload\": {\n            \"oneOf\": [\n              {\n                \"type\": \"object\",\n                \"properties\": {\n                  \"kind\": {\n                    \"type\": \"string\",\n                    \"const\": \"started\"\n                  },\n                  \"roster\": {\n                    \"minItems\": 9,\n                    \"maxItems\": 9,\n                    \"type\": \"array\",\n                    \"items\": {\n                      \"type\": \"object\",\n                      \"properties\": {\n                        \"slot\": {\n                          \"type\": \"integer\",\n                          \"minimum\": 0,\n                          \"maximum\": 8\n                        },\n                        \"name\": {\n                          \"type\": \"string\"\n                        },\n                        \"alive\": {\n                          \"type\": \"boolean\"\n                        },\n                        \"presentation\": {\n                          \"oneOf\": [\n                            {\n                              \"type\": \"object\",\n                              \"properties\": {\n                                \"kind\": {\n                                  \"type\": \"string\",\n                                  \"const\": \"neutral\"\n                                }\n                              },\n                              \"required\": [\n                                \"kind\"\n                              ],\n                              \"additionalProperties\": false\n                            },\n                            {\n                              \"type\": \"object\",\n                              \"properties\": {\n                                \"kind\": {\n                                  \"type\": \"string\",\n                                  \"const\": \"character\"\n                                },\n                                \"characterId\": {\n                                  \"type\": \"string\",\n                                  \"pattern\": \"^[a-z0-9][a-z0-9_-]{0,47}$\"\n                                },\n                                \"persona\": {\n                                  \"type\": \"string\"\n                                }\n                              },\n                              \"required\": [\n                                \"kind\",\n                                \"characterId\",\n                                \"persona\"\n                              ],\n                              \"additionalProperties\": false\n                            }\n                          ]\n                        }\n                      },\n                      \"required\": [\n                        \"slot\",\n                        \"name\",\n                        \"alive\",\n                        \"presentation\"\n                      ],\n                      \"additionalProperties\": false\n                    }\n                  },\n                  \"rulesVersion\": {\n                    \"type\": \"string\",\n                    \"pattern\": \"^[\\\\x21-\\\\x7e]{1,80}$\"\n                  }\n                },\n                \"required\": [\n                  \"kind\",\n                  \"roster\",\n                  \"rulesVersion\"\n                ],\n                \"additionalProperties\": false\n              },\n              {\n                \"type\": \"object\",\n                \"properties\": {\n                  \"kind\": {\n                    \"type\": \"string\",\n                    \"const\": \"phase\"\n                  },\n                  \"phase\": {\n                    \"type\": \"string\",\n                    \"enum\": [\n                      \"waiting\",\n                      \"day\",\n                      \"vote\",\n                      \"night\",\n                      \"finished\"\n                    ]\n                  },\n                  \"day\": {\n                    \"type\": \"integer\",\n                    \"minimum\": 0,\n                    \"maximum\": 32\n                  },\n                  \"durationMs\": {\n                    \"type\": \"integer\",\n                    \"minimum\": 0,\n                    \"maximum\": 978000\n                  }\n                },\n                \"required\": [\n                  \"kind\",\n                  \"phase\",\n                  \"day\",\n                  \"durationMs\"\n                ],\n                \"additionalProperties\": false\n              },\n              {\n                \"type\": \"object\",\n                \"properties\": {\n                  \"kind\": {\n                    \"type\": \"string\",\n                    \"const\": \"speech\"\n                  },\n                  \"speech\": {\n                    \"type\": \"object\",\n                    \"properties\": {\n                      \"slot\": {\n                        \"type\": \"integer\",\n                        \"minimum\": 0,\n                        \"maximum\": 8\n                      },\n                      \"text\": {\n                        \"type\": \"string\"\n                      },\n                      \"replyTo\": {\n                        \"anyOf\": [\n                          {\n                            \"type\": \"string\",\n                            \"pattern\": \"^[A-Za-z0-9_-]{1,80}$\"\n                          },\n                          {\n                            \"type\": \"null\"\n                          }\n                        ]\n                      },\n                      \"accusation\": {\n                        \"anyOf\": [\n                          {\n                            \"type\": \"integer\",\n                            \"minimum\": 0,\n                            \"maximum\": 8\n                          },\n                          {\n                            \"type\": \"null\"\n                          }\n                        ]\n                      }\n                    },\n                    \"required\": [\n                      \"slot\",\n                      \"text\",\n                      \"replyTo\",\n                      \"accusation\"\n                    ],\n                    \"additionalProperties\": false\n                  }\n                },\n                \"required\": [\n                  \"kind\",\n                  \"speech\"\n                ],\n                \"additionalProperties\": false\n              },\n              {\n                \"type\": \"object\",\n                \"properties\": {\n                  \"kind\": {\n                    \"type\": \"string\",\n                    \"const\": \"wolf_chat\"\n                  },\n                  \"slot\": {\n                    \"type\": \"integer\",\n                    \"minimum\": 0,\n                    \"maximum\": 8\n                  },\n                  \"text\": {\n                    \"type\": \"string\"\n                  }\n                },\n                \"required\": [\n                  \"kind\",\n                  \"slot\",\n                  \"text\"\n                ],\n                \"additionalProperties\": false\n              },\n              {\n                \"type\": \"object\",\n                \"properties\": {\n                  \"kind\": {\n                    \"type\": \"string\",\n                    \"const\": \"noble_chat\"\n                  },\n                  \"slot\": {\n                    \"type\": \"integer\",\n                    \"minimum\": 0,\n                    \"maximum\": 8\n                  },\n                  \"text\": {\n                    \"type\": \"string\"\n                  }\n                },\n                \"required\": [\n                  \"kind\",\n                  \"slot\",\n                  \"text\"\n                ],\n                \"additionalProperties\": false\n              },\n              {\n                \"type\": \"object\",\n                \"properties\": {\n                  \"kind\": {\n                    \"type\": \"string\",\n                    \"const\": \"confessional\"\n                  },\n                  \"slot\": {\n                    \"type\": \"integer\",\n                    \"minimum\": 0,\n                    \"maximum\": 8\n                  },\n                  \"requestKind\": {\n                    \"type\": \"string\",\n                    \"enum\": [\n                      \"bid\",\n                      \"wolf_chat\",\n                      \"noble_chat\",\n                      \"vote\",\n                      \"night\"\n                    ]\n                  },\n                  \"text\": {\n                    \"type\": \"string\"\n                  }\n                },\n                \"required\": [\n                  \"kind\",\n                  \"slot\",\n                  \"requestKind\",\n                  \"text\"\n                ],\n                \"additionalProperties\": false\n              },\n              {\n                \"type\": \"object\",\n                \"properties\": {\n                  \"kind\": {\n                    \"type\": \"string\",\n                    \"const\": \"bid\"\n                  },\n                  \"slot\": {\n                    \"type\": \"integer\",\n                    \"minimum\": 0,\n                    \"maximum\": 8\n                  },\n                  \"window\": {\n                    \"type\": \"integer\",\n                    \"minimum\": 0,\n                    \"maximum\": 17\n                  },\n                  \"bid\": {\n                    \"type\": \"object\",\n                    \"properties\": {\n                      \"kind\": {\n                        \"type\": \"string\",\n                        \"const\": \"bid\"\n                      },\n                      \"wantsToSpeak\": {\n                        \"type\": \"boolean\"\n                      },\n                      \"urgency\": {\n                        \"type\": \"integer\",\n                        \"minimum\": 0,\n                        \"maximum\": 3\n                      },\n                      \"text\": {\n                        \"type\": \"string\"\n                      },\n                      \"replyTo\": {\n                        \"anyOf\": [\n                          {\n                            \"type\": \"string\",\n                            \"pattern\": \"^[A-Za-z0-9_-]{1,80}$\"\n                          },\n                          {\n                            \"type\": \"null\"\n                          }\n                        ]\n                      },\n                      \"accusation\": {\n                        \"anyOf\": [\n                          {\n                            \"type\": \"integer\",\n                            \"minimum\": 0,\n                            \"maximum\": 8\n                          },\n                          {\n                            \"type\": \"null\"\n                          }\n                        ]\n                      },\n                      \"reason\": {\n                        \"type\": \"string\"\n                      }\n                    },\n                    \"required\": [\n                      \"kind\",\n                      \"wantsToSpeak\",\n                      \"urgency\",\n                      \"text\",\n                      \"replyTo\",\n                      \"accusation\",\n                      \"reason\"\n                    ],\n                    \"additionalProperties\": false\n                  },\n                  \"rank\": {\n                    \"anyOf\": [\n                      {\n                        \"type\": \"integer\",\n                        \"minimum\": 0,\n                        \"maximum\": 8\n                      },\n                      {\n                        \"type\": \"null\"\n                      }\n                    ]\n                  },\n                  \"selected\": {\n                    \"type\": \"boolean\"\n                  }\n                },\n                \"required\": [\n                  \"kind\",\n                  \"slot\",\n                  \"window\",\n                  \"bid\",\n                  \"rank\",\n                  \"selected\"\n                ],\n                \"additionalProperties\": false\n              },\n              {\n                \"type\": \"object\",\n                \"properties\": {\n                  \"kind\": {\n                    \"type\": \"string\",\n                    \"const\": \"ballots\"\n                  },\n                  \"ballots\": {\n                    \"maxItems\": 9,\n                    \"type\": \"array\",\n                    \"items\": {\n                      \"type\": \"object\",\n                      \"properties\": {\n                        \"slot\": {\n                          \"type\": \"integer\",\n                          \"minimum\": 0,\n                          \"maximum\": 8\n                        },\n                        \"target\": {\n                          \"anyOf\": [\n                            {\n                              \"type\": \"integer\",\n                              \"minimum\": 0,\n                              \"maximum\": 8\n                            },\n                            {\n                              \"type\": \"null\"\n                            }\n                          ]\n                        }\n                      },\n                      \"required\": [\n                        \"slot\",\n                        \"target\"\n                      ],\n                      \"additionalProperties\": false\n                    }\n                  },\n                  \"eliminated\": {\n                    \"anyOf\": [\n                      {\n                        \"type\": \"integer\",\n                        \"minimum\": 0,\n                        \"maximum\": 8\n                      },\n                      {\n                        \"type\": \"null\"\n                      }\n                    ]\n                  },\n                  \"resolution\": {\n                    \"type\": \"string\",\n                    \"enum\": [\n                      \"majority\",\n                      \"no_majority\",\n                      \"tie\",\n                      \"all_abstain\"\n                    ]\n                  }\n                },\n                \"required\": [\n                  \"kind\",\n                  \"ballots\",\n                  \"eliminated\",\n                  \"resolution\"\n                ],\n                \"additionalProperties\": false\n              },\n              {\n                \"type\": \"object\",\n                \"properties\": {\n                  \"kind\": {\n                    \"type\": \"string\",\n                    \"const\": \"night_choices\"\n                  },\n                  \"slot\": {\n                    \"type\": \"integer\",\n                    \"minimum\": 0,\n                    \"maximum\": 8\n                  },\n                  \"actions\": {\n                    \"maxItems\": 2,\n                    \"type\": \"array\",\n                    \"items\": {\n                      \"type\": \"object\",\n                      \"properties\": {\n                        \"ability\": {\n                          \"type\": \"string\",\n                          \"enum\": [\n                            \"kill\",\n                            \"block\",\n                            \"inspect\",\n                            \"protect\",\n                            \"jail\",\n                            \"check\",\n                            \"inform\",\n                            \"track\"\n                          ]\n                        },\n                        \"target\": {\n                          \"anyOf\": [\n                            {\n                              \"type\": \"integer\",\n                              \"minimum\": 0,\n                              \"maximum\": 8\n                            },\n                            {\n                              \"type\": \"null\"\n                            }\n                          ]\n                        },\n                        \"killer\": {\n                          \"type\": \"integer\",\n                          \"minimum\": 0,\n                          \"maximum\": 8\n                        }\n                      },\n                      \"required\": [\n                        \"ability\",\n                        \"target\"\n                      ],\n                      \"additionalProperties\": false\n                    }\n                  }\n                },\n                \"required\": [\n                  \"kind\",\n                  \"slot\",\n                  \"actions\"\n                ],\n                \"additionalProperties\": false\n              },\n              {\n                \"type\": \"object\",\n                \"properties\": {\n                  \"kind\": {\n                    \"type\": \"string\",\n                    \"const\": \"night_outcome\"\n                  },\n                  \"ability\": {\n                    \"type\": \"string\",\n                    \"enum\": [\n                      \"kill\",\n                      \"block\",\n                      \"inspect\",\n                      \"protect\",\n                      \"jail\",\n                      \"check\",\n                      \"inform\",\n                      \"track\"\n                    ]\n                  },\n                  \"actor\": {\n                    \"anyOf\": [\n                      {\n                        \"type\": \"integer\",\n                        \"minimum\": 0,\n                        \"maximum\": 8\n                      },\n                      {\n                        \"type\": \"null\"\n                      }\n                    ]\n                  },\n                  \"target\": {\n                    \"anyOf\": [\n                      {\n                        \"type\": \"integer\",\n                        \"minimum\": 0,\n                        \"maximum\": 8\n                      },\n                      {\n                        \"type\": \"null\"\n                      }\n                    ]\n                  },\n                  \"outcome\": {\n                    \"type\": \"string\",\n                    \"enum\": [\n                      \"applied\",\n                      \"blocked\",\n                      \"protected\",\n                      \"passed\",\n                      \"actor_dead\"\n                    ]\n                  }\n                },\n                \"required\": [\n                  \"kind\",\n                  \"ability\",\n                  \"actor\",\n                  \"target\",\n                  \"outcome\"\n                ],\n                \"additionalProperties\": false\n              },\n              {\n                \"type\": \"object\",\n                \"properties\": {\n                  \"kind\": {\n                    \"type\": \"string\",\n                    \"const\": \"private_result\"\n                  },\n                  \"slot\": {\n                    \"type\": \"integer\",\n                    \"minimum\": 0,\n                    \"maximum\": 8\n                  },\n                  \"result\": {\n                    \"oneOf\": [\n                      {\n                        \"type\": \"object\",\n                        \"properties\": {\n                          \"day\": {\n                            \"type\": \"integer\",\n                            \"minimum\": 0,\n                            \"maximum\": 32\n                          },\n                          \"ability\": {\n                            \"type\": \"string\",\n                            \"const\": \"inspect\"\n                          },\n                          \"target\": {\n                            \"type\": \"integer\",\n                            \"minimum\": 0,\n                            \"maximum\": 8\n                          },\n                          \"result\": {\n                            \"type\": \"string\",\n                            \"enum\": [\n                              \"wolf\",\n                              \"not_wolf\",\n                              \"no_result\"\n                            ]\n                          }\n                        },\n                        \"required\": [\n                          \"day\",\n                          \"ability\",\n                          \"target\",\n                          \"result\"\n                        ],\n                        \"additionalProperties\": false\n                      },\n                      {\n                        \"type\": \"object\",\n                        \"properties\": {\n                          \"day\": {\n                            \"type\": \"integer\",\n                            \"minimum\": 0,\n                            \"maximum\": 32\n                          },\n                          \"ability\": {\n                            \"type\": \"string\",\n                            \"const\": \"check\"\n                          },\n                          \"target\": {\n                            \"type\": \"integer\",\n                            \"minimum\": 0,\n                            \"maximum\": 8\n                          },\n                          \"result\": {\n                            \"anyOf\": [\n                              {\n                                \"type\": \"string\",\n                                \"enum\": [\n                                  \"wolf\",\n                                  \"alchemist\",\n                                  \"track_reader\",\n                                  \"seer\",\n                                  \"guard\",\n                                  \"chef\",\n                                  \"dairy_maid\",\n                                  \"priest\",\n                                  \"noble\",\n                                  \"sheep\",\n                                  \"jester\"\n                                ]\n                              },\n                              {\n                                \"type\": \"string\",\n                                \"const\": \"vanilla\"\n                              },\n                              {\n                                \"type\": \"string\",\n                                \"const\": \"no_result\"\n                              }\n                            ]\n                          }\n                        },\n                        \"required\": [\n                          \"day\",\n                          \"ability\",\n                          \"target\",\n                          \"result\"\n                        ],\n                        \"additionalProperties\": false\n                      },\n                      {\n                        \"type\": \"object\",\n                        \"properties\": {\n                          \"day\": {\n                            \"type\": \"integer\",\n                            \"minimum\": 0,\n                            \"maximum\": 32\n                          },\n                          \"ability\": {\n                            \"type\": \"string\",\n                            \"const\": \"inform\"\n                          },\n                          \"target\": {\n                            \"type\": \"integer\",\n                            \"minimum\": 0,\n                            \"maximum\": 8\n                          },\n                          \"result\": {\n                            \"type\": \"string\",\n                            \"const\": \"town\"\n                          }\n                        },\n                        \"required\": [\n                          \"day\",\n                          \"ability\",\n                          \"target\",\n                          \"result\"\n                        ],\n                        \"additionalProperties\": false\n                      },\n                      {\n                        \"type\": \"object\",\n                        \"properties\": {\n                          \"day\": {\n                            \"type\": \"integer\",\n                            \"minimum\": 0,\n                            \"maximum\": 32\n                          },\n                          \"ability\": {\n                            \"type\": \"string\",\n                            \"const\": \"track\"\n                          },\n                          \"target\": {\n                            \"type\": \"integer\",\n                            \"minimum\": 0,\n                            \"maximum\": 8\n                          },\n                          \"result\": {\n                            \"anyOf\": [\n                              {\n                                \"maxItems\": 9,\n                                \"type\": \"array\",\n                                \"items\": {\n                                  \"type\": \"integer\",\n                                  \"minimum\": 0,\n                                  \"maximum\": 8\n                                }\n                              },\n                              {\n                                \"type\": \"string\",\n                                \"const\": \"no_result\"\n                              }\n                            ]\n                          }\n                        },\n                        \"required\": [\n                          \"day\",\n                          \"ability\",\n                          \"target\",\n                          \"result\"\n                        ],\n                        \"additionalProperties\": false\n                      }\n                    ]\n                  }\n                },\n                \"required\": [\n                  \"kind\",\n                  \"slot\",\n                  \"result\"\n                ],\n                \"additionalProperties\": false\n              },\n              {\n                \"type\": \"object\",\n                \"properties\": {\n                  \"kind\": {\n                    \"type\": \"string\",\n                    \"const\": \"elimination\"\n                  },\n                  \"slot\": {\n                    \"type\": \"integer\",\n                    \"minimum\": 0,\n                    \"maximum\": 8\n                  },\n                  \"cause\": {\n                    \"type\": \"string\",\n                    \"enum\": [\n                      \"vote\",\n                      \"wolf\"\n                    ]\n                  }\n                },\n                \"required\": [\n                  \"kind\",\n                  \"slot\",\n                  \"cause\"\n                ],\n                \"additionalProperties\": false\n              },\n              {\n                \"type\": \"object\",\n                \"properties\": {\n                  \"kind\": {\n                    \"type\": \"string\",\n                    \"const\": \"night_resolved\"\n                  },\n                  \"eliminated\": {\n                    \"maxItems\": 9,\n                    \"type\": \"array\",\n                    \"items\": {\n                      \"type\": \"integer\",\n                      \"minimum\": 0,\n                      \"maximum\": 8\n                    }\n                  }\n                },\n                \"required\": [\n                  \"kind\",\n                  \"eliminated\"\n                ],\n                \"additionalProperties\": false\n              },\n              {\n                \"type\": \"object\",\n                \"properties\": {\n                  \"kind\": {\n                    \"type\": \"string\",\n                    \"const\": \"failure\"\n                  },\n                  \"slot\": {\n                    \"type\": \"integer\",\n                    \"minimum\": 0,\n                    \"maximum\": 8\n                  },\n                  \"requestKind\": {\n                    \"type\": \"string\",\n                    \"enum\": [\n                      \"bid\",\n                      \"wolf_chat\",\n                      \"noble_chat\",\n                      \"vote\",\n                      \"night\"\n                    ]\n                  },\n                  \"code\": {\n                    \"type\": \"string\",\n                    \"enum\": [\n                      \"timeout\",\n                      \"disconnected\",\n                      \"malformed\",\n                      \"illegal\",\n                      \"refused\",\n                      \"provider_error\",\n                      \"throttled\",\n                      \"version\"\n                    ]\n                  },\n                  \"source\": {\n                    \"type\": \"string\",\n                    \"enum\": [\n                      \"game\",\n                      \"policy_report\"\n                    ]\n                  },\n                  \"disposition\": {\n                    \"type\": \"string\",\n                    \"enum\": [\n                      \"retry\",\n                      \"fallback\"\n                    ]\n                  },\n                  \"attempt\": {\n                    \"type\": \"integer\",\n                    \"minimum\": 0,\n                    \"maximum\": 2\n                  }\n                },\n                \"required\": [\n                  \"kind\",\n                  \"slot\",\n                  \"requestKind\",\n                  \"code\",\n                  \"source\",\n                  \"disposition\",\n                  \"attempt\"\n                ],\n                \"additionalProperties\": false\n              },\n              {\n                \"type\": \"object\",\n                \"properties\": {\n                  \"kind\": {\n                    \"type\": \"string\",\n                    \"const\": \"finished\"\n                  },\n                  \"result\": {\n                    \"type\": \"object\",\n                    \"properties\": {\n                      \"schema\": {\n                        \"type\": \"string\",\n                        \"const\": \"wcw.results/1\"\n                      },\n                      \"rulesVersion\": {\n                        \"type\": \"string\",\n                        \"pattern\": \"^[\\\\x21-\\\\x7e]{1,80}$\"\n                      },\n                      \"outcome\": {\n                        \"type\": \"string\",\n                        \"enum\": [\n                          \"town_win\",\n                          \"wolf_win\",\n                          \"jester_win\",\n                          \"draw\"\n                        ]\n                      },\n                      \"reason\": {\n                        \"type\": \"string\",\n                        \"enum\": [\n                          \"wolves_eliminated\",\n                          \"wolf_parity\",\n                          \"jester_voted_out\",\n                          \"day_cap\"\n                        ]\n                      },\n                      \"daysCompleted\": {\n                        \"type\": \"integer\",\n                        \"minimum\": 0,\n                        \"maximum\": 32\n                      },\n                      \"scores\": {\n                        \"minItems\": 9,\n                        \"maxItems\": 9,\n                        \"type\": \"array\",\n                        \"items\": {\n                          \"type\": \"integer\",\n                          \"minimum\": 0,\n                          \"maximum\": 1\n                        }\n                      }\n                    },\n                    \"required\": [\n                      \"schema\",\n                      \"rulesVersion\",\n                      \"outcome\",\n                      \"reason\",\n                      \"daysCompleted\",\n                      \"scores\"\n                    ],\n                    \"additionalProperties\": false\n                  }\n                },\n                \"required\": [\n                  \"kind\",\n                  \"result\"\n                ],\n                \"additionalProperties\": false\n              },\n              {\n                \"type\": \"object\",\n                \"properties\": {\n                  \"kind\": {\n                    \"type\": \"string\",\n                    \"const\": \"roles\"\n                  },\n                  \"roles\": {\n                    \"minItems\": 9,\n                    \"maxItems\": 9,\n                    \"type\": \"array\",\n                    \"items\": {\n                      \"type\": \"object\",\n                      \"properties\": {\n                        \"slot\": {\n                          \"type\": \"integer\",\n                          \"minimum\": 0,\n                          \"maximum\": 8\n                        },\n                        \"role\": {\n                          \"type\": \"string\",\n                          \"enum\": [\n                            \"wolf\",\n                            \"alchemist\",\n                            \"track_reader\",\n                            \"seer\",\n                            \"guard\",\n                            \"chef\",\n                            \"dairy_maid\",\n                            \"priest\",\n                            \"noble\",\n                            \"sheep\",\n                            \"jester\"\n                          ]\n                        },\n                        \"faction\": {\n                          \"type\": \"string\",\n                          \"enum\": [\n                            \"wolf\",\n                            \"town\",\n                            \"solo\"\n                          ]\n                        }\n                      },\n                      \"required\": [\n                        \"slot\",\n                        \"role\",\n                        \"faction\"\n                      ],\n                      \"additionalProperties\": false\n                    }\n                  }\n                },\n                \"required\": [\n                  \"kind\",\n                  \"roles\"\n                ],\n                \"additionalProperties\": false\n              },\n              {\n                \"type\": \"object\",\n                \"properties\": {\n                  \"kind\": {\n                    \"type\": \"string\",\n                    \"const\": \"seed\"\n                  },\n                  \"seed\": {\n                    \"type\": \"string\",\n                    \"pattern\": \"^[0-9a-f]{32}$\"\n                  },\n                  \"randomVersion\": {\n                    \"type\": \"string\",\n                    \"const\": \"sha256-counter/1\"\n                  }\n                },\n                \"required\": [\n                  \"kind\",\n                  \"seed\",\n                  \"randomVersion\"\n                ],\n                \"additionalProperties\": false\n              }\n            ]\n          }\n        },\n        \"required\": [\n          \"schema\",\n          \"id\",\n          \"cursor\",\n          \"day\",\n          \"phase\",\n          \"reveal\",\n          \"payload\"\n        ],\n        \"additionalProperties\": false\n      }\n    },\n    \"transcriptTruncated\": {\n      \"type\": \"boolean\"\n    },\n    \"request\": {\n      \"oneOf\": [\n        {\n          \"type\": \"object\",\n          \"properties\": {\n            \"kind\": {\n              \"type\": \"string\",\n              \"const\": \"bid\"\n            },\n            \"window\": {\n              \"type\": \"integer\",\n              \"minimum\": 0,\n              \"maximum\": 17\n            },\n            \"maxCharacters\": {\n              \"type\": \"number\",\n              \"const\": 480\n            },\n            \"host\": {\n              \"type\": \"object\",\n              \"properties\": {\n                \"reason\": {\n                  \"type\": \"string\",\n                  \"enum\": [\n                    \"human_reply\",\n                    \"open_discussion\"\n                  ]\n                },\n                \"replyTo\": {\n                  \"anyOf\": [\n                    {\n                      \"type\": \"string\",\n                      \"pattern\": \"^[A-Za-z0-9_-]{1,80}$\"\n                    },\n                    {\n                      \"type\": \"null\"\n                    }\n                  ]\n                },\n                \"prompt\": {\n                  \"type\": \"string\",\n                  \"maxLength\": 240\n                }\n              },\n              \"required\": [\n                \"reason\",\n                \"replyTo\"\n              ],\n              \"additionalProperties\": false\n            }\n          },\n          \"required\": [\n            \"kind\",\n            \"window\",\n            \"maxCharacters\"\n          ],\n          \"additionalProperties\": false\n        },\n        {\n          \"type\": \"object\",\n          \"properties\": {\n            \"kind\": {\n              \"type\": \"string\",\n              \"const\": \"wolf_chat\"\n            },\n            \"turn\": {\n              \"type\": \"integer\",\n              \"minimum\": 0,\n              \"maximum\": 17\n            },\n            \"maxCharacters\": {\n              \"type\": \"number\",\n              \"const\": 480\n            }\n          },\n          \"required\": [\n            \"kind\",\n            \"turn\",\n            \"maxCharacters\"\n          ],\n          \"additionalProperties\": false\n        },\n        {\n          \"type\": \"object\",\n          \"properties\": {\n            \"kind\": {\n              \"type\": \"string\",\n              \"const\": \"noble_chat\"\n            },\n            \"turn\": {\n              \"type\": \"integer\",\n              \"minimum\": 0,\n              \"maximum\": 17\n            },\n            \"maxCharacters\": {\n              \"type\": \"number\",\n              \"const\": 480\n            }\n          },\n          \"required\": [\n            \"kind\",\n            \"turn\",\n            \"maxCharacters\"\n          ],\n          \"additionalProperties\": false\n        },\n        {\n          \"type\": \"object\",\n          \"properties\": {\n            \"kind\": {\n              \"type\": \"string\",\n              \"const\": \"vote\"\n            },\n            \"targets\": {\n              \"maxItems\": 9,\n              \"type\": \"array\",\n              \"items\": {\n                \"type\": \"integer\",\n                \"minimum\": 0,\n                \"maximum\": 8\n              }\n            },\n            \"allowPass\": {\n              \"type\": \"boolean\",\n              \"const\": true\n            }\n          },\n          \"required\": [\n            \"kind\",\n            \"targets\",\n            \"allowPass\"\n          ],\n          \"additionalProperties\": false\n        },\n        {\n          \"type\": \"object\",\n          \"properties\": {\n            \"kind\": {\n              \"type\": \"string\",\n              \"const\": \"night\"\n            },\n            \"choices\": {\n              \"maxItems\": 2,\n              \"type\": \"array\",\n              \"items\": {\n                \"type\": \"object\",\n                \"properties\": {\n                  \"ability\": {\n                    \"type\": \"string\",\n                    \"enum\": [\n                      \"kill\",\n                      \"block\",\n                      \"inspect\",\n                      \"protect\",\n                      \"jail\",\n                      \"check\",\n                      \"inform\",\n                      \"track\"\n                    ]\n                  },\n                  \"targets\": {\n                    \"maxItems\": 9,\n                    \"type\": \"array\",\n                    \"items\": {\n                      \"type\": \"integer\",\n                      \"minimum\": 0,\n                      \"maximum\": 8\n                    }\n                  },\n                  \"allowPass\": {\n                    \"type\": \"boolean\",\n                    \"const\": true\n                  },\n                  \"actors\": {\n                    \"maxItems\": 3,\n                    \"type\": \"array\",\n                    \"items\": {\n                      \"type\": \"integer\",\n                      \"minimum\": 0,\n                      \"maximum\": 8\n                    }\n                  }\n                },\n                \"required\": [\n                  \"ability\",\n                  \"targets\",\n                  \"allowPass\"\n                ],\n                \"additionalProperties\": false\n              }\n            }\n          },\n          \"required\": [\n            \"kind\",\n            \"choices\"\n          ],\n          \"additionalProperties\": false\n        }\n      ]\n    }\n  },\n  \"required\": [\n    \"protocol\",\n    \"type\",\n    \"episodeId\",\n    \"observationId\",\n    \"requestId\",\n    \"attempt\",\n    \"remainingMs\",\n    \"phase\",\n    \"day\",\n    \"self\",\n    \"roster\",\n    \"teammates\",\n    \"privateResults\",\n    \"votes\",\n    \"transcript\",\n    \"transcriptTruncated\",\n    \"request\"\n  ],\n  \"additionalProperties\": false\n}\n```\n\n## Action\n\n```json\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"type\": \"object\",\n  \"properties\": {\n    \"protocol\": {\n      \"type\": \"string\",\n      \"const\": \"wcw.player/1\"\n    },\n    \"type\": {\n      \"type\": \"string\",\n      \"const\": \"action\"\n    },\n    \"episodeId\": {\n      \"type\": \"string\",\n      \"pattern\": \"^[A-Za-z0-9_-]{1,80}$\"\n    },\n    \"requestId\": {\n      \"type\": \"string\",\n      \"pattern\": \"^[A-Za-z0-9_-]{1,80}$\"\n    },\n    \"observationId\": {\n      \"type\": \"string\",\n      \"pattern\": \"^[A-Za-z0-9_-]{1,80}$\"\n    },\n    \"body\": {\n      \"oneOf\": [\n        {\n          \"type\": \"object\",\n          \"properties\": {\n            \"kind\": {\n              \"type\": \"string\",\n              \"const\": \"bid\"\n            },\n            \"wantsToSpeak\": {\n              \"type\": \"boolean\"\n            },\n            \"urgency\": {\n              \"type\": \"integer\",\n              \"minimum\": 0,\n              \"maximum\": 3\n            },\n            \"text\": {\n              \"type\": \"string\"\n            },\n            \"replyTo\": {\n              \"anyOf\": [\n                {\n                  \"type\": \"string\",\n                  \"pattern\": \"^[A-Za-z0-9_-]{1,80}$\"\n                },\n                {\n                  \"type\": \"null\"\n                }\n              ]\n            },\n            \"accusation\": {\n              \"anyOf\": [\n                {\n                  \"type\": \"integer\",\n                  \"minimum\": 0,\n                  \"maximum\": 8\n                },\n                {\n                  \"type\": \"null\"\n                }\n              ]\n            },\n            \"reason\": {\n              \"type\": \"string\"\n            }\n          },\n          \"required\": [\n            \"kind\",\n            \"wantsToSpeak\",\n            \"urgency\",\n            \"text\",\n            \"replyTo\",\n            \"accusation\",\n            \"reason\"\n          ],\n          \"additionalProperties\": false\n        },\n        {\n          \"type\": \"object\",\n          \"properties\": {\n            \"kind\": {\n              \"type\": \"string\",\n              \"const\": \"wolf_chat\"\n            },\n            \"text\": {\n              \"type\": \"string\"\n            },\n            \"summary\": {\n              \"type\": \"string\"\n            }\n          },\n          \"required\": [\n            \"kind\",\n            \"text\",\n            \"summary\"\n          ],\n          \"additionalProperties\": false\n        },\n        {\n          \"type\": \"object\",\n          \"properties\": {\n            \"kind\": {\n              \"type\": \"string\",\n              \"const\": \"noble_chat\"\n            },\n            \"text\": {\n              \"type\": \"string\"\n            },\n            \"summary\": {\n              \"type\": \"string\"\n            }\n          },\n          \"required\": [\n            \"kind\",\n            \"text\",\n            \"summary\"\n          ],\n          \"additionalProperties\": false\n        },\n        {\n          \"type\": \"object\",\n          \"properties\": {\n            \"kind\": {\n              \"type\": \"string\",\n              \"const\": \"vote\"\n            },\n            \"target\": {\n              \"anyOf\": [\n                {\n                  \"type\": \"integer\",\n                  \"minimum\": 0,\n                  \"maximum\": 8\n                },\n                {\n                  \"type\": \"null\"\n                }\n              ]\n            },\n            \"summary\": {\n              \"type\": \"string\"\n            }\n          },\n          \"required\": [\n            \"kind\",\n            \"target\",\n            \"summary\"\n          ],\n          \"additionalProperties\": false\n        },\n        {\n          \"type\": \"object\",\n          \"properties\": {\n            \"kind\": {\n              \"type\": \"string\",\n              \"const\": \"night\"\n            },\n            \"actions\": {\n              \"maxItems\": 2,\n              \"type\": \"array\",\n              \"items\": {\n                \"type\": \"object\",\n                \"properties\": {\n                  \"ability\": {\n                    \"type\": \"string\",\n                    \"enum\": [\n                      \"kill\",\n                      \"block\",\n                      \"inspect\",\n                      \"protect\",\n                      \"jail\",\n                      \"check\",\n                      \"inform\",\n                      \"track\"\n                    ]\n                  },\n                  \"target\": {\n                    \"anyOf\": [\n                      {\n                        \"type\": \"integer\",\n                        \"minimum\": 0,\n                        \"maximum\": 8\n                      },\n                      {\n                        \"type\": \"null\"\n                      }\n                    ]\n                  },\n                  \"killer\": {\n                    \"type\": \"integer\",\n                    \"minimum\": 0,\n                    \"maximum\": 8\n                  }\n                },\n                \"required\": [\n                  \"ability\",\n                  \"target\"\n                ],\n                \"additionalProperties\": false\n              }\n            },\n            \"summary\": {\n              \"type\": \"string\"\n            }\n          },\n          \"required\": [\n            \"kind\",\n            \"actions\",\n            \"summary\"\n          ],\n          \"additionalProperties\": false\n        }\n      ]\n    },\n    \"report\": {\n      \"anyOf\": [\n        {\n          \"type\": \"object\",\n          \"properties\": {\n            \"code\": {\n              \"type\": \"string\",\n              \"enum\": [\n                \"refused\",\n                \"provider_error\",\n                \"throttled\"\n              ]\n            },\n            \"attempts\": {\n              \"anyOf\": [\n                {\n                  \"type\": \"number\",\n                  \"const\": 0\n                },\n                {\n                  \"type\": \"number\",\n                  \"const\": 1\n                },\n                {\n                  \"type\": \"number\",\n                  \"const\": 2\n                }\n              ]\n            }\n          },\n          \"required\": [\n            \"code\",\n            \"attempts\"\n          ],\n          \"additionalProperties\": false\n        },\n        {\n          \"type\": \"null\"\n        }\n      ]\n    }\n  },\n  \"required\": [\n    \"protocol\",\n    \"type\",\n    \"episodeId\",\n    \"requestId\",\n    \"observationId\",\n    \"body\",\n    \"report\"\n  ],\n  \"additionalProperties\": false\n}\n```\n\n## Control\n\n```json\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"oneOf\": [\n    {\n      \"type\": \"object\",\n      \"properties\": {\n        \"protocol\": {\n          \"type\": \"string\",\n          \"const\": \"wcw.player/1\"\n        },\n        \"type\": {\n          \"type\": \"string\",\n          \"const\": \"ready\"\n        },\n        \"episodeId\": {\n          \"type\": \"string\",\n          \"pattern\": \"^[A-Za-z0-9_-]{1,80}$\"\n        },\n        \"slot\": {\n          \"type\": \"integer\",\n          \"minimum\": 0,\n          \"maximum\": 8\n        }\n      },\n      \"required\": [\n        \"protocol\",\n        \"type\",\n        \"episodeId\",\n        \"slot\"\n      ],\n      \"additionalProperties\": false\n    },\n    {\n      \"type\": \"object\",\n      \"properties\": {\n        \"protocol\": {\n          \"type\": \"string\",\n          \"const\": \"wcw.player/1\"\n        },\n        \"type\": {\n          \"type\": \"string\",\n          \"const\": \"receipt\"\n        },\n        \"requestId\": {\n          \"type\": \"string\",\n          \"pattern\": \"^[A-Za-z0-9_-]{1,80}$\"\n        },\n        \"status\": {\n          \"type\": \"string\",\n          \"enum\": [\n            \"accepted\",\n            \"duplicate\",\n            \"rejected\",\n            \"expired\"\n          ]\n        },\n        \"code\": {\n          \"anyOf\": [\n            {\n              \"type\": \"string\",\n              \"enum\": [\n                \"timeout\",\n                \"disconnected\",\n                \"malformed\",\n                \"illegal\",\n                \"refused\",\n                \"provider_error\",\n                \"throttled\",\n                \"version\"\n              ]\n            },\n            {\n              \"type\": \"null\"\n            }\n          ]\n        },\n        \"retry\": {\n          \"type\": \"boolean\"\n        }\n      },\n      \"required\": [\n        \"protocol\",\n        \"type\",\n        \"requestId\",\n        \"status\",\n        \"code\",\n        \"retry\"\n      ],\n      \"additionalProperties\": false\n    },\n    {\n      \"type\": \"object\",\n      \"properties\": {\n        \"protocol\": {\n          \"type\": \"string\",\n          \"const\": \"wcw.player/1\"\n        },\n        \"type\": {\n          \"type\": \"string\",\n          \"const\": \"end\"\n        },\n        \"episodeId\": {\n          \"type\": \"string\",\n          \"pattern\": \"^[A-Za-z0-9_-]{1,80}$\"\n        },\n        \"result\": {\n          \"type\": \"object\",\n          \"properties\": {\n            \"schema\": {\n              \"type\": \"string\",\n              \"const\": \"wcw.results/1\"\n            },\n            \"rulesVersion\": {\n              \"type\": \"string\",\n              \"pattern\": \"^[\\\\x21-\\\\x7e]{1,80}$\"\n            },\n            \"outcome\": {\n              \"type\": \"string\",\n              \"enum\": [\n                \"town_win\",\n                \"wolf_win\",\n                \"jester_win\",\n                \"draw\"\n              ]\n            },\n            \"reason\": {\n              \"type\": \"string\",\n              \"enum\": [\n                \"wolves_eliminated\",\n                \"wolf_parity\",\n                \"jester_voted_out\",\n                \"day_cap\"\n              ]\n            },\n            \"daysCompleted\": {\n              \"type\": \"integer\",\n              \"minimum\": 0,\n              \"maximum\": 32\n            },\n            \"scores\": {\n              \"minItems\": 9,\n              \"maxItems\": 9,\n              \"type\": \"array\",\n              \"items\": {\n                \"type\": \"integer\",\n                \"minimum\": 0,\n                \"maximum\": 1\n              }\n            }\n          },\n          \"required\": [\n            \"schema\",\n            \"rulesVersion\",\n            \"outcome\",\n            \"reason\",\n            \"daysCompleted\",\n            \"scores\"\n          ],\n          \"additionalProperties\": false\n        }\n      },\n      \"required\": [\n        \"protocol\",\n        \"type\",\n        \"episodeId\",\n        \"result\"\n      ],\n      \"additionalProperties\": false\n    }\n  ]\n}\n```"
+          }
+        },
+        {
+          "id": "discord",
+          "title": "Play Who Cried Wolf? on Discord",
+          "content": {
+            "type": "text",
+            "value": "Play the original social-deduction party game with friends inside a Discord voice channel. Visit [Who Cried Wolf?](https://whocriedwolf.gg/) to launch the activity, browse roles, and find the support community. The Coworld adaptation uses the rules in this package’s README."
+          }
+        }
+      ]
+    },
+    "replay_viewer": {
+      "bundle": "viewer"
+    }
+  },
+  "player": [
+    {
+      "id": "scripted",
+      "name": "Scripted baseline",
+      "type": "player",
+      "image": "{{PLAYER_IMAGE}}",
+      "run": [
+        "node",
+        "build/player.mjs"
+      ],
+      "description": "Deterministic no-model policy using only offered observations."
+    },
+    {
+      "id": "llm",
+      "name": "Configurable LLM baseline",
+      "type": "player",
+      "image": "{{PLAYER_IMAGE}}",
+      "run": [
+        "node",
+        "build/llm-player.mjs"
+      ],
+      "description": "One-seat OpenRouter or Bedrock client. Detects the hosted Bedrock endpoint and reads BEDROCK_MODEL; WCW_LLM_PROVIDER can select a backend explicitly. OpenRouter uses WCW_MODEL and a runtime OPENROUTER_API_KEY. WCW_PLAYER_PROMPT sets personality. Scripted operation without OpenRouter credentials; bounded legal fallbacks on provider failure."
+    }
+  ],
+  "variants": [
+    {
+      "id": "standard",
+      "name": "NewD3 · Nine policy players",
+      "description": "Random NewD3 setup, fresh seed, and the same paced discussion and night coordination as human play.",
+      "game_config": {
+        "mode": "bots",
+        "players": [
+          {
+            "name": "Player 1"
+          },
+          {
+            "name": "Player 2"
+          },
+          {
+            "name": "Player 3"
+          },
+          {
+            "name": "Player 4"
+          },
+          {
+            "name": "Player 5"
+          },
+          {
+            "name": "Player 6"
+          },
+          {
+            "name": "Player 7"
+          },
+          {
+            "name": "Player 8"
+          },
+          {
+            "name": "Player 9"
+          }
+        ],
+        "setup": "random",
+        "maxDays": 8,
+        "player_connect_timeout_seconds": 30
+      }
+    },
+    {
+      "id": "human",
+      "name": "NewD3 · One human + eight policies",
+      "description": "Seat 0 is the browser player; eight seats are policies. Locally verified; hosted human seating remains to be verified.",
+      "game_config": {
+        "mode": "human",
+        "humanSlot": 0,
+        "players": [
+          {
+            "name": "Player 1"
+          },
+          {
+            "name": "Player 2"
+          },
+          {
+            "name": "Player 3"
+          },
+          {
+            "name": "Player 4"
+          },
+          {
+            "name": "Player 5"
+          },
+          {
+            "name": "Player 6"
+          },
+          {
+            "name": "Player 7"
+          },
+          {
+            "name": "Player 8"
+          },
+          {
+            "name": "Player 9"
+          }
+        ],
+        "setup": "random",
+        "maxDays": 8,
+        "player_connect_timeout_seconds": 30
+      }
+    },
+    {
+      "id": "reproducible",
+      "name": "NewD3 A2 · Reproducible fixture",
+      "description": "Fixed A2 setup and seed for comparisons; model output remains nondeterministic.",
+      "game_config": {
+        "mode": "bots",
+        "players": [
+          {
+            "name": "Player 1"
+          },
+          {
+            "name": "Player 2"
+          },
+          {
+            "name": "Player 3"
+          },
+          {
+            "name": "Player 4"
+          },
+          {
+            "name": "Player 5"
+          },
+          {
+            "name": "Player 6"
+          },
+          {
+            "name": "Player 7"
+          },
+          {
+            "name": "Player 8"
+          },
+          {
+            "name": "Player 9"
+          }
+        ],
+        "setup": "A2",
+        "seed": "000102030405060708090a0b0c0d0e0f",
+        "maxDays": 8,
+        "player_connect_timeout_seconds": 30
+      }
+    },
+    {
+      "id": "smoke",
+      "name": "Scripted protocol check",
+      "description": "Fast seeded protocol and completion check. Use scripted policies; not an LLM timing benchmark.",
+      "game_config": {
+        "mode": "fast",
+        "setup": "A1",
+        "players": [
+          {
+            "name": "Player 1"
+          },
+          {
+            "name": "Player 2"
+          },
+          {
+            "name": "Player 3"
+          },
+          {
+            "name": "Player 4"
+          },
+          {
+            "name": "Player 5"
+          },
+          {
+            "name": "Player 6"
+          },
+          {
+            "name": "Player 7"
+          },
+          {
+            "name": "Player 8"
+          },
+          {
+            "name": "Player 9"
+          }
+        ],
+        "seed": "000102030405060708090a0b0c0d0e0f",
+        "maxDays": 8,
+        "windowMs": 100,
+        "player_connect_timeout_seconds": 30
+      }
+    }
+  ],
+  "certification": {
+    "game_config": {
+      "mode": "fast",
+      "setup": "A1",
+      "players": [
+        {
+          "name": "Player 1"
+        },
+        {
+          "name": "Player 2"
+        },
+        {
+          "name": "Player 3"
+        },
+        {
+          "name": "Player 4"
+        },
+        {
+          "name": "Player 5"
+        },
+        {
+          "name": "Player 6"
+        },
+        {
+          "name": "Player 7"
+        },
+        {
+          "name": "Player 8"
+        },
+        {
+          "name": "Player 9"
+        }
+      ],
+      "seed": "000102030405060708090a0b0c0d0e0f",
+      "maxDays": 8,
+      "windowMs": 100,
+      "player_connect_timeout_seconds": 30
+    },
+    "players": [
+      {
+        "player_id": "llm"
+      },
+      {
+        "player_id": "scripted"
+      },
+      {
+        "player_id": "scripted"
+      },
+      {
+        "player_id": "scripted"
+      },
+      {
+        "player_id": "scripted"
+      },
+      {
+        "player_id": "scripted"
+      },
+      {
+        "player_id": "scripted"
+      },
+      {
+        "player_id": "scripted"
+      },
+      {
+        "player_id": "scripted"
+      }
+    ]
+  }
+}

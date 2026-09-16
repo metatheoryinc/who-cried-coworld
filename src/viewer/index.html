@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en" data-proto="wcw-spectator">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Who Cried Wolf · Replay</title>
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+<div class="world-layer" aria-hidden="true"></div>
+
+<header class="masthead">
+  <div class="brand">
+    <h1 id="ep-title"><img class="brand-art" src="assets/wcw/title_logo.png" alt="Who Cried Wolf"></h1>
+    <span class="sub" id="ep-sub">—</span>
+  </div>
+
+  <span class="status" id="status"><span class="dot"></span><span id="status-text">—</span></span>
+
+  <div class="control">
+    <span class="label" id="reveal-label">Reveal</span>
+    <span class="seg" data-kind="reveal" role="group" aria-labelledby="reveal-label">
+      <button type="button" value="aired">As it aired</button>
+      <button type="button" value="omniscient">Everything</button>
+    </span>
+    <span class="hint" id="reveal-hint"></span>
+  </div>
+</header>
+
+<div class="stage">
+  <aside class="rail" aria-label="The fold">
+    <div class="head">
+      <h2>The fold</h2>
+      <span class="count" id="alive-count">—</span>
+    </div>
+    <ul class="seats" id="seats"></ul>
+  </aside>
+
+  <main class="floor" id="floor" aria-label="Episode floor" aria-live="polite" aria-relevant="additions"></main>
+</div>
+
+<footer class="transport" id="transport">
+  <button class="tbtn" id="play" type="button" aria-label="Play or pause">▶</button>
+  <button class="tbtn" id="prev" type="button" aria-label="Previous beat" title="Previous beat (←)">◀</button>
+  <button class="tbtn" id="next" type="button" aria-label="Next beat" title="Next beat (→)">▶|</button>
+  <div class="timeline">
+    <div class="segments" id="segments" aria-hidden="true"></div>
+    <label class="sr" for="scrub">Episode position</label>
+    <input type="range" id="scrub" min="1" value="1" step="1">
+  </div>
+  <span class="tlabel" id="tlabel">—</span>
+  <span class="tlabel" id="livebar" hidden>Live &middot; the timeline becomes scrubbable when the episode completes and its replay is published.</span>
+</footer>
+
+<script type="module" src="./viewer.js"></script>
+</body></html>

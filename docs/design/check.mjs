@@ -77,7 +77,7 @@ const VISUAL_HOOKS = [
   ['class="world-layer"', 'game-first world layer'],
   ['data-world=', 'phase-aware world state'],
   ['assets/wcw/title_logo.png', 'original title artwork'],
-  ['assets/wcw/player-card/base_playercard.png', 'original player-card artwork'],
+  ['assets/wcw/player-card/Player_sheep_base.png', 'original player avatar artwork'],
   ['ROLE_ART', 'original role artwork mapping'],
 ];
 for (const [needle, label] of VISUAL_HOOKS) {

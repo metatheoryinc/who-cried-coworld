@@ -1,0 +1,18 @@
+import { z } from 'zod';
+import { GameText, Id, Slot } from './primitives.js';
+export const Ability=z.enum(['kill','block','inspect','protect','jail','check','inform','track']);
+export type Ability=z.infer<typeof Ability>;
+export const Bid=z.object({
+ kind:z.literal('bid'),wantsToSpeak:z.boolean(),urgency:z.number().int().min(0).max(3),
+ text:GameText(480),replyTo:Id.nullable(),accusation:Slot.nullable(),reason:GameText(240),
+}).strict().refine(b=>b.wantsToSpeak?b.text.trim().length>0:b.text===''&&b.urgency===0&&b.replyTo===null&&b.accusation===null,'Invalid speaking bid');
+export type Bid=z.infer<typeof Bid>;
+export const NightChoice=z.object({ability:Ability,target:Slot.nullable(),killer:Slot.optional()}).strict();
+export const ActionBody=z.discriminatedUnion('kind',[
+ Bid,
+ z.object({kind:z.literal('wolf_chat'),text:GameText(480),summary:GameText(240)}).strict(),
+ z.object({kind:z.literal('noble_chat'),text:GameText(480),summary:GameText(240)}).strict(),
+ z.object({kind:z.literal('vote'),target:Slot.nullable(),summary:GameText(240)}).strict(),
+ z.object({kind:z.literal('night'),actions:z.array(NightChoice).max(2).refine(rows=>new Set(rows.map(r=>r.ability)).size===rows.length),summary:GameText(240)}).strict(),
+]);
+export type ActionBody=z.infer<typeof ActionBody>;

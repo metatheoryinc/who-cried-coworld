@@ -1,0 +1,31 @@
+{
+  "name": "who-cried-wolf-coworld",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.19.0 <25",
+    "npm": ">=11 <12"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "build": "node tools/build.mjs",
+    "episode:local": "npm run build && node tools/local-episode.mjs",
+    "episode:llm": "npm run build && node tools/llm-playtest.mjs",
+    "play:human": "npm run build && node tools/human-play.mjs"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "3.1134.0",
+    "@smithy/node-http-handler": "4.12.1",
+    "ws": "8.21.3",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.5",
+    "@types/ws": "8.18.1",
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2",
+    "vitest": "5.0.1"
+  }
+}

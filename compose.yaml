@@ -1,0 +1,13 @@
+services:
+  game:
+    image: wcw-game:local
+    platform: linux/amd64
+    build:
+      context: .
+      target: game
+  player:
+    image: wcw-player:local
+    platform: linux/amd64
+    build:
+      context: .
+      target: player

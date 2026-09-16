@@ -1,3 +1,10 @@
 .DS_Store
 .maicelium/
 .worktrees/
+.local/
+node_modules/
+build/
+dist/
+artifacts/
+test-results/
+tmp/

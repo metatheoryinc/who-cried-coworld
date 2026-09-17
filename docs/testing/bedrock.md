@@ -116,3 +116,39 @@ and runtime moderators now use InvokeModel. No public-AWS fallback is attempted
 when an injected sidecar fails. This update does not establish whether Softmax's
 browser-lobby launcher supplies the required environment; production verification
 is still needed with a newly uploaded policy.
+
+## Published InvokeModel verification (2026-09-17 UTC)
+
+Released game **0.1.4**, `cow_762aeedc-995f-4518-8021-4c3a89ef748a`,
+and policy **wcw-bedrock-haiku:v3** (policy version ID
+`402fc78a-83f7-42c4-a907-c7ef47b9f943`) from commit `40d2832`.
+The game is canonical, passed all 10 local and hosted certification checks,
+and completed all five hosted smoke episodes. The source verification passed
+241 tests, type checking, build, and a staged secret scan.
+
+The separate paid inference check used nine v3 policies, deterministic moderation,
+setup A1, and a one-day cap. Timers were 78 seconds for discussion, 10 for voting,
+20 for coordination, 10 for night actions, and 0.1 for each transition. The day
+length preserves 13-second discussion turns; reducing it below 78 seconds also
+shortens individual discussion deadlines.
+
+- Request: `xreq_82ca261d-28b9-4a15-ae38-53346fb9e159`.
+- Episode: `ereq_2bf197d7-3ef3-4dd7-824c-de2cc1b674ba`, completed successfully.
+- All nine policy logs reported Bedrock endpoint/model/credentials present and
+  `allowScripted: false`. All nine had at least one accepted model decision.
+- 35 model attempts: 34 HTTP 200 responses and one deadline timeout. Median
+  attempt latency was 2,205 ms. No HTTP permission or throttling errors occurred.
+- 27 of 29 decisions produced accepted actions. Repair retries recovered five
+  initial validation failures. One wolf repeatedly targeted an eliminated player;
+  one vote timed out at the shortened 10-second deadline. These two decisions
+  used legal fallback behavior, not scripted discussion.
+- Calls covered public bids, votes, wolf chat, and night actions. The shared
+  adapter uses InvokeModel; this check does not exercise the optional LLM moderator.
+
+Local evidence is saved under the ignored
+`artifacts/release-0.1.4-certification/` directory. The hosted check verifies the
+Experience Request execution path. It does **not** establish that the separate
+human-lobby launcher injects Bedrock configuration. Use v3 for a future lobby
+check: missing configuration now fails visibly instead of silently emitting
+scripted dialogue. Existing lobbies and previously uploaded policy versions do
+not inherit these changes.

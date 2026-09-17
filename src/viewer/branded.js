@@ -199,6 +199,7 @@ function renderSeats(m) {
       </summary>
       <div class="detail">${detail}
         <dl><dt>Seat</dt><dd>${n}</dd>
+          ${s.policyName ? `<dt>Policy</dt><dd>${esc(s.policyName)}</dd>` : ''}
           <dt>Spoke</dt><dd>${m.spoke[n]} time${m.spoke[n] === 1 ? '' : 's'}</dd>
           <dt>Status</dt><dd>${esc(st)}</dd>
           ${r ? `<dt>Role</dt><dd>${esc(ROLE_LABEL[r.role])} &middot; ${r.faction === 'wolf' ? 'Wolf faction' : 'Town'}</dd>` : ''}

@@ -152,3 +152,80 @@ human-lobby launcher injects Bedrock configuration. Use v3 for a future lobby
 check: missing configuration now fails visibly instead of silently emitting
 scripted dialogue. Existing lobbies and previously uploaded policy versions do
 not inherit these changes.
+
+## Human-lobby diagnostic policy
+
+Select **wcw-bedrock-diagnostic:v1** in the bot seats of a new human lobby using
+existing game 0.1.4. This is a diagnostic policy, not a competitive player. It
+connects before checking credentials, reports safe status in public speaking
+turns, and abstains from votes and night actions. Private chat also reports only
+diagnostics. With all eight bot seats selected, each policy performs at most one
+tiny Haiku call per process (eight calls total absent process restarts).
+
+The first message may show only environment presence; subsequent speaking turns
+include the completed probe. Each process probes health and spend once (two-second
+limits each), then makes one 32-output-token model request with a five-second
+limit. The probe runs independently of game action deadlines. No endpoint means
+no network probe or direct AWS call. Shutdown cancels the probe.
+
+Interpret the messages:
+
+- **endpoint/model missing**: policy connected, but hosted inference configuration
+  was not supplied completely.
+- **health HTTP 200**: the health endpoint responded; model access is checked separately.
+- **spend exhausted**: the sidecar reported zero allowance or nonpositive remaining funds.
+- **model OK**: a nonempty model response passed through the normal Bedrock adapter.
+- **model HTTP 403/429/etc.**: provider/sidecar returned that HTTP status.
+- **model failed**: timeout, transport, or response error; no raw error is exposed.
+- **no diagnostic speech**: investigate container launch, WebSocket connection,
+  or observations; this does not establish a Bedrock failure.
+
+The diagnostic policy deliberately overrides provider selection to Bedrock and
+never publishes credentials, endpoint URLs, raw response bodies, or model text.
+Spend/health endpoints can be unavailable while inference still works, so the
+model probe runs even if either preliminary check fails. This policy cannot recover
+logs from old sessions. Terminate the test once the status is visible.
+
+Build/upload independently of the game package:
+
+```sh
+docker build --platform linux/amd64 --target player -t wcw-diagnostic:local .
+DOCKER_DEFAULT_PLATFORM=linux/amd64 uv run --project /Users/jt/projects/coworld coworld upload-policy wcw-diagnostic:local \
+  --name wcw-bedrock-diagnostic \
+  --run node --run build/diagnostic-player.mjs \
+  --use-bedrock \
+  --bedrock-model us.anthropic.claude-haiku-4-5-20251001-v1:0
+```
+
+Current upstream documentation supports both Converse and InvokeModel. The earlier
+API switch alone does not explain the human-lobby failure; runtime probe evidence
+is required.
+
+### Diagnostic v2: environment names
+
+`wcw-bedrock-diagnostic:v2` also cycles through numbered `ENV 1/N` pages in
+public speaking turns. Each page lists environment-variable **names only**, with
+`empty` or `populated`. Values are never included. Empty means a zero-length
+string; whitespace counts as populated. Keys with undefined values are omitted.
+Names are sorted, JSON-escaped, and paginated to fit the game's chat limit.
+Unusually long names may continue on the next page.
+
+The first public turn reports probe status; subsequent turns list the environment
+pages, then the cycle repeats with current probe status. Private chats and
+correction retries do not advance this sequence. Group messages by bot name:
+each process reports its own environment. A full list can take multiple speaking
+turns or days. Existing lobby processes retain their old policy version; select
+v2 explicitly in a new lobby. The one-probe-per-process limit is unchanged.
+
+### Diagnostic v3: compact environment report first
+
+Select `wcw-bedrock-diagnostic:v3` for new lobby tests. Public turns now start
+with ENV pages, followed by the probe result, then repeat. Names containing
+BEDROCK, AWS, MODEL, LLM, PROXY, SECRET, TOKEN, ENDPOINT, or API_KEY appear first.
+If none are present, the report says so explicitly. Values remain excluded.
+
+Kubernetes service-link variables (SERVICE_HOST, SERVICE_PORT and numbered
+PORT_TCP/UDP/SCTP families, including their matching base PORT) are replaced by
+a count. Other variables, including unrelated custom PORT names, remain listed.
+This avoids hundreds of chat pages from the hosted cluster's service discovery.
+Each bot still reports its own environment; read numbered pages from one bot.

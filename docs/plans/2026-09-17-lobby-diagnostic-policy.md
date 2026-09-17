@@ -1,0 +1,5 @@
+# Hosted lobby diagnostic policy
+
+Approved flow: connect using the normal player protocol before inspecting inference configuration. On the first observation, run one bounded background probe of Bedrock environment presence, sidecar health, spend status, and one tiny model request. Public bids report sanitized progress/results. Other actions pass legally; private channels contain only the same diagnostics. Never print credentials, endpoint URLs, raw errors, or model text. Missing configuration must still allow the policy to report in chat.
+
+Implementation: separate diagnostic entry point in the existing player image; reuse the connection client and Bedrock adapter. Limit the probe to one per process, with independent bounded stages and cancellation on shutdown. No provider fallback or direct AWS call when the hosted endpoint is absent. Build and upload a separately named policy with Bedrock flags. Test missing environment, successful stages, zero spend cap, failures, and safe legal actions. Human lobby is started by the user, with diagnostic policies selected explicitly.

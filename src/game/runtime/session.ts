@@ -9,6 +9,7 @@ import { rankBids,wolfSchedule } from '../domain/floor.js';
 import { buildObservation,publicRoster } from './observation.js';
 import { project } from '../../shared/presentation/project.js';
 import type { Bid } from '../../shared/actions.js';
+import {DisplayName,assignDisplayNames} from '../../shared/player-names.js';
 
 /** One serialized owner. advance() receives monotonic time; no phase closes early. */
 export class Session {
@@ -16,6 +17,12 @@ export class Session {
  readonly state:State;
  readonly journal:Event[]=[];
  readonly pending=new Map<number,Pending>();
+ private readonly displayNames=new Map<number,string>();
+ registerName(slot:number,name:string){
+  if(this.phase!=='waiting'||!Number.isInteger(slot)||slot<0||slot>8||this.config.mode==='human'&&slot===this.config.humanSlot)return;
+  const parsed=DisplayName.safeParse(name);
+  if(parsed.success&&!this.displayNames.has(slot))this.displayNames.set(slot,parsed.data);
+ }
  phase:Phase='waiting';
  window=0;
  deadline=0;
@@ -43,6 +50,8 @@ export class Session {
  }
  start(now:number){
   if(this.phase!=='waiting')throw new Error('Episode already started');
+  const names=assignDisplayNames(this.config.players.map(p=>p.name),this.displayNames);
+  this.config.players=this.config.players.map((p,slot)=>this.displayNames.has(slot)?{name:names[slot]!,policyName:p.policyName??p.name}:p);
   this.emit({kind:'started',roster:publicRoster(this.state,this.config),rulesVersion:'wcw.rules/2'});
   this.emit({kind:'roles',roles:this.state.seats.map(p=>({slot:p.slot,role:p.role,faction:p.faction}))});
   this.emit({kind:'seed',seed:this.state.seed,randomVersion:'sha256-counter/1'});

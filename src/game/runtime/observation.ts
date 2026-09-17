@@ -5,7 +5,7 @@ import type { Pending } from '../domain/requests.js';
 import type { Event,Phase } from '../../shared/events.js';
 import { project } from '../../shared/presentation/project.js';
 export function publicRoster(s:State,c:GameConfig){
- return s.seats.map(p=>({slot:p.slot,name:c.players[p.slot]!.name,alive:p.alive,presentation:structuredClone(c.presentation[p.slot]!)}));
+ return s.seats.map(p=>({slot:p.slot,name:c.players[p.slot]!.name,...(c.players[p.slot]!.policyName?{policyName:c.players[p.slot]!.policyName}:{}),alive:p.alive,presentation:structuredClone(c.presentation[p.slot]!)}));
 }
 export function buildObservation(s:State,c:GameConfig,journal:Event[],p:Pending,phase:Phase,now:number):Observation{
  const seat=s.seats[p.slot];
@@ -13,7 +13,7 @@ export function buildObservation(s:State,c:GameConfig,journal:Event[],p:Pending,
  const visible=project(journal,p.slot);
  const speech=visible.filter(e=>e.payload.kind==='speech'||e.payload.kind==='wolf_chat'||e.payload.kind==='noble_chat');
  const observation=Observation.parse({protocol:'wcw.player/1',type:'observation',episodeId:p.episodeId,requestId:p.requestId,observationId:p.observationId,attempt:p.attempt,remainingMs:Math.min(45000,Math.max(0,Math.ceil(p.deadline-now))),phase,day:s.day,
-  self:{slot:seat.slot,role:seat.role,faction:seat.faction,alive:seat.alive},roster:publicRoster(s,c),
+  self:{slot:seat.slot,role:seat.role,faction:seat.faction,alive:seat.alive},roster:publicRoster(s,c).map(({policyName,...seat})=>seat),
   teammates:seat.faction==='wolf'?s.seats.filter(p=>p.faction==='wolf').map(p=>({slot:p.slot,role:p.role})):seat.role==='noble'?s.seats.filter(p=>p.role==='noble').map(p=>({slot:p.slot,role:p.role})):[],
   privateResults:visible.flatMap(e=>e.payload.kind==='private_result'&&e.payload.slot===seat.slot?[e.payload.result]:[]),
   votes:visible.flatMap(e=>e.payload.kind==='ballots'?[{day:e.day,ballots:e.payload.ballots,eliminated:e.payload.eliminated}]:[]),

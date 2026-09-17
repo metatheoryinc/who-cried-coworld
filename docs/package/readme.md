@@ -139,3 +139,33 @@ A named variant chooses game rules, not the roster's model providers.
 Live player views reveal only permitted information. The public spectator hides
 private roles and chats. The completed replay lets viewers explicitly reveal all
 roles, private chats, decisions, and results.
+
+## In-game policy display names
+
+The reusable LLM client registers a short name derived from its configured model
+(e.g. Sonnet, Haiku, Gemini, DeepSeek). Set `WCW_PLAYER_NAME` in the policy runtime
+environment to override it. Unknown models keep the platform name unless overridden.
+Names must be 1–32 ASCII letters, digits, spaces, dots, underscores or hyphens,
+starting with a letter or digit. These are display labels, not verified model identity.
+
+The first matching seat is `Sonnet`, the next `Sonnet-2`, then `Sonnet-3`.
+Resolution is case-insensitive and follows seat order, not connection order.
+Human and unregistered names are reserved. Names lock when the game starts and
+remain unchanged on reconnect. Cards, votes, chats, agent observations and replays
+use those names. Replay player details and human-card tooltips retain the original
+policy label. The Softmax lobby keeps its platform labels.
+
+Custom clients opt in by preserving the supplied WebSocket URL and adding
+`registerName=1`. On `ready` with `canRegisterName: true`, send:
+
+```json
+{"protocol":"wcw.player/1","type":"register","displayName":"Sonnet"}
+```
+
+Registration is optional and allowed only before game start. Opted-in connections
+have a two-second registration grace period. Invalid or missing registrations keep
+the configured name. Repeated registrations cannot replace a previously accepted
+name. Clients that do not opt in retain the existing ready-message format.
+
+Hosted use requires updated game and policy images; existing uploaded versions
+and active sessions do not acquire the feature from local source changes.

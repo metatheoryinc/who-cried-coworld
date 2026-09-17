@@ -17,7 +17,7 @@ const ConfigFields = z.object({
  humanSlot:z.number().int().min(0).max(8).default(0),
  humanTimers:HumanTimers.default(()=>HumanTimers.parse({})),
  tokens:z.array(z.string().min(1)).length(9).refine(t=>new Set(t).size===9,'Tokens must be distinct'),
- players:z.array(z.object({name:GameText(80,1)}).strict()).length(9),
+ players:z.array(z.object({name:GameText(80,1),policyName:GameText(80,1).optional()}).strict()).length(9),
  presentation:z.array(Presentation).length(9).default(()=>Array.from({length:9},()=>({kind:'neutral' as const}))),
  setup:NewD3Setup.or(z.literal('random')).optional(),
  roles:RoleDeck.default(()=>[...defaultRoles]),

@@ -9,6 +9,7 @@ import { Session } from './session.js';
 import { HumanSession } from './human-session.js';
 import { exportReplay,type Replay } from '../../shared/replay.js';
 import { project } from '../../shared/presentation/project.js';
+import {Registration} from '../../shared/player-names.js';
 export async function startServer(config:GameConfig,options:{port:number;host:string;viewerDir?:string;moderatorEnvironment?:NodeJS.ProcessEnv;onModeratorLog?:(log:ModeratorLog)=>void}){
  const session=new (config.mode!=='fast'?HumanSession:Session)(config,`episode_${randomUUID().replaceAll('-','')}`);
  const moderatorEnv=options.moderatorEnvironment??process.env;
@@ -19,6 +20,7 @@ export async function startServer(config:GameConfig,options:{port:number;host:st
  let resolveCompleted!:(r:Replay)=>void,rejectCompleted!:(e:unknown)=>void;
  const completion=new Promise<Replay>((yes,no)=>{resolveCompleted=yes;rejectCompleted=no;});
  const readyAt=performance.now();
+ const nameDeadlines=new Map<number,number>();
  const authenticate=(url:URL)=>{
   const raw=url.searchParams.get('slot');if(raw===null||! /^[0-8]$/.test(raw))return null;
   const slot=Number(raw),token=Buffer.from(url.searchParams.get('token')??''),expected=Buffer.from(config.tokens[slot]!);
@@ -59,7 +61,8 @@ export async function startServer(config:GameConfig,options:{port:number;host:st
   try{
    if(completed)return;
    const now=performance.now();
-   if(session.phase==='waiting'&&(!(session instanceof HumanSession)||config.mode==='bots'||policies.has(config.humanSlot))&&(policies.size===9||now-readyAt>=config.player_connect_timeout_seconds*1000))session.start(now);
+   const namesReady=[...nameDeadlines.values()].every(deadline=>now>=deadline);
+   if(session.phase==='waiting'&&(!(session instanceof HumanSession)||config.mode==='bots'||policies.has(config.humanSlot))&&namesReady&&(policies.size===9||now-readyAt>=config.player_connect_timeout_seconds*1000))session.start(now);
    session.advance(now);flush();
    if(session.state.result){
     completed=true;if(timer)clearInterval(timer);
@@ -77,8 +80,19 @@ export async function startServer(config:GameConfig,options:{port:number;host:st
   wss.handleUpgrade(req,socket,head,ws=>{
    ws.on('error',()=>{});
    if(url.pathname==='/player'||url.pathname==='/human'){
-    policies.set(slot!,ws);send(ws,{protocol:'wcw.player/1',type:'ready',episodeId:session.episodeId,slot});
+    policies.set(slot!,ws);
+    const naming=url.searchParams.get('registerName')==='1'&&!(config.mode==='human'&&slot===config.humanSlot);
+    if(naming&&session.phase==='waiting')nameDeadlines.set(slot!,performance.now()+2000);
+    send(ws,{protocol:'wcw.player/1',type:'ready',episodeId:session.episodeId,slot,...(naming?{canRegisterName:session.phase==='waiting'}:{})});
     ws.on('message',(bytes,isBinary)=>{
+     if(naming&&!isBinary){
+      let raw;try{raw=JSON.parse(bytes.toString());}catch{}
+      if(raw?.type==='register'){
+       const registration=Registration.safeParse(raw);
+       if(registration.success){session.registerName(slot!,registration.data.displayName);nameDeadlines.delete(slot!);}
+       return;
+      }
+     }
      if(session instanceof HumanSession&&slot===config.humanSlot&&!isBinary){
       let raw;try{raw=JSON.parse(bytes.toString());}catch{}
       if(raw?.type==='chat'){const receipt=session.chat(slot!,bytes.toString(),performance.now());send(ws,{protocol:'wcw.human/1',type:'chat_receipt',id:raw.id,...receipt});if(receipt.status==='rejected'){const n=(invalid.get(ws)?.count??0)+1;invalid.set(ws,{request:'chat',count:n});if(n>=64)ws.close(1008,'Invalid traffic');}flush();return;}
@@ -90,7 +104,7 @@ export async function startServer(config:GameConfig,options:{port:number;host:st
      if(receipt.status==='rejected'||!pending){const count=invalid.get(ws)?.request===key?invalid.get(ws)!.count+1:1;invalid.set(ws,{request:key,count});if(count>=16)ws.close(1008,'Invalid traffic');}
      flush();
     });
-    ws.on('close',()=>{if(policies.get(slot!)===ws){policies.delete(slot!);session.disconnect(slot!);}sent.delete(ws);invalid.delete(ws);});
+    ws.on('close',()=>{if(policies.get(slot!)===ws){policies.delete(slot!);nameDeadlines.delete(slot!);session.disconnect(slot!);}sent.delete(ws);invalid.delete(ws);});
     tick();flush();
    }else{
     const recipient=url.pathname==='/global'?'public':slot!;

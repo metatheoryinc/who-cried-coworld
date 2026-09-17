@@ -67,3 +67,19 @@ it('reserves a human seat, waits in lobby, and reconnects with private state',as
   expect((await again).self).toEqual(first.self);
  }finally{for(const ws of clients)ws.terminate();await server.close();}
 },5000);
+
+import {runPlayerClient} from '../../src/player/client.js';
+it('registers names through real clients in reverse connection order and freezes replay names',async()=>{
+ const server=await startServer({...c(),player_connect_timeout_seconds:10},{port:0,host:'127.0.0.1'});
+ const clients:ReturnType<typeof runPlayerClient>[]=[];const seen:string[][]=[];
+ try{
+  for(let slot=8;slot>=0;slot--){
+   clients.push(runPlayerClient(`ws://127.0.0.1:${server.port}/player?slot=${slot}&token=t${slot}`,async o=>{seen.push(o.roster.map(p=>p.name));return scriptedAction(o);},'Sonnet'));
+  }
+  const replay=await server.completed;
+  const expected=Array.from({length:9},(_,i)=>i===0?'Sonnet':`Sonnet-${i+1}`);
+  expect(seen.length).toBeGreaterThan(0);for(const names of seen)expect(names).toEqual(expected);
+  const started=replay.events.find(e=>e.payload.kind==='started')!;
+  expect(started.payload.kind==='started'&&started.payload.roster.map(p=>p.name)).toEqual(expected);
+ }finally{for(const client of clients)client.stop();await server.close();}
+},10000);

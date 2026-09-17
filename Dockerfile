@@ -20,4 +20,5 @@ CMD ["node","build/game.mjs"]
 FROM runtime AS player
 COPY --from=build /app/build/player.mjs ./build/player.mjs
 COPY --from=build /app/build/llm-player.mjs ./build/llm-player.mjs
+COPY --from=build /app/build/diagnostic-player.mjs ./build/diagnostic-player.mjs
 CMD ["node","build/player.mjs"]

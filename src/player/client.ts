@@ -2,8 +2,9 @@ import WebSocket from 'ws';
 import {Observation,Control,type Action} from '../shared/player.js';
 import {decodeText} from '../shared/decode.js';
 /** One independent seat client: no game initialization or other player orchestration. */
-export function runPlayerClient(url:string,choose:(o:Observation,signal:AbortSignal)=>Promise<Action>){
+export function runPlayerClient(url:string,choose:(o:Observation,signal:AbortSignal)=>Promise<Action>,displayName?:string){
  const parsed=new URL(url);if(!['ws:','wss:'].includes(parsed.protocol))throw Error('Expected a player WebSocket URL');
+ if(displayName){parsed.searchParams.set('registerName','1');url=parsed.toString();}
  let socket:WebSocket,ended=false,failures=0,timer:ReturnType<typeof setTimeout>|undefined,active:AbortController|undefined,last='';
  let resolve!:()=>void,reject!:(e:Error)=>void;
  const done=new Promise<void>((yes,no)=>{resolve=yes;reject=no;});
@@ -25,6 +26,7 @@ export function runPlayerClient(url:string,choose:(o:Observation,signal:AbortSig
    }
    const control=decodeText(text,Control,512*1024);
    if(!control.ok){ws.close(1008,'Invalid server message');return;}
+   if(control.value.type==='ready'&&control.value.canRegisterName&&displayName)ws.send(JSON.stringify({protocol:'wcw.player/1',type:'register',displayName}));
    if(control.value.type==='end'){ended=true;active?.abort();ws.close();resolve();}
   });
   ws.on('close',()=>{

@@ -36,7 +36,7 @@ export const Observation=z.object({
  (o.self.faction==='wolf'?o.teammates.every(t=>factionOf(t.role)==='wolf'):o.self.role==='noble'?o.teammates.every(t=>t.role==='noble'):o.teammates.length===0)&&o.roster[o.self.slot]!.alive);
 export type Observation=z.infer<typeof Observation>;
 export const Control=z.discriminatedUnion('type',[
- z.object({protocol:z.literal('wcw.player/1'),type:z.literal('ready'),episodeId:Id,slot:Slot}).strict(),
+ z.object({protocol:z.literal('wcw.player/1'),type:z.literal('ready'),episodeId:Id,slot:Slot,canRegisterName:z.boolean().optional()}).strict(),
  z.object({protocol:z.literal('wcw.player/1'),type:z.literal('receipt'),requestId:Id,status:z.enum(['accepted','duplicate','rejected','expired']),code:Code.nullable(),retry:z.boolean()}).strict(),
  z.object({protocol:z.literal('wcw.player/1'),type:z.literal('end'),episodeId:Id,result:Results}).strict(),
 ]);

@@ -10,7 +10,7 @@ export const Day=z.number().int().min(0).max(32);
 export const Code=z.enum(['timeout','disconnected','malformed','illegal','refused','provider_error','throttled','version']);
 export const RequestKind=z.enum(['bid','wolf_chat','noble_chat','vote','night']);
 export const sortedSlots=(rows:number[])=>rows.every((n,i)=>i===0||n>rows[i-1]!);
-export const PublicSeat=z.object({slot:Slot,name:GameText(80,1),alive:z.boolean(),presentation:Presentation}).strict();
+export const PublicSeat=z.object({slot:Slot,name:GameText(80,1),policyName:GameText(80,1).optional(),alive:z.boolean(),presentation:Presentation}).strict();
 export const Roster=z.array(PublicSeat).length(9).refine(rows=>rows.every((r,i)=>r.slot===i));
 export const PrivateResult=z.discriminatedUnion('ability',[
  z.object({day:Day,ability:z.literal('inspect'),target:Slot,result:z.enum(['wolf','not_wolf','no_result'])}).strict(),

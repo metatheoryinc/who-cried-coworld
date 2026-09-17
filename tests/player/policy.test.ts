@@ -21,3 +21,15 @@ it('uses Bedrock without an OpenRouter key instead of silently playing scripted'
  const action=await llmAction(o,{provider:'bedrock',model:'bedrock-test',bedrockSender});
  expect(bedrockSender).toHaveBeenCalledTimes(1);expect(action.body).toMatchObject({text:'Bedrock reply.'});
 });
+it('sends the same explicit JSON-only system prompt through both providers and accepts a fenced Bedrock reply',async()=>{
+ const o=observation();const body={kind:o.request.kind,text:'A precise reply.',summary:''};
+ const fetcher=vi.fn().mockResolvedValue(Response.json({choices:[{message:{content:JSON.stringify(body)}}]}));
+ const bedrockSender=vi.fn().mockResolvedValue({output:{message:{content:[{text:'```json\n'+JSON.stringify(body)+'\n```'}]}},stopReason:'end_turn'});
+ await llmAction(o,{model:'test',key:'secret',personality:'Be concise.',fetcher});
+ const action=await llmAction(o,{provider:'bedrock',model:'test',personality:'Be concise.',bedrockSender});
+ const orPrompt=JSON.parse(fetcher.mock.calls[0]![1].body).messages[0].content;
+ expect(bedrockSender.mock.calls[0]![0].input.system[0].text).toBe(orPrompt);
+ expect(orPrompt).toContain('exactly one bare JSON object');
+ expect(orPrompt).toContain('Do not wrap it in Markdown code fences');
+ expect(action.body).toEqual(body);expect(action.report).toBeNull();expect(bedrockSender).toHaveBeenCalledTimes(1);
+});

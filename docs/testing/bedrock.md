@@ -70,3 +70,29 @@ model-specific response latency remain to be verified.
 References: [Softmax Bedrock guide](https://docs.softmax.com/coworld/build-a-player/bedrock),
 [game runtime contract](https://github.com/Metta-AI/coworld/blob/main/src/coworld/docs/roles/GAME.md#bedrock-and-aws-access),
 [AWS Converse examples](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/javascript_bedrock-runtime_code_examples.html).
+
+## Hosted Haiku response-format regression (2026-09-16)
+
+The v0.1.1 nine-Haiku run completed with deterministic moderation, but many model
+responses were rejected for formatting. Both backends use `playerSystemPrompt`;
+OpenRouter additionally requests JSON-object output (JSON Schema for Gemini),
+whereas the Bedrock Converse adapter currently relies on prompt instructions.
+
+The shared output instruction now explicitly requests a bare JSON object with no
+Markdown fences, XML, or prose. The player parser tolerates one JSON action inside
+a single Markdown fence or following leading prose. It does not rewrite fields,
+truncate strings, extract multiple competing objects, or weaken the strict JSON
+and action validators. The original 8 KiB limit applies before wrapper removal.
+The wire-protocol decoder remains unchanged.
+
+An offline check against 434 rejected response excerpts recovered 390 for format
+and schema validation. This used broad synthetic legal targets, so it does not
+prove those actions were legal in their original game states. Remaining failures
+include excessive text length, invalid IDs, misspelled fields, and unsupported or
+malformed wrappers. They still use the existing bounded repair retry and fallback.
+Tests also verify identical system prompts across the two provider adapters.
+
+Rebuild and upload the player image as a new policy version before the next hosted
+run; existing `wcw-bedrock-haiku:v1` instances cannot pick up local changes. The
+game release can stay at v0.1.1 for this player-only fix. No new hosted inference
+run has validated the updated prompt or parser yet.

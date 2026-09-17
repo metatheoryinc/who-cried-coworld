@@ -29,3 +29,15 @@ it('accepts harmless schema metadata but rejects schema documents and unrelated 
  expect(()=>parseModelAction(JSON.stringify({$schema:'https://json-schema.org/draft/2020-12/schema',type:'object',properties:{kind:{const:'night'}}}),o)).toThrow();
  expect(()=>parseModelAction(JSON.stringify({...action,unexpected:true}),o)).toThrow();
 });
+it('accepts one fenced JSON action or a single action after prose without rewriting text',()=>{
+ const body={kind:'night',actions:[{ability:'inspect',target:2}],summary:'Check {the claim} and "quotes".'};
+ const json=JSON.stringify(body);
+ for(const text of ['```json\n'+json+'\n```','```\r\n'+json+'\r\n```','I will inspect the claim.\n'+json,'I will inspect the claim.\n```json\n'+json+'\n```']){
+  expect(parseModelAction(text,o).body).toEqual(body);
+ }
+});
+it('rejects ambiguous wrappers, duplicate keys, unsafe integers, arrays, and oversized output',()=>{
+ const json='{"kind":"night","actions":[{"ability":"inspect","target":2}],"summary":""}';
+ for(const text of [json+'\n'+json,'```json\n'+json+'\n```\n```json\n'+json+'\n```','['+json+']','```json\n'+json.replace('"target":2','"target":2,"target":3')+'\n```', 'I choose:\n'+json.replace('"target":2','"target":9007199254740993'),'x'.repeat(8192)+'\n'+json])expect(()=>parseModelAction(text,o)).toThrow();
+ expect(()=>parseModelAction('```json\n'+json.replace('"target":2','"target":0')+'\n```',o)).toThrow('Illegal night');
+});

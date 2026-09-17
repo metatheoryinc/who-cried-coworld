@@ -13,10 +13,22 @@ export function actionSchema(o:Observation){
 }
 export function outputInstruction(o:Observation){
  const example=o.request.kind==='bid'?{kind:'bid',wantsToSpeak:true,urgency:1,text:'Your own brief contribution goes here.',replyTo:null,accusation:null,reason:'Your brief explanation.'}:fallbackBody(o.request);
- return `Return an ACTION INSTANCE, never a JSON Schema document. Do not output $schema, type, properties, required, or additionalProperties. Example of the response shape (replace values with your decision): ${JSON.stringify(example)}. Contract describing allowed fields, not the answer: ${JSON.stringify(actionSchema(o))}\nUse numeric zero-based slot targets from the offered request, or null to pass. For a non-pass kill, include killer: the numeric slot of the living Wolf agreed to perform it, selected from actors. All Wolf nominations should agree on target AND killer. Include every offered night ability in the offered order. No extra keys. Text limits: text: 480 characters; summary and reason: 240 characters. No tabs or control characters. Keep speech under 30 words, other text under 40 words and all character limits. urgency is an INTEGER 0..3. A silent bid must have empty text, urgency 0, replyTo null, accusation null. Summary/reason is a brief decision explanation, not hidden chain-of-thought. For sheep with no night abilities return actions: []. Current legal request: ${JSON.stringify(o.request)}.`;
+ return `Return exactly one bare JSON object: the ACTION INSTANCE, never a JSON Schema document. Start with { and end with }. Do not wrap it in Markdown code fences, XML tags, or quotation marks. Do not add prose, analysis, or commentary before or after the object. Do not output $schema, type, properties, required, or additionalProperties. Example of the response shape (replace values with your decision): ${JSON.stringify(example)}. Contract describing allowed fields, not the answer: ${JSON.stringify(actionSchema(o))}\nUse numeric zero-based slot targets from the offered request, or null to pass. For a non-pass kill, include killer: the numeric slot of the living Wolf agreed to perform it, selected from actors. All Wolf nominations should agree on target AND killer. Include every offered night ability in the offered order. No extra keys. Text limits: text: 480 characters; summary and reason: 240 characters. No tabs or control characters. Keep speech under 30 words, other text under 40 words and all character limits. urgency is an INTEGER 0..3. A silent bid must have empty text, urgency 0, replyTo null, accusation null. Summary/reason is a brief decision explanation, not hidden chain-of-thought. For sheep with no night abilities return actions: []. Current legal request: ${JSON.stringify(o.request)}.`;
 }
 export function parseModelAction(content:string,o:Observation){
- const decoded=decodeText(content,z.unknown());
+ // Normalize presentation only, never repair JSON or change action values.
+ // Check the original size before removing prose/fences so the limit cannot be bypassed.
+ if(new TextEncoder().encode(content).byteLength>8192)throw new Error('Malformed model action: expected unambiguous JSON under 8192 bytes');
+ let json=content.trim();
+ const fence=/^([^`{}\[\]]*)```(?:json)?[ \t]*\r?\n([\s\S]*?)\r?\n```$/i.exec(json);
+ if(fence)json=fence[2]!.trim();
+ else if(/^[A-Za-z]/.test(json)){
+  const start=json.indexOf('{');
+  // Only leading prose is tolerated. The strict decoder rejects trailing prose,
+  // multiple objects, malformed JSON, duplicate keys, and unsafe numbers.
+  if(start>0&&!/[`\[\]]/.test(json.slice(0,start)))json=json.slice(start);
+ }
+ const decoded=decodeText(json,z.unknown());
  if(!decoded.ok)throw new Error('Malformed model action: expected unambiguous JSON under 8192 bytes');
  const value=decoded.value;
  // Tolerate only known schema annotations on an actual action; preserve all other validation.

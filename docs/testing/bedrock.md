@@ -219,7 +219,8 @@ v2 explicitly in a new lobby. The one-probe-per-process limit is unchanged.
 
 ### Diagnostic v3: compact environment report first
 
-Select `wcw-bedrock-diagnostic:v3` for new lobby tests. Public turns now start
+The compact report was introduced in v3; select `wcw-bedrock-diagnostic:v4`
+for new lobby tests with the current release. Public turns start
 with ENV pages, followed by the probe result, then repeat. Names containing
 BEDROCK, AWS, MODEL, LLM, PROXY, SECRET, TOKEN, ENDPOINT, or API_KEY appear first.
 If none are present, the report says so explicitly. Values remain excluded.

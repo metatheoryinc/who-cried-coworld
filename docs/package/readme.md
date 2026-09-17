@@ -80,7 +80,7 @@ must fit the same deadline; failed or missing actions use the game's legal fallb
 The NewD3 rules and role abilities are unchanged.
 
 For hosted requests, use `variant_id: "fast-llm"` and supply nine policy seats.
-Use the updated Bedrock policy `wcw-bedrock-haiku:v3`; the variant does not select
+Use the updated Bedrock policy `wcw-bedrock-haiku:v4`; the variant does not select
 that policy or its model automatically. `smoke` keeps one-second windows for
 scripted certification and is not suitable for evaluating LLM response reliability.
 

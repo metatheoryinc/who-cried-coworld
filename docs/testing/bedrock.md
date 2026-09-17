@@ -1,7 +1,9 @@
 # Bedrock inference for players and moderator
 
-The shared adapter uses the AWS SDK's Bedrock Runtime Converse API. Select a model
-or inference profile that supports Converse. The client explicitly uses HTTP/1.1
+The shared adapter uses the AWS SDK's Bedrock Runtime `InvokeModel` API with the
+Anthropic Messages body (`anthropic_version: bedrock-2023-05-31`). Select an Anthropic
+Claude model or inference profile, such as the uploaded Haiku policy; other model
+families require their own request/response adapter. The client explicitly uses HTTP/1.1
 for compatibility with loopback sidecars. Hosted calls go
 to `AWS_ENDPOINT_URL_BEDROCK_RUNTIME`; the SDK uses the platform's injected
 credentials and region. There is no public-AWS retry if the sidecar fails.
@@ -25,7 +27,7 @@ deterministic scheduling if its inference configuration is missing or invalid.
 `WCW_MODERATOR=llm` requires valid configuration and fails startup otherwise. The
 host can be disabled with `WCW_MODERATOR=off`. No automatic model-ID substitution occurs.
 OpenRouter settings, including the Gemini schema and DeepSeek output cap, remain
-unchanged. Bedrock uses portable Converse parameters rather than sending unsupported
+unchanged. Bedrock uses Anthropic Messages parameters rather than sending unsupported
 OpenRouter reasoning or response-format fields. JSON instructions and local action
 validation still apply.
 
@@ -60,7 +62,7 @@ policies that require per-seat request attribution.
 
 ## Verification
 
-Tests cover backend selection, missing model configuration, Converse translation,
+Tests cover backend selection, missing model configuration, InvokeModel request/response translation,
 usage extraction, truncation, throttling, permission failures, and both player and
 moderator use without an OpenRouter key. A real SDK request is exercised against a
 local HTTP stub to check endpoint routing and that 429 does not trigger SDK retries.
@@ -69,14 +71,14 @@ model-specific response latency remain to be verified.
 
 References: [Softmax Bedrock guide](https://docs.softmax.com/coworld/build-a-player/bedrock),
 [game runtime contract](https://github.com/Metta-AI/coworld/blob/main/src/coworld/docs/roles/GAME.md#bedrock-and-aws-access),
-[AWS Converse examples](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/javascript_bedrock-runtime_code_examples.html).
+[Coworld Bedrock contract](https://github.com/Metta-AI/coworld/blob/main/src/coworld/docs/BEDROCK.md).
 
 ## Hosted Haiku response-format regression (2026-09-16)
 
 The v0.1.1 nine-Haiku run completed with deterministic moderation, but many model
 responses were rejected for formatting. Both backends use `playerSystemPrompt`;
 OpenRouter additionally requests JSON-object output (JSON Schema for Gemini),
-whereas the Bedrock Converse adapter currently relies on prompt instructions.
+whereas the Bedrock adapter currently relies on prompt instructions.
 
 The shared output instruction now explicitly requests a bare JSON object with no
 Markdown fences, XML, or prose. The player parser tolerates one JSON action inside
@@ -96,3 +98,21 @@ Rebuild and upload the player image as a new policy version before the next host
 run; existing `wcw-bedrock-haiku:v1` instances cannot pick up local changes. The
 game release can stay at v0.1.1 for this player-only fix. No new hosted inference
 run has validated the updated prompt or parser yet.
+
+## No silent scripted LLM policy (2026-09-17)
+
+`node build/llm-player.mjs` fails startup if no usable inference configuration is
+selected. It emits `player_startup` with configuration-presence booleans, never
+credential values or a seat URL. These identify whether a hosted lobby supplied
+`AWS_ENDPOINT_URL_BEDROCK_RUNTIME`, `BEDROCK_MODEL`, and Bedrock opt-in, or an
+OpenRouter key. This does not prove the endpoint is reachable; successful model
+attempts remain the evidence for that.
+
+Intentional credential-free checks may add `--allow-scripted`. The manifest's
+bundled `llm` baseline explicitly includes that flag so certification remains free.
+Actual uploaded LLM policies must omit it. Provider failures after startup retain
+bounded retries and legal passes, not the scripted discussion text. Both players
+and runtime moderators now use InvokeModel. No public-AWS fallback is attempted
+when an injected sidecar fails. This update does not establish whether Softmax's
+browser-lobby launcher supplies the required environment; production verification
+is still needed with a newly uploaded policy.

@@ -80,7 +80,7 @@ must fit the same deadline; failed or missing actions use the game's legal fallb
 The NewD3 rules and role abilities are unchanged.
 
 For hosted requests, use `variant_id: "fast-llm"` and supply nine policy seats.
-Our uploaded Bedrock policy is `wcw-bedrock-haiku:v2`; the variant does not select
+Use the updated Bedrock policy `wcw-bedrock-haiku:v3`; the variant does not select
 that policy or its model automatically. `smoke` keeps one-second windows for
 scripted certification and is not suitable for evaluating LLM response reliability.
 
@@ -130,7 +130,9 @@ The **llm** baseline is a standalone OpenRouter/Bedrock client. On Softmax it de
 Bedrock endpoint and uses `BEDROCK_MODEL`; explicit backend selection uses
 `WCW_LLM_PROVIDER`. OpenRouter is configured per seat by
 `WCW_MODEL`, with optional `WCW_PLAYER_PROMPT` personality text and a runtime
-`OPENROUTER_API_KEY`. In OpenRouter mode without credentials it uses scripted actions. Provider failures
+`OPENROUTER_API_KEY`. The standalone client fails startup without inference configuration. The bundled
+certification baseline explicitly passes `--allow-scripted` for credential-free
+protocol checks; omit that flag when uploading an actual LLM policy. Provider failures
 receive bounded retries and then a legal pass. Keys are not included in the package.
 A named variant chooses game rules, not the roster's model providers.
 

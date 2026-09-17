@@ -44,11 +44,11 @@ it('falls back inside the server when the runtime provider fails',async()=>{
  }finally{await server.close();fetcher.mockRestore();}
 });
 it('uses the game Bedrock endpoint and model without OpenRouter credentials',async()=>{
- const send=vi.fn().mockResolvedValue({output:{message:{content:[{text:JSON.stringify({slot:0,prompt:'ChatGPT, what would you add?'})}]}},stopReason:'end_turn'});
+ const send=vi.fn().mockResolvedValue({body:new TextEncoder().encode(JSON.stringify({content:[{type:'text',text:JSON.stringify({slot:0,prompt:'ChatGPT, what would you add?'})}],stop_reason:'end_turn'}))});
  const log=vi.fn(),http=vi.fn();
  const moderator=createRuntimeModerator({AWS_ENDPOINT_URL_BEDROCK_RUNTIME:'http://127.0.0.1:9100',WCW_MODERATOR_BEDROCK_MODEL:'host-model'},log,http,send)!;
  expect((await moderator(input,new AbortController().signal)).slot).toBe(0);
- expect(http).not.toHaveBeenCalled();expect(send.mock.calls[0]![0].input).toMatchObject({modelId:'host-model',inferenceConfig:{maxTokens:600}});
+ expect(http).not.toHaveBeenCalled();expect(send.mock.calls[0]![0].input).toMatchObject({modelId:'host-model'});expect(JSON.parse(send.mock.calls[0]![0].input.body).max_tokens).toBe(600);
  expect(log).toHaveBeenCalledWith(expect.objectContaining({provider:'bedrock',outcome:'selected'}));
 });
 it('starts a paced game with deterministic moderation when the sidecar has no host model',async()=>{

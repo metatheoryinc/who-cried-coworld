@@ -6,9 +6,9 @@ import {timedAction,DecisionError} from './timed-llm.js';
 import {providerCompletion} from './provider.js';
 import {actionSchema} from './llm.js';
 import {playerSystemPrompt} from './prompt.js';
-export type PolicyOptions=Omit<InferenceConfig,'provider'>&{provider?:InferenceConfig['provider'];bedrockSender?:BedrockSender;personality?:string;onLog?:(row:Record<string,unknown>)=>void;fetcher?:typeof fetch};
+export type PolicyOptions=Omit<InferenceConfig,'provider'>&{provider?:InferenceConfig['provider'];allowScripted?:boolean;bedrockSender?:BedrockSender;personality?:string;onLog?:(row:Record<string,unknown>)=>void;fetcher?:typeof fetch};
 export async function llmAction(o:Observation,options:PolicyOptions,signal?:AbortSignal):Promise<Action>{
- if(options.provider!=='bedrock'&&!options.key){options.onLog?.({slot:o.self.slot,requestId:o.requestId,outcome:'scripted',reason:'no_credentials'});return scriptedAction(o);}
+ if(options.provider!=='bedrock'&&!options.key){if(!options.allowScripted)throw new DecisionError('missing_credentials','LLM player requires inference credentials; scripted mode must be explicitly enabled',false);options.onLog?.({slot:o.self.slot,requestId:o.requestId,outcome:'scripted',reason:'no_credentials'});return scriptedAction(o);}
  let metadata:Record<string,unknown>={};
  return timedAction(o,async(attemptSignal,repair)=>{
   if(signal?.aborted)throw new DecisionError('cancelled','Player request cancelled',false);

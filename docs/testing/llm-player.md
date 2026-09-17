@@ -4,8 +4,8 @@
 other players. The `player` Docker target contains both entrypoints:
 
 - `node build/player.mjs`: original scripted baseline, no LLM.
-- `node build/llm-player.mjs`: configurable OpenRouter/Bedrock policy with scripted operation
-  when OpenRouter is selected and no credential is supplied, and bounded legal fallbacks on provider failure.
+- `node build/llm-player.mjs`: configurable OpenRouter/Bedrock policy; missing configuration fails startup, and provider failures use bounded legal fallbacks.
+- `node build/llm-player.mjs --allow-scripted`: explicitly allows credential-free scripted protocol testing.
 
 ## Runtime configuration
 
@@ -13,7 +13,7 @@ other players. The `player` Docker target contains both entrypoints:
 | --- | --- |
 | `COWORLD_PLAYER_WS_URL` | Required runner-supplied WebSocket URL with seat authentication. |
 | `WCW_MODEL` | Model for this process/seat; defaults to `openai/gpt-oss-120b`. |
-| `OPENROUTER_API_KEY` | Runtime OpenRouter credential. Missing/empty means scripted play in OpenRouter mode. Bedrock uses the AWS credential chain. |
+| `OPENROUTER_API_KEY` | Runtime OpenRouter credential. Missing/empty fails startup in OpenRouter mode unless `--allow-scripted` is passed. Bedrock uses the AWS credential chain. |
 | `WCW_PLAYER_PROMPT` | Optional personality text; otherwise uses the bundled benchmark personality for that seat. |
 
 Provide each seat its own environment to choose different models or personalities.
@@ -26,8 +26,8 @@ node build/llm-player.mjs
 ```
 
 The manifest declares `scripted` and `llm` runnables using the same player image.
-Its certification fixture assigns one seat to `llm` and eight to `scripted`; without
-credentials this verifies the LLM client's protocol/lifecycle through its scripted path.
+The bundled `llm` runnable explicitly passes `--allow-scripted`. Its certification
+fixture assigns one seat to `llm` and eight to `scripted`; without credentials this verifies the LLM client's protocol/lifecycle through its scripted path.
 That is not evidence of hosted external-provider access.
 
 ## Shared implementation

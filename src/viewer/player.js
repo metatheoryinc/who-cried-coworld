@@ -1,20 +1,22 @@
+import { playerConnection } from './connection.js';
 import { knownRole } from './known-role.js';
-import { Replay } from '../shared/replay.js';
 import { deathCause,stageSummary } from './stage-summary.js';
 import { voteMarks } from './vote-marks.js';
 import { roleNames,newD3Decks } from '../shared/roles.js';
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const asset=name=>`/assets/play/${name}.png`;
+const asset=name=>`assets/play/${name}.png`;
 const art={wolf:'Role_Wolf_outline',alchemist:'Role_Alchemist_outline',track_reader:'Role_Track_reader_outline',seer:'Role_Seer_outline',guard:'Role_Guard_outline',chef:'Role_Chef_outline',dairy_maid:'Role_Dairymaid_outline',priest:'Role_Priest_outline',noble:'Role_Noble_01_outline',sheep:'Role_Villager_outline',jester:'Role_Villager_outline'};
 const descriptions={wolf:'Hide among the sheep. Coordinate with your pack and choose a killer each night.',alchemist:'A wolf with a potion: block one player and nominate your pack’s kill each night.',track_reader:'A wolf who learns roles. Sheep and ordinary Wolves both appear as vanilla.',seer:'Each night, inspect one player to learn whether they are a wolf.',guard:'Protect one other player from the wolves each night.',chef:'Jail one player each night: block their action and protect them from the kill.',dairy_maid:'Visit someone at night. They learn that you are town.',priest:'Track one player each night to see whom they actually visited.',noble:'You know your fellow Nobles are town. Coordinate in your private channel.',sheep:'Your voice and your vote are your powers. Find the wolves before they outnumber you.',jester:'Convince the village to vote you out. Dying at night does not count.'};
 const labels={discussion:'Discuss & deduce',vote:'Cast your vote',coordination:'Night whispers',actions:'Make your move',dusk:'The Night Begins…',dawn:'The Day Begins…'};
 let state=null,ws,channel='town',lastRender='',actionKey='',remainingUntil=0,joined=false,connecting=false,ended=false,pendingChat=null;
-const params=new URLSearchParams(location.search),slot=params.get('slot'),token=params.get('token');
-const storageKey=`wcw-joined:${location.host}:${slot}:${token}`;
+const params=new URLSearchParams(location.search);
+let slot=params.get('slot'),connection;
+try{connection=playerConnection(location.href);}catch{$('connection').textContent='Invalid seat link. Open your game invitation again.';$('join').disabled=true;}
+const storageKey=`wcw-joined:${connection?.socket??location.href}`;
 function name(slot){return state?.roster[slot]?.name??`Seat ${slot+1}`;}
 function feedback(t){$('feedback').textContent=t;}
 function drawPlayers(){
- const roster=state?.roster??Array.from({length:9},(_,i)=>({slot:i,name:i===Number(slot)?'You':`Player ${i+1}`,alive:true}));
+ const roster=state?.roster??Array.from({length:9},(_,i)=>({slot:i,name:slot!==null&&i===Number(slot)?'You':`Player ${i+1}`,alive:true}));
  const request=state?.observation?.request,eligible=request?.kind==='vote'&&!state?.accepted?request.targets:[];
  $('players').innerHTML=roster.map(p=>{
   const known=knownRole(state,p.slot),you=state?.self?.slot===p.slot;
@@ -34,7 +36,7 @@ function options(targets,pass=true){return (pass?'<option value="">Pass</option>
 function drawAction(){
  const o=state.observation,key=`${state.phase}:${state.period}:${o?.requestId}:${JSON.stringify(state.accepted)}:${state.self?.alive}:${state.result?.outcome}:${state.floor?.turn}`;
  if(key===actionKey)return;actionKey=key;feedback('');
- if(state.result){$('action').innerHTML=`<span class="eyebrow">THE STORY ENDS</span><h2 class="result">${esc({town_win:'The village prevails',wolf_win:'The wolves prevail',jester_win:'The Trickster wins',draw:'A village divided'}[state.result.outcome])}</h2><p>${state.result.scores[Number(slot)]?'You won.':'The game is complete.'} The completed replay is saved by the local host.</p><a href="/client/replay?replay=/replay.json">Watch the replay</a>`;return;}
+ if(state.result){$('action').innerHTML=`<span class="eyebrow">THE STORY ENDS</span><h2 class="result">${esc({town_win:'The village prevails',wolf_win:'The wolves prevail',jester_win:'The Trickster wins',draw:'A village divided'}[state.result.outcome])}</h2><p>${state.result.scores[Number(slot)]?'You won.':'The game is complete.'} ${esc(connection.replayNotice)}</p><a href="${esc(connection.replayPage)}" target="_blank" rel="noopener noreferrer">${esc(connection.replayLabel)}</a>`;return;}
  if(!state.self){$('action').innerHTML='<h2>Gathering the village…</h2><p>Waiting for the other players to connect.</p>';return;}
  if(!state.self.alive){$('action').innerHTML='<h2>Your story lives on</h2><p>You have been eliminated. Follow the public conversation while the village plays on.</p>';return;}
  if(state.accepted){$('action').innerHTML=`<h2>Choice locked in</h2><p>${esc(state.accepted.kind==='vote'?`Your vote: ${state.accepted.target===null?'Pass':name(state.accepted.target)}.`:'Your night actions are recorded.')} The phase ends when the timer reaches zero.</p>`;return;}
@@ -93,7 +95,7 @@ function drawChat(){
  $('chat-hint').textContent=allowed?'480 characters · Enter to send':state.self?.alive?'Chat reopens during discussion.':'You can watch the conversation.';
 }
 function deathMark(cause){return cause?`<img class="death-mark ${cause==='wolf'?'claw':'meat'}" src="${asset(cause==='wolf'?'dead_icon_claw':'dead_icon_meat')}" alt="${cause==='wolf'?'Killed by wolves':'Eliminated by town'}">`:'';}
-let resultDismissed=false,lastInterlude='',endRolesRequested=false;
+let resultDismissed=false,lastInterlude='';
 function drawInterlude(){
  const summary=stageSummary(state),show=!!summary||!!state.result&&!resultDismissed;
  const panel=$('interlude');panel.hidden=!show;
@@ -113,21 +115,21 @@ function drawInterlude(){
   };
   const winners=state.roster.filter(p=>result.scores[p.slot]===1),others=state.roster.filter(p=>result.scores[p.slot]!==1);
   panel.className=`interlude end-screen ${wolf?'wolf-ending':'town-ending'}`;
-  panel.innerHTML=`<div class="end-content"><h2 id="interlude-title" tabindex="-1">${esc(headline)}</h2>${winners.length?`<h3>Winners</h3><div class="end-cards winners">${winners.map(card).join('')}</div>`:''}<div class="end-bottom"><section><h3>${winners.length?'The rest of the village':'The village'}</h3><div class="end-cards">${others.map(card).join('')}</div></section><div class="end-actions"><h2>The End</h2><a class="primary" href="/client/replay?replay=/replay.json">Watch replay</a><button id="review-village">Review village</button></div></div></div>`;
+  panel.innerHTML=`<div class="end-content"><h2 id="interlude-title" tabindex="-1">${esc(headline)}</h2>${winners.length?`<h3>Winners</h3><div class="end-cards winners">${winners.map(card).join('')}</div>`:''}<div class="end-bottom"><section><h3>${winners.length?'The rest of the village':'The village'}</h3><div class="end-cards">${others.map(card).join('')}</div></section><div class="end-actions"><h2>The End</h2><p>${esc(connection.replayNotice)}</p><a class="primary" href="${esc(connection.replayPage)}" target="_blank" rel="noopener noreferrer">${esc(connection.replayLabel)}</a><button id="review-village">Review village</button></div></div></div>`;
   $('review-village').onclick=()=>{resultDismissed=true;lastInterlude='';drawInterlude();$('phase').setAttribute('tabindex','-1');$('phase').focus();};
  }
  $('interlude-title')?.focus({preventScroll:true});
 }
-function render(s){state=s;
- if(s.result&&!s.revealedRoles?.length&&!endRolesRequested){endRolesRequested=true;fetch('/replay.json').then(r=>{if(!r.ok)throw new Error('Replay unavailable');return r.json();}).then(raw=>{const replay=Replay.parse(raw);if(replay.episodeId!==state.episodeId)return;state.revealedRoles=replay.events.find(e=>e.payload.kind==='roles')?.payload.roles??[];lastInterlude='';drawInterlude();}).catch(()=>{});}
+function render(s){state=s;if(s.self)slot=s.self.slot;
 remainingUntil=performance.now()+s.remainingMs;ended=!!s.result;const key=JSON.stringify([s.events.length,s.phase,s.period,s.observation?.requestId,s.observation?.attempt,s.accepted,s.self?.alive,s.floor?.turn]);
  if(key!==lastRender){lastRender=key;document.body.classList.toggle('night',s.phase==='night');$('day').textContent=s.phase==='waiting'?'GATHERING THE VILLAGE':`DAY ${s.day} · ${s.phase==='night'?'AFTER DARK':'THE VILLAGE'}`;$('phase').textContent=s.result?'Game over':labels[s.period];drawPlayers();drawRole();drawAction();drawChat();drawInterlude();}
  updateClock();
 }
 function updateClock(){const n=Math.max(0,Math.ceil((remainingUntil-performance.now())/1000));$('timer').textContent=state&&!ended?`${Math.floor(n/60)}:${String(n%60).padStart(2,'0')}`:'—:—';$('timer').classList.toggle('urgent',!!state&&n<=10&&!ended);$('timer-label').textContent=ended?'Complete':state?state.period==='discussion'?'Until voting':state.period==='coordination'?'Until actions':'Time remaining':'Not started';if($('transition-countdown'))$('transition-countdown').textContent=n>0?`The next phase starts in ${n}s`:'Waiting for the next phase…';}
-function connect(){if(connecting||ws?.readyState===WebSocket.OPEN)return;connecting=true;joined=true;sessionStorage.setItem(storageKey,'1');$('connection').textContent='Connecting…';ws=new WebSocket(`${location.protocol==='https:'?'wss:':'ws:'}//${location.host}/human?slot=${encodeURIComponent(slot)}&token=${encodeURIComponent(token)}`);
+function connect(){if(!connection||connecting||ws?.readyState===WebSocket.OPEN)return;connecting=true;joined=true;sessionStorage.setItem(storageKey,'1');$('connection').textContent='Connecting…';ws=new WebSocket(connection.socket);
  ws.onopen=()=>{connecting=false;$('connection').textContent='Connected · your seat is private';if(state)drawChat();};
  ws.onmessage=e=>{let p;try{p=JSON.parse(e.data);}catch{return;}
+  if(p.type==='ready'){slot=p.slot;drawPlayers();}
   if(p.type==='snapshot')render(p);
   if(p.type==='receipt')feedback(['accepted','duplicate'].includes(p.status)?'Choice recorded.':p.status==='expired'?'The action window has closed.':`Choice rejected${p.retry?' — please try again':''}.`);
   if(p.type==='chat_receipt'&&p.id===pendingChat){pendingChat=null;if(['accepted','duplicate'].includes(p.status))$('message').value='';else feedback(p.message??'Message was not sent.');drawChat();}

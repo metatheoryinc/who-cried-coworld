@@ -13,6 +13,7 @@ export function episodeBudgetSeconds(c: {maxDays:number;windowMs:number;player_c
 }
 const ConfigFields = z.object({
  mode:z.enum(['fast','human']).default('fast'),
+ moderator:z.enum(['default','llm','auto']).optional().describe('Host selection: default is deterministic; llm requires runtime model credentials; auto permits fallback. Omission preserves WCW_MODERATOR. Fast mode uses bid ranking.'),
  humanSlot:z.number().int().min(0).max(8).default(0),
  humanTimers:HumanTimers.default(()=>HumanTimers.parse({})),
  tokens:z.array(z.string().min(1)).length(9).refine(t=>new Set(t).size===9,'Tokens must be distinct'),
@@ -26,7 +27,7 @@ const ConfigFields = z.object({
  windowMs:z.number().int().min(100).max(10000).default(3500),
 }).strict();
 export const GameConfig=z.union([
- ConfigFields.extend({mode:z.literal('fast').default('fast')}),
+ ConfigFields.extend({mode:z.literal('fast').default('fast'),moderator:z.enum(['default','auto']).optional().describe('Fast mode uses deterministic bid ranking; LLM moderation requires human or bots mode.')}),
  ConfigFields.extend({mode:z.literal('bots'),humanSlot:z.literal(-1).default(-1),player_connect_timeout_seconds:z.number().int().min(1).max(180).default(30)}),
  ConfigFields.extend({mode:z.literal('human'),player_connect_timeout_seconds:z.number().int().min(1).max(180).default(30)}),
 ]).refine(c=>!c.setup||JSON.stringify(c.roles)===JSON.stringify(defaultRoles),'Choose a setup or a custom role deck, not both').refine(c=>episodeBudgetSeconds(c)<=2400,'Episode exceeds time budget');

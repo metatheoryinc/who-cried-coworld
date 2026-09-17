@@ -1,3 +1,4 @@
+import { viewerConnection } from './connection.js';
 import { nextReplayCursor } from './playback.js';
 import { foldPhaseBanners } from './phase-banners.js';
 import { Replay } from '../shared/replay.js';
@@ -5,7 +6,7 @@ import { ViewerPacket } from '../shared/events.js';
 import { decodeText } from '../shared/decode.js';
 import { roleNames } from '../shared/roles.js';
 const params = new URLSearchParams(location.search);
-const isSeatInspector=location.pathname==='/client/player';
+const isSeatInspector=/\/client\/player\/?$/.test(location.pathname);
 const replayUrl = new URLSearchParams(location.hash.slice(1)).get('replay') ?? params.get('replay');
 let LIVE_PUBLIC = {episodeId:'Connecting…',events:[]}, REPLAY_EXPORT;
 let refresh=()=>{};
@@ -17,8 +18,7 @@ try {
   for(;;){const chunk=await reader.read();if(chunk.done)break;bytes+=chunk.value.byteLength;if(bytes>32*1024*1024){await reader.cancel();throw Error('Replay too large');}data+=decoder.decode(chunk.value,{stream:true});}data+=decoder.decode();
   const parsed=decodeText(data,Replay,32*1024*1024);if(!parsed.ok)throw Error('Invalid or unsupported replay');REPLAY_EXPORT=parsed.value;
  }else{
-  const player=location.pathname==='/client/player';
-  const socket=new WebSocket(`${location.protocol==='https:'?'wss':'ws'}://${location.host}${player?'/inspect'+location.search:'/global'}`);
+  const socket=new WebSocket(viewerConnection(location.href).socket);
   socket.onmessage=message=>{const parsed=decodeText(message.data,ViewerPacket,32*1024*1024);if(!parsed.ok){showError('Invalid viewer data');socket.close();return;}
    const p=parsed.value;if(p.type==='reset')LIVE_PUBLIC={episodeId:p.episodeId,events:p.events};else{
     const incoming=p.events.filter(e=>e.cursor>LIVE_PUBLIC.events.length);if(incoming.length&&incoming[0].cursor!==LIVE_PUBLIC.events.length+1){showError('Stream gap — reload');socket.close();return;}LIVE_PUBLIC.events.push(...incoming);

@@ -11,7 +11,8 @@ import { exportReplay,type Replay } from '../../shared/replay.js';
 import { project } from '../../shared/presentation/project.js';
 export async function startServer(config:GameConfig,options:{port:number;host:string;viewerDir?:string;moderatorEnvironment?:NodeJS.ProcessEnv;onModeratorLog?:(log:ModeratorLog)=>void}){
  const session=new (config.mode!=='fast'?HumanSession:Session)(config,`episode_${randomUUID().replaceAll('-','')}`);
- if(session instanceof HumanSession)session.moderator=createRuntimeModerator(options.moderatorEnvironment??process.env,options.onModeratorLog);
+ const moderatorEnv=options.moderatorEnvironment??process.env;
+ if(session instanceof HumanSession)session.moderator=createRuntimeModerator(config.moderator===undefined?moderatorEnv:{...moderatorEnv,WCW_MODERATOR:config.moderator==='default'?'off':config.moderator},options.onModeratorLog);
  const policies=new Map<number,WebSocket>(),viewers=new Map<WebSocket,{slot:number|'public';cursor:number}>();
  const sent=new Map<WebSocket,string>(),invalid=new Map<WebSocket,{request:string;count:number}>();
  let completed=false,timer:ReturnType<typeof setInterval>|undefined;
@@ -72,13 +73,13 @@ export async function startServer(config:GameConfig,options:{port:number;host:st
   const url=new URL(req.url??'/','http://localhost');
   const slot=authenticate(url);
   if(!['/player','/human','/global','/inspect'].includes(url.pathname)||url.pathname!=='/global'&&slot===null){socket.write('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n');socket.destroy();return;}
-  if((url.pathname==='/human'&&(!(session instanceof HumanSession)||slot!==config.humanSlot))||(url.pathname==='/player'&&session instanceof HumanSession&&slot===config.humanSlot)||(['/human','/player'].includes(url.pathname)&&(policies.has(slot!)||(completed&&url.pathname==='/player')))){socket.write('HTTP/1.1 409 Conflict\r\nConnection: close\r\n\r\n');socket.destroy();return;}
+  if((url.pathname==='/human'&&(!(session instanceof HumanSession)||slot!==config.humanSlot))||(['/human','/player'].includes(url.pathname)&&(policies.has(slot!)||(completed&&!(session instanceof HumanSession&&slot===config.humanSlot))))){socket.write('HTTP/1.1 409 Conflict\r\nConnection: close\r\n\r\n');socket.destroy();return;}
   wss.handleUpgrade(req,socket,head,ws=>{
    ws.on('error',()=>{});
    if(url.pathname==='/player'||url.pathname==='/human'){
     policies.set(slot!,ws);send(ws,{protocol:'wcw.player/1',type:'ready',episodeId:session.episodeId,slot});
     ws.on('message',(bytes,isBinary)=>{
-     if(url.pathname==='/human'&&session instanceof HumanSession&&!isBinary){
+     if(session instanceof HumanSession&&slot===config.humanSlot&&!isBinary){
       let raw;try{raw=JSON.parse(bytes.toString());}catch{}
       if(raw?.type==='chat'){const receipt=session.chat(slot!,bytes.toString(),performance.now());send(ws,{protocol:'wcw.human/1',type:'chat_receipt',id:raw.id,...receipt});if(receipt.status==='rejected'){const n=(invalid.get(ws)?.count??0)+1;invalid.set(ws,{request:'chat',count:n});if(n>=64)ws.close(1008,'Invalid traffic');}flush();return;}
      }

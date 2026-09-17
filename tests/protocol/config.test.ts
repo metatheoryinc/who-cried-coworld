@@ -26,3 +26,10 @@ it('allows ten-second fast LLM windows within the forty-minute package budget',(
  const c=GameConfig.parse({...input(),mode:'fast',setup:'random',maxDays:8,windowMs:10000,player_connect_timeout_seconds:30});
  expect(episodeBudgetSeconds(c)).toBe(2140);
 });
+it('validates moderator selection independently of paced variant settings',()=>{
+ for(const mode of ['human','bots'])for(const moderator of ['default','llm','auto'])expect(GameConfig.parse({...input(),mode,moderator}).moderator).toBe(moderator);
+ expect(GameConfig.parse(input()).moderator).toBeUndefined();
+ expect(GameConfig.safeParse({...input(),mode:'human',moderator:'invalid'}).success).toBe(false);
+ expect(GameConfig.safeParse({...input(),mode:'fast',moderator:'llm'}).success).toBe(false);
+ for(const moderator of ['default','auto'])expect(GameConfig.parse({...input(),mode:'fast',moderator}).moderator).toBe(moderator);
+});

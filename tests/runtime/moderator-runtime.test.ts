@@ -70,3 +70,17 @@ it('keeps automatic configuration fallback safe even if logging fails',()=>{
  expect(JSON.stringify(log.mock.calls)).not.toContain('not-a-url-secret');
  expect(createRuntimeModerator(env,()=>{throw Error('log unavailable');})).toBeUndefined();
 });
+it.each(['human','bots'] as const)('honors explicit moderator config over environment in %s mode',async mode=>{
+ const base={mode,tokens:Array.from({length:9},(_,i)=>`t${i}`),players:Array.from({length:9},(_,i)=>({name:`P${i}`}))};
+ const env={WCW_MODERATOR:'llm',OPENROUTER_API_KEY:'test'};
+ const deterministic=await startServer(GameConfig.parse({...base,moderator:'default'}),{port:0,host:'127.0.0.1',moderatorEnvironment:env});
+ try{expect('moderator' in deterministic.session&&deterministic.session.moderator).toBeUndefined();expect(env.WCW_MODERATOR).toBe('llm');}
+ finally{await deterministic.close();}
+ const llm=await startServer(GameConfig.parse({...base,moderator:'llm'}),{port:0,host:'127.0.0.1',moderatorEnvironment:{...env,WCW_MODERATOR:'off'}});
+ try{expect('moderator' in llm.session&&typeof llm.session.moderator).toBe('function');}
+ finally{await llm.close();}
+ await expect(startServer(GameConfig.parse({...base,moderator:'llm'}),{port:0,host:'127.0.0.1',moderatorEnvironment:{}})).rejects.toThrow('credential');
+ const auto=await startServer(GameConfig.parse({...base,moderator:'auto'}),{port:0,host:'127.0.0.1',moderatorEnvironment:{WCW_MODERATOR:'llm'}});
+ try{expect('moderator' in auto.session&&auto.session.moderator).toBeUndefined();}
+ finally{await auto.close();}
+});

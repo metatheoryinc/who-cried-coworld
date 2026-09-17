@@ -88,6 +88,36 @@ In `standard`, `human`, and `reproducible`, a neutral moderator allocates the sp
 LLM; without credentials, or if selection fails, deterministic scheduling keeps
 play moving. This is distinct from the policies that decide each player's actions.
 
+## Choosing the moderator
+
+Set `moderator` in the episode's game configuration independently of the paced
+variant (`human`, `standard`, or `reproducible`):
+
+```json
+{"moderator": "default"}
+```
+
+- **`default`**: deterministic host; no moderator model calls.
+- **`llm`**: use an LLM host. Missing runtime credentials/model settings fail startup;
+  failed, invalid or late selections during play fall back to the deterministic host.
+- **`auto`**: use an LLM when runtime settings are available; otherwise use the
+  deterministic host, including when provider configuration is unavailable.
+
+An explicit config value overrides `WCW_MODERATOR`. If omitted, the existing
+runtime setting is preserved (`auto` when that setting is absent). The same game
+image supports both choices; separate variants are not required. This setting
+changes the host only, not the models used by the eight or nine player policies.
+
+Credentials stay in the game process's runtime environment. For OpenRouter, supply
+`WCW_MODERATOR_API_KEY` (or `OPENROUTER_API_KEY`) and optionally
+`OPENROUTER_HOST_MODEL`. For Bedrock, supply the hosted endpoint and
+`WCW_MODERATOR_BEDROCK_MODEL` (or `BEDROCK_MODEL`). Policy-container settings do not
+automatically configure the game host.
+
+**Fast-mode exception:** `fast-llm` and `smoke` use bid ranking. They accept `default`
+or `auto`, both retaining that scheduler; `llm` is rejected. Use a paced mode for
+LLM moderation. The config schema advertises this restriction.
+
 ## Policy guidance and baselines
 
 Reason from the information in your seat's observation. Refer to players by their

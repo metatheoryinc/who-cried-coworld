@@ -51,13 +51,18 @@ it('reserves a human seat, waits in lobby, and reconnects with private state',as
  const server=await startServer(config,{port:0,host:'127.0.0.1'}),clients:WebSocket[]=[];
  const connect=(path:string)=>new Promise<WebSocket>((yes,no)=>{const ws=new WebSocket(`ws://127.0.0.1:${server.port}${path}`);clients.push(ws);ws.once('open',()=>yes(ws));ws.once('error',no);});
  try{
-  await expect(connect('/player?slot=1&token=t1')).rejects.toThrow();
+  await expect(connect('/player?slot=1&token=bad')).rejects.toThrow();
   for(const slot of [0,2,3,4,5,6,7,8])await connect(`/player?slot=${slot}&token=t${slot}`);
   await new Promise(r=>setTimeout(r,1100));expect(server.session.phase).toBe('waiting');
-  const snapshot=new Promise<any>((yes,no)=>{const ws=new WebSocket(`ws://127.0.0.1:${server.port}/human?slot=1&token=t1`);clients.push(ws);ws.on('error',no);ws.on('message',b=>{const p=JSON.parse(b.toString());if(p.type==='snapshot'&&p.self)yes(p);});});
+  const snapshot=new Promise<any>((yes,no)=>{const ws=new WebSocket(`ws://127.0.0.1:${server.port}/player?slot=1&token=t1`);clients.push(ws);ws.on('error',no);ws.on('message',b=>{const p=JSON.parse(b.toString());if(p.type==='snapshot'&&p.self)yes(p);});});
   const first=await snapshot;expect(first.self.slot).toBe(1);expect(first.remainingMs).toBeGreaterThan(140000);
   expect(JSON.stringify(first)).not.toMatch(/"seed"|"kind":"roles"|"tokens"/);
-  clients.at(-1)!.close();await new Promise(r=>setTimeout(r,40));
+  const human=clients.at(-1)!;
+  await expect(connect('/human?slot=1&token=t1')).rejects.toThrow();
+  const receipt=new Promise<any>(yes=>human.on('message',b=>{const p=JSON.parse(b.toString());if(p.type==='chat_receipt')yes(p);}));
+  human.send(JSON.stringify({protocol:'wcw.human/1',type:'chat',episodeId:first.episodeId,id:'chat_hosted',phaseKey:first.phaseKey,channel:'town',text:'Hello village'}));
+  expect((await receipt).status).toBe('accepted');
+  human.close();await new Promise(r=>setTimeout(r,40));
   const again=new Promise<any>((yes,no)=>{const ws=new WebSocket(`ws://127.0.0.1:${server.port}/human?slot=1&token=t1`);clients.push(ws);ws.on('error',no);ws.on('message',b=>{const p=JSON.parse(b.toString());if(p.type==='snapshot')yes(p);});});
   expect((await again).self).toEqual(first.self);
  }finally{for(const ws of clients)ws.terminate();await server.close();}

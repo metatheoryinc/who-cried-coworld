@@ -158,6 +158,13 @@ moderation in `startServer` for `human` and `bots` modes. The older `fast` mode 
 its existing scheduling. The runtime does not read a benchmark checkout or `.env` file;
 the local launcher still loads its benchmark environment before starting the server.
 
+Game configuration can set `moderator: "default"`, `"llm"`, or `"auto"` for either
+paced mode. An explicit value overrides `WCW_MODERATOR`; omission preserves the
+legacy environment behavior. `default` disables model initialization even with
+credentials present. `llm` requires usable settings at startup, while turn failures
+still fall back. `auto` allows startup fallback. Fast mode rejects `llm` because it
+uses bid ranking. See [moderator configuration](../package/readme.md#choosing-the-moderator).
+
 Runtime environment settings:
 
 | Variable | Behavior |
@@ -185,3 +192,54 @@ The moderator and policy clients also support Bedrock via the shared adapter.
 Hosted-sidecar detection takes precedence in `auto` mode; model IDs must be supplied
 using `BEDROCK_MODEL` / `WCW_MODERATOR_BEDROCK_MODEL`. See [Bedrock configuration](bedrock.md)
 for explicit provider selection, direct AWS testing, and current verification limits.
+
+## Hosted player connection adapter (2026-09-17)
+
+The player UI accepts the platform-supplied `address` query parameter, following
+Coworld's bundled Paint Arena client. It preserves the address's proxy path and
+query; HTTP(S) addresses become WS(S). Without `address`, local seat links still
+connect to `/human?slot=N&token=T`.
+
+The reserved human seat can connect through authenticated `/player` (the runner's
+standard route) or `/human` (the local alias). Both deliver the same private human
+snapshots, chat receipts and actions. The browser learns its seat from the server's
+`ready`/snapshot messages; the page URL does not need a second copy of slot/token.
+The game still requires the correct seat token on the upstream connection, and
+rejects duplicate controllers. The platform proxy remains responsible for account
+and upstream seat authorization.
+
+Player HTML, CSS, art and replay links now resolve beneath the proxied page path,
+rather than assuming the website's origin root is the game. An invalid socket
+protocol displays an invalid-link message and disables joining.
+
+Validation: a local reverse proxy at `/api/fixture/proxy/` served the built UI,
+injected fixture-only seat credentials upstream, and forwarded WebSocket upgrades
+to `/player`. Browser joining, private role display, public chat, bot responses and
+reload/reconnect worked with eight scripted policies and `WCW_MODERATOR=off`.
+Automated tests cover URL preservation, local compatibility, invalid protocols,
+authentication, chat, duplicate controllers and reconnects.
+
+This is proxy compatibility evidence, not a completed Softmax human episode.
+The updated game image must be published before production testing. The actual
+Softmax invitation/participation flow and proxy authorization still need end-to-end
+validation with one human plus eight policies. Do not launch the human variant as
+nine policies: seat 0 is reserved for the browser player.
+
+### Spectator proxy and replay lifecycle
+
+The live spectator now honors `address` as well, preserving the supplied WebSocket
+path/query. Local `/global` and authenticated inspector `/inspect` fallbacks retain
+any HTTP proxy prefix. Browser verification through `/api/fixture/proxy/` displayed
+the live episode, nine-player roster and day-one banner instead of “Connecting”.
+
+The packaged entrypoint writes replay and results to `COGAME_SAVE_REPLAY_URI` and
+`COGAME_RESULTS_URI`, then exits. Coworld's runner checks required artifacts and
+uploads the replay. Persistent replay viewing belongs to Softmax's static viewer,
+not the terminated game server. The hosted human end screen now offers **Open Softmax**, which opens
+`https://softmax.com/observatory/v2` in a new tab without copying seat credentials.
+It explains that the replay becomes available after episode processing and asks
+the player to open their completed game. This is an Observatory handoff, not a
+direct replay link: the live page has no platform episode-request ID or saved
+replay URL. Local games retain their direct **Watch replay** link. End-screen
+role reveals use the final private snapshot, without fetching the terminating
+server. No server keepalive or lifecycle change is needed.

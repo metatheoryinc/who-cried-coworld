@@ -97,13 +97,13 @@ setup
 
 The episode begins on Day 1. It does not open with a playable night. This follows the current Tofu state machine; older Tofu tests that still narrate a first night are stale relative to that production transition.
 
-The default `maxDays` is 8 and must be configurable as an integer from 1 through 32. A cycle is Day N followed, if no faction has already won, by Night N. After Night `maxDays` resolves, the judge checks faction victory first. If neither faction has won, it emits a draw and never enters Day `maxDays + 1`. Hosted configuration must also satisfy the architecture's total 978-second budget formula; the standard eight-second preset therefore permits at most eight days.
+The default `maxDays` is 8 and must be configurable as an integer from 1 through 32. A cycle is Day N followed, if no faction has already won, by Night N. After Night `maxDays` resolves, the judge checks faction victory first. If neither faction has won, it emits a draw and never enters Day `maxDays + 1`. Configuration must also fit the 40-minute package budget; see the current [variants and pacing](../package/readme.md#variants-and-pacing).
 
 Faction victory is checked immediately after each `day.resolve` and `night.resolve`. No discussion, vote, or action window opens after a terminal result.
 
 ### Bounded windows
 
-The v1 defaults are:
+The original design proposed the following timing (superseded by the 26-window fast scheduler and separate paced scheduler documented in the package README):
 
 | Window | Count per cycle | Deadline per window |
 | --- | ---: | ---: |
@@ -112,7 +112,7 @@ The v1 defaults are:
 | Day vote | 1 | 8 seconds |
 | Night actions | 1 | 8 seconds |
 
-This is at most 96 seconds of policy-facing windows per complete cycle. Connection and finalization budgets belong to the architecture record; the current design target is 180 seconds for connection and 30 seconds for finalization, yielding a 978-second upper bound for eight complete cycles before platform overhead.
+This is at most 96 seconds of policy-facing windows per complete cycle. Connection and finalization budgets belong to the architecture record; the original design target was 180 seconds for connection and 30 seconds for finalization, yielding a 978-second upper bound for eight complete cycles before platform overhead.
 
 An individual request may reach a terminal accepted-or-fallback state early, but its batch resolves only at the fixed window boundary. The public phase duration must not shrink when roles die, policies answer early, or fewer actors are eligible; otherwise timing becomes a role/activity side channel. Timeouts are game inputs recorded as diagnostic events, not reasons to extend a phase.
 

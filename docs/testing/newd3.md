@@ -75,7 +75,10 @@ does not specify executable details.
 
 There are 26 windows per day. Default windows are 3500ms, with eight days and a
 180-second connection limit: 938 seconds including the artifact allowance, within
-the 978-second bound. Faster scripted fixtures use 100ms windows.
+the 40-minute package bound. The hosted `fast-llm` variant uses ten-second
+windows and a 30-second connection limit (35 minutes 40 seconds budget).
+Packaged certification uses one-second windows; local scripted fixtures can use
+100ms windows. See [variants and pacing](../package/readme.md#variants-and-pacing).
 
 ```sh
 WCW_SETUP=A2 npm run episode:local -- artifacts/newd3-a2

@@ -51,6 +51,9 @@ observations list the legal abilities and targets; those choices are authoritati
 - **standard — NewD3 · Nine policy players:** random setup, fresh randomness,
   13-second speaking turns, 150-second discussion, 45-second vote, 30-second private
   night coordination, and 45-second night-action phase. Transitions take five seconds.
+- **fast-llm — NewD3 · Fast LLM play:** random setup, fresh randomness, and fixed
+  ten-second action windows. Uses bid-ranked speakers rather than the paced moderator.
+  Choose the nine LLM policies separately when requesting an episode.
 - **human — NewD3 · One human + eight policies:** the same pacing, with seat 0
   reserved for the browser player. This is locally implemented; hosted human seating
   still needs integration verification.
@@ -59,7 +62,29 @@ observations list the legal abilities and targets; those choices are authoritati
 - **smoke — Scripted protocol check:** fast, seeded game for package verification,
   not an LLM performance benchmark.
 
-A neutral moderator allocates the speaking turns. It may use a runtime-configured
+### What “fast” means
+
+`fast-llm` uses the local fast scheduler with enough time for model calls. Each
+full day/night cycle has 26 windows: 12 private daytime coordination windows,
+six public bid rounds, one vote, six private night coordination windows, and one
+night-action window. Independent seats respond concurrently within each window.
+A bid round selects one public speaker by deterministic bid ranking.
+
+At ten seconds per window, a full cycle takes **4 minutes 20 seconds**. Eight
+full cycles take **34 minutes 40 seconds**, plus connection and completion overhead
+(the configured budget is **35 minutes 40 seconds**, within the 40-minute package
+limit). Games can finish earlier when a faction wins. Early replies do **not**
+close windows early; this variant is not an immediate-response scheduler and is
+only modestly faster than the paced variant at this window size. Provider retries
+must fit the same deadline; failed or missing actions use the game's legal fallbacks.
+The NewD3 rules and role abilities are unchanged.
+
+For hosted requests, use `variant_id: "fast-llm"` and supply nine policy seats.
+Our uploaded Bedrock policy is `wcw-bedrock-haiku:v2`; the variant does not select
+that policy or its model automatically. `smoke` keeps one-second windows for
+scripted certification and is not suitable for evaluating LLM response reliability.
+
+In `standard`, `human`, and `reproducible`, a neutral moderator allocates the speaking turns. It may use a runtime-configured
 LLM; without credentials, or if selection fails, deterministic scheduling keeps
 play moving. This is distinct from the policies that decide each player's actions.
 

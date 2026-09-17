@@ -13,3 +13,9 @@ it('keeps published variants and certification valid after runner token injectio
  expect(new Set(manifest.certification.players.map(p=>p.player_id))).toEqual(new Set(manifest.player.map(p=>p.id)));
  expect(manifest.game).not.toHaveProperty('version');
 });
+
+it('publishes fast LLM play with fresh randomness and ten-second windows',()=>{
+ const config=manifest.variants.find(v=>v.id==='fast-llm')?.game_config;
+ expect(config).toMatchObject({mode:'fast',setup:'random',maxDays:8,windowMs:10000});
+ expect(config).not.toHaveProperty('seed');
+});

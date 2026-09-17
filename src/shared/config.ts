@@ -23,11 +23,11 @@ const ConfigFields = z.object({
  seed:z.string().regex(/^[0-9a-f]{32}$/).optional(),
  maxDays:z.number().int().min(1).max(32).default(8),
  player_connect_timeout_seconds:z.number().int().min(1).max(180).default(180),
- windowMs:z.number().int().min(100).max(8000).default(3500),
+ windowMs:z.number().int().min(100).max(10000).default(3500),
 }).strict();
 export const GameConfig=z.union([
  ConfigFields.extend({mode:z.literal('fast').default('fast')}),
  ConfigFields.extend({mode:z.literal('bots'),humanSlot:z.literal(-1).default(-1),player_connect_timeout_seconds:z.number().int().min(1).max(180).default(30)}),
  ConfigFields.extend({mode:z.literal('human'),player_connect_timeout_seconds:z.number().int().min(1).max(180).default(30)}),
-]).refine(c=>!c.setup||JSON.stringify(c.roles)===JSON.stringify(defaultRoles),'Choose a setup or a custom role deck, not both').refine(c=>episodeBudgetSeconds(c)<=(c.mode!=='fast'?2400:978),'Episode exceeds time budget');
+]).refine(c=>!c.setup||JSON.stringify(c.roles)===JSON.stringify(defaultRoles),'Choose a setup or a custom role deck, not both').refine(c=>episodeBudgetSeconds(c)<=2400,'Episode exceeds time budget');
 export type GameConfig = z.infer<typeof GameConfig>;

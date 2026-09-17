@@ -8,3 +8,15 @@ dist/
 artifacts/
 test-results/
 tmp/
+
+# Local credentials and environment overrides
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.p12
+*.pfx
+.npmrc
+.pypirc

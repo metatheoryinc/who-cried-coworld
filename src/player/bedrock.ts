@@ -12,6 +12,39 @@ export async function bedrockCompletion(input:BedrockInput,sender?:BedrockSender
   if(previous?.role===message.role)previous.content!.push({type:'text',text:message.content});
   else messages.push({role:message.role,content:[{type:'text',text:message.content}]});
  }
+ // The historical endpoint variable now identifies Softmax's OpenRouter proxy.
+ if(input.endpoint&&!sender){
+  if(!/^[a-z0-9-]+\/[a-z0-9][a-z0-9._:-]*$/i.test(input.model))throw new DecisionError('invalid_request','Hosted model must be a canonical OpenRouter slug',false);
+  const claude=input.model.startsWith('anthropic/');
+  const url=`${input.endpoint.replace(/\/$/,'')}/v1/${claude?'messages':'chat/completions'}`;
+  input.metadata({provider:'softmax',endpoint:url});
+  let response:Response;
+  try{
+   response=await fetch(url,{method:'POST',redirect:'error',signal:input.signal,headers:{'Content-Type':'application/json',...(claude?{'x-api-key':'sidecar','anthropic-version':'2023-06-01'}:{Authorization:'Bearer sidecar'})},body:JSON.stringify(claude?{model:input.model,system:system.join('\n\n'),messages,max_tokens:input.maxTokens??1600,stream:false}:{model:input.model,messages:input.messages,max_tokens:input.maxTokens??1600,stream:false})});
+  }catch{
+   throw new DecisionError(input.signal.aborted?'timeout':'transport_error','Hosted proxy request failed',!input.signal.aborted);
+  }
+  input.metadata({httpStatus:response.status});
+  let body:any;
+  try{body=await response.json();}catch{
+   if(!response.ok)throw new DecisionError('http_error',`Hosted proxy HTTP ${response.status}`,response.status===408||response.status===429||response.status>=500);
+   throw new DecisionError('invalid_response','Hosted proxy returned invalid JSON');
+  }
+  if(!response.ok){
+   // Error types are useful diagnostics; never echo arbitrary response bodies.
+   const code=body?.error?.type??body?.error?.code;
+   input.metadata({providerErrorCode:typeof code==='string'&&/^[a-z0-9_-]{1,80}$/i.test(code)?code:null});
+   throw new DecisionError('http_error',`Hosted proxy HTTP ${response.status}`,response.status===408||response.status===429||response.status>=500);
+  }
+  if(!body||typeof body!=='object'||Array.isArray(body))throw new DecisionError('invalid_response','Hosted proxy returned invalid JSON object');
+  const finish=claude?body.stop_reason:body.choices?.[0]?.finish_reason;
+  input.metadata({generationId:body.id??null,finishReason:finish??null,usage:body.usage??null});
+  if(finish==='max_tokens'||finish==='length')throw new DecisionError('output_limit','Model reached its output token limit');
+  if(['refusal','content_filter'].includes(finish))throw new DecisionError('refused','Hosted model declined the request',false);
+  const text=claude?(Array.isArray(body.content)?body.content.filter((b:any)=>b?.type==='text'&&typeof b.text==='string').map((b:any)=>b.text).join(''):''):body.choices?.[0]?.message?.content;
+  if(typeof text!=='string'||!text.trim())throw new DecisionError('empty_response','Hosted proxy returned no message content');
+  return text;
+ }
  // Disable SDK retries: timedAction owns retry count and the decision deadline.
  const client=sender?undefined:new BedrockRuntimeClient({endpoint:input.endpoint,region:input.region,maxAttempts:1,requestHandler:new NodeHttpHandler()});
  input.metadata({provider:'bedrock',endpoint:input.endpoint??'AWS default endpoint'});

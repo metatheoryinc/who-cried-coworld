@@ -84,3 +84,15 @@ it.each(['human','bots'] as const)('honors explicit moderator config over enviro
  try{expect('moderator' in auto.session&&auto.session.moderator).toBeUndefined();}
  finally{await auto.close();}
 });
+
+it('selects a moderator turn through the new hosted Messages proxy',async()=>{
+ const fetcher=vi.spyOn(globalThis,'fetch').mockResolvedValue(Response.json({content:[{type:'text',text:JSON.stringify({slot:0,prompt:'ChatGPT, what would you add?'})}],stop_reason:'end_turn'}));
+ const log=vi.fn();
+ try{
+  const moderator=createRuntimeModerator({WCW_MODERATOR:'llm',AWS_ENDPOINT_URL_BEDROCK_RUNTIME:'http://localhost:9100',WCW_MODERATOR_BEDROCK_MODEL:'anthropic/claude-haiku-4.5'},log)!;
+  expect((await moderator(input,AbortSignal.timeout(2000))).slot).toBe(0);
+  expect(fetcher.mock.calls[0]![0]).toBe('http://localhost:9100/v1/messages');
+  expect(JSON.parse(fetcher.mock.calls[0]![1]!.body as string)).toMatchObject({model:'anthropic/claude-haiku-4.5',max_tokens:600});
+  expect(log).toHaveBeenCalledWith(expect.objectContaining({provider:'softmax',outcome:'selected'}));
+ }finally{fetcher.mockRestore();}
+});

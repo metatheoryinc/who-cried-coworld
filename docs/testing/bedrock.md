@@ -1,12 +1,12 @@
-# Bedrock inference for players and moderator
+# Hosted LLM proxy and local Bedrock inference
 
-The shared adapter uses the AWS SDK's Bedrock Runtime `InvokeModel` API with the
-Anthropic Messages body (`anthropic_version: bedrock-2023-05-31`). Select an Anthropic
-Claude model or inference profile, such as the uploaded Haiku policy; other model
-families require their own request/response adapter. The client explicitly uses HTTP/1.1
-for compatibility with loopback sidecars. Hosted calls go
-to `AWS_ENDPOINT_URL_BEDROCK_RUNTIME`; the SDK uses the platform's injected
-credentials and region. There is no public-AWS retry if the sidecar fails.
+As of September 22, 2026, Softmax documents an OpenRouter-backed sidecar. The
+historical `AWS_ENDPOINT_URL_BEDROCK_RUNTIME`, `BEDROCK_MODEL`, and upload flags
+remain, but hosted requests use `/v1/messages` for Claude and
+`/v1/chat/completions` for other models. Use canonical OpenRouter slugs such as
+`anthropic/claude-haiku-4.5`. Placeholder authentication is used; no personal key
+is sent to the proxy. Streaming is disabled. Direct AWS without an endpoint still
+uses the SDK InvokeModel path. Local OpenRouter settings are unchanged.
 
 ## Backend selection
 
@@ -15,7 +15,7 @@ credentials and region. There is no public-AWS retry if the sidecar fails.
 | `WCW_LLM_PROVIDER=auto` | Default: prefer Bedrock when its endpoint is present; otherwise use Bedrock for `USE_BEDROCK=true`/`1`, or OpenRouter. |
 | `WCW_LLM_PROVIDER=openrouter` | Explicitly use personal OpenRouter credits, even if a sidecar is present. |
 | `WCW_LLM_PROVIDER=bedrock` | Explicit Bedrock: sidecar if supplied, otherwise direct AWS via the SDK credential chain. |
-| `BEDROCK_MODEL` | Required Bedrock model/inference-profile ID; never an OpenRouter model slug. |
+| `BEDROCK_MODEL` | Canonical OpenRouter slug for hosted proxy calls; AWS model/profile ID only for direct AWS. |
 | `WCW_MODERATOR_PROVIDER` | Optional moderator-only backend override. |
 | `WCW_MODERATOR_BEDROCK_MODEL` | Optional separate host model ID; otherwise uses `BEDROCK_MODEL`. |
 | `WCW_BEDROCK_MAX_TOKENS` | Player output ceiling, default 1,600, configurable from 1 to 16,384. Host stays capped at 600. |
@@ -27,7 +27,7 @@ deterministic scheduling if its inference configuration is missing or invalid.
 `WCW_MODERATOR=llm` requires valid configuration and fails startup otherwise. The
 host can be disabled with `WCW_MODERATOR=off`. No automatic model-ID substitution occurs.
 OpenRouter settings, including the Gemini schema and DeepSeek output cap, remain
-unchanged. Bedrock uses Anthropic Messages parameters rather than sending unsupported
+unchanged. Hosted Claude uses Anthropic Messages parameters rather than sending unsupported
 OpenRouter reasoning or response-format fields. JSON instructions and local action
 validation still apply.
 
@@ -64,12 +64,11 @@ policies that require per-seat request attribution.
 
 Tests cover backend selection, missing model configuration, InvokeModel request/response translation,
 usage extraction, truncation, throttling, permission failures, and both player and
-moderator use without an OpenRouter key. A real SDK request is exercised against a
-local HTTP stub to check endpoint routing and that 429 does not trigger SDK retries.
-No paid AWS or hosted Bedrock call was made during implementation. Hosted access and
-model-specific response latency remain to be verified.
+moderator use without an OpenRouter key. A real hosted HTTP request is exercised against a
+local HTTP stub to check endpoint routing and that 429 does not trigger internal retries.
+See the dated verification sections below; older runs used the previous Bedrock contract.
 
-References: [Softmax Bedrock guide](https://docs.softmax.com/coworld/build-a-player/bedrock),
+References: [Softmax hosted LLM guide](https://softmax.com/docs/coworld/build-a-player/hosted-llm),
 [game runtime contract](https://github.com/Metta-AI/coworld/blob/main/src/coworld/docs/roles/GAME.md#bedrock-and-aws-access),
 [Coworld Bedrock contract](https://github.com/Metta-AI/coworld/blob/main/src/coworld/docs/BEDROCK.md).
 
@@ -194,7 +193,7 @@ DOCKER_DEFAULT_PLATFORM=linux/amd64 uv run --project /Users/jt/projects/coworld 
   --name wcw-bedrock-diagnostic \
   --run node --run build/diagnostic-player.mjs \
   --use-bedrock \
-  --bedrock-model us.anthropic.claude-haiku-4-5-20251001-v1:0
+  --bedrock-model anthropic/claude-haiku-4.5
 ```
 
 Current upstream documentation supports both Converse and InvokeModel. The earlier
@@ -230,3 +229,33 @@ PORT_TCP/UDP/SCTP families, including their matching base PORT) are replaced by
 a count. Other variables, including unrelated custom PORT names, remain listed.
 This avoids hundreds of chat pages from the hosted cluster's service discovery.
 Each bot still reports its own environment; read numbered pages from one bot.
+
+## Hosted proxy migration — September 22, 2026
+
+Uploaded `wcw-bedrock-haiku:v5` and `wcw-bedrock-diagnostic:v5` using the
+canonical model `anthropic/claude-haiku-4.5`. The policy names retain their old
+Bedrock spelling, but both now use the hosted Messages endpoint. No personal
+OpenRouter credential is attached to these versions.
+
+```sh
+DOCKER_DEFAULT_PLATFORM=linux/amd64 uv run --project /Users/jt/projects/coworld coworld upload-policy wcw-player:local \
+  --name wcw-bedrock-haiku \
+  --run node --run build/llm-player.mjs \
+  --use-bedrock --bedrock-model anthropic/claude-haiku-4.5
+```
+
+This is a policy-only release. Existing Coworld 0.1.5 works with these policies
+when using its deterministic moderator. The shared moderator adapter is updated
+in source but requires a new game image release before hosted LLM moderation uses
+this new API. Keep `moderator: "default"` for the current hosted check.
+
+Experience request: `xreq_bd57a510-8c48-4b23-abd8-df1a8863d5d4`.
+Episode: `ereq_64805747-bca8-4175-88e5-a7314a8be499`.
+Evidence directory: `artifacts/hosted-proxy-v5/` (ignored).
+
+The v5 hosted check completed successfully. All nine players started, all 36
+proxy calls returned HTTP 200, and all 29 distinct decision requests received
+an accepted response. Five malformed action attempts were recovered by retries.
+Median call latency was 2,636.5 ms. This verifies the new proxy in Experience
+Requests; human-lobby injection still requires its own test. All 253 local tests,
+typecheck, and build passed before upload.

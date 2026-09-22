@@ -28,17 +28,17 @@ it('classifies throttle, access denial, and truncated output for bounded fallbac
  await expect(bedrockCompletion(input,vi.fn().mockResolvedValue(response({stop_reason:'max_tokens'})))).rejects.toMatchObject({code:'output_limit'});
  expect(JSON.stringify(input.metadata.mock.calls)).not.toContain('sensitive');
 });
-it('sends the real SDK request to the injected endpoint and does not retry HTTP 429',async()=>{
+it('sends the hosted Messages request to the injected endpoint and does not retry HTTP 429',async()=>{
  const {createServer}=await import('node:http');
  let calls=0,path='',body='',succeed=false;
  const server=createServer(async(req,res)=>{calls++;path=req.url??'';body='';for await(const chunk of req)body+=chunk;if(succeed){res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify({content:[{type:'text',text:'Model reply'}],stop_reason:'end_turn',usage:{input_tokens:2,output_tokens:3}}));return;}res.writeHead(429,{'content-type':'application/json','x-amzn-errortype':'ThrottlingException'});res.end(JSON.stringify({message:'Limited'}));});
  await new Promise<void>(r=>server.listen(0,'127.0.0.1',r));const address=server.address();if(!address||typeof address==='string')throw Error('No port');
  vi.stubEnv('AWS_PROFILE',undefined);vi.stubEnv('AWS_DEFAULT_PROFILE',undefined);vi.stubEnv('AWS_BEARER_TOKEN_BEDROCK',undefined);vi.stubEnv('AWS_BEARER_TOKEN_BEDROCK_FILE',undefined);vi.stubEnv('AWS_SESSION_TOKEN',undefined);vi.stubEnv('AWS_ACCESS_KEY_ID','test');vi.stubEnv('AWS_SECRET_ACCESS_KEY','test');vi.stubEnv('AWS_EC2_METADATA_DISABLED','true');
  try{
-  await expect(bedrockCompletion({model:'test-model',endpoint:`http://127.0.0.1:${address.port}`,region:'us-west-2',messages:[{role:'user',content:'Decide'}],metadata:()=>{},signal:AbortSignal.timeout(3000)})).rejects.toMatchObject({code:'http_error',retryable:true});
-  expect(calls).toBe(1);expect(path).toContain('/model/test-model/invoke');expect(JSON.parse(body).messages[0].content[0].text).toBe('Decide');
+  await expect(bedrockCompletion({model:'anthropic/claude-haiku-4.5',endpoint:`http://127.0.0.1:${address.port}`,region:'us-west-2',messages:[{role:'user',content:'Decide'}],metadata:()=>{},signal:AbortSignal.timeout(3000)})).rejects.toMatchObject({code:'http_error',retryable:true});
+  expect(calls).toBe(1);expect(path).toBe('/v1/messages');expect(JSON.parse(body)).not.toHaveProperty('anthropic_version');expect(JSON.parse(body).model).toBe('anthropic/claude-haiku-4.5');expect(JSON.parse(body).messages[0].content[0].text).toBe('Decide');
   succeed=true;
-  await expect(bedrockCompletion({model:'test-model',endpoint:`http://127.0.0.1:${address.port}`,region:'us-west-2',messages:[{role:'user',content:'Decide'}],metadata:()=>{},signal:AbortSignal.timeout(3000)})).resolves.toBe('Model reply');
+  await expect(bedrockCompletion({model:'anthropic/claude-haiku-4.5',endpoint:`http://127.0.0.1:${address.port}`,region:'us-west-2',messages:[{role:'user',content:'Decide'}],metadata:()=>{},signal:AbortSignal.timeout(3000)})).resolves.toBe('Model reply');
   expect(calls).toBe(2);
  }finally{vi.unstubAllEnvs();await new Promise<void>(r=>server.close(()=>r()));}
 });
@@ -48,4 +48,17 @@ it('rejects malformed JSON responses and distinguishes empty or refused content'
  await expect(bedrockCompletion(input,vi.fn().mockResolvedValue({body:new TextEncoder().encode('not json')}))).rejects.toMatchObject({code:'invalid_response'});
  await expect(bedrockCompletion(input,vi.fn().mockResolvedValue(response({content:[],stop_reason:'end_turn'})))).rejects.toMatchObject({code:'empty_response'});
  await expect(bedrockCompletion(input,vi.fn().mockResolvedValue(response({content:[],stop_reason:'refusal'})))).rejects.toMatchObject({code:'refused',retryable:false});
+});
+
+it('routes non-Claude hosted models to chat completions without personal credentials',async()=>{
+ const fetcher=vi.fn().mockResolvedValue(new Response(JSON.stringify({choices:[{message:{content:'reply'},finish_reason:'stop'}]})));
+ vi.stubGlobal('fetch',fetcher);
+ try{
+  await expect(bedrockCompletion({model:'google/gemini-test',endpoint:'http://localhost:9100/',messages:[{role:'user',content:'Hi'}],signal:AbortSignal.timeout(1000),metadata:()=>{}})).resolves.toBe('reply');
+  expect(fetcher.mock.calls[0]![0]).toBe('http://localhost:9100/v1/chat/completions');
+  expect(fetcher.mock.calls[0]![1].headers.Authorization).toBe('Bearer sidecar');
+  expect(JSON.parse(fetcher.mock.calls[0]![1].body).stream).toBe(false);
+  await expect(bedrockCompletion({model:'us.anthropic.old-model:0',endpoint:'http://localhost:9100',messages:[],signal:AbortSignal.timeout(1000),metadata:()=>{}})).rejects.toMatchObject({code:'invalid_request',retryable:false});
+  expect(fetcher).toHaveBeenCalledTimes(1);
+ }finally{vi.unstubAllGlobals();}
 });

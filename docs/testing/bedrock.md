@@ -259,3 +259,7 @@ an accepted response. Five malformed action attempts were recovered by retries.
 Median call latency was 2,636.5 ms. This verifies the new proxy in Experience
 Requests; human-lobby injection still requires its own test. All 253 local tests,
 typecheck, and build passed before upload.
+
+The game-side adapter and moderator JSON handling are published together in
+Coworld 0.1.7; see [the moderator release notes](release-0.1.7.md). Historical
+policy-only notes above describe the earlier v5 verification against game 0.1.5.

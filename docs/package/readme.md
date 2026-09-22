@@ -110,7 +110,7 @@ changes the host only, not the models used by the eight or nine player policies.
 
 Credentials stay in the game process's runtime environment. For OpenRouter, supply
 `WCW_MODERATOR_API_KEY` (or `OPENROUTER_API_KEY`) and optionally
-`OPENROUTER_HOST_MODEL`. For hosted play, version 0.1.6 configures the moderator model as
+`OPENROUTER_HOST_MODEL`. For hosted play, version 0.1.7 configures the moderator model as
 `anthropic/claude-haiku-4.5`. Softmax supplies the proxy endpoint at runtime; no
 personal key is required. Set `moderator: "llm"` to require the LLM host or
 `moderator: "default"` to disable model calls. Local OpenRouter play is unchanged.
@@ -178,5 +178,5 @@ New hosted policies use the Softmax proxy at `AWS_ENDPOINT_URL_BEDROCK_RUNTIME`
 with canonical OpenRouter model slugs in `BEDROCK_MODEL` (for example
 `anthropic/claude-haiku-4.5`). Upload with `--use-bedrock`; the flag is historical.
 The player uses `/v1/messages` for Claude and `/v1/chat/completions` otherwise.
-It sends placeholder auth, not a personal provider key. Use v5 policies with the 0.1.6 game release for hosted LLM moderation. See
+It sends placeholder auth, not a personal provider key. Use v5 policies with the 0.1.7 game release for hosted LLM moderation. See
 [proxy verification and configuration](../testing/bedrock.md).

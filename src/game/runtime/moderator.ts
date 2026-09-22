@@ -1,3 +1,5 @@
+import {decodeText} from '../../shared/decode.js';
+import {z} from 'zod';
 import {resolveInference,type InferenceConfig} from '../../player/inference.js';
 import {bedrockCompletion,type BedrockSender} from '../../player/bedrock.js';
 import {moderatorPrompt,validateModeratorChoice,type Moderator} from '../domain/moderator.js';
@@ -25,7 +27,7 @@ export function createRuntimeModerator(env:NodeJS.ProcessEnv=process.env,onLog:(
   try{
    if(inference.provider==='bedrock'){
     const content=await bedrockCompletion({...inference,messages:[{role:'system',content:moderatorPrompt},{role:'user',content:JSON.stringify(input)}],maxTokens:600,signal,metadata:data=>Object.assign(log,data)},bedrockSender);
-    stage='invalid choice';const choice=validateModeratorChoice(JSON.parse(content),input);log.choice=choice;log.outcome='selected';return choice;
+    stage='invalid choice';const choice=validateModeratorChoice(parseModeratorResponse(content),input);log.choice=choice;log.outcome='selected';return choice;
    }
    const response=await fetcher('https://openrouter.ai/api/v1/chat/completions',{method:'POST',signal,headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({model,messages:[{role:'system',content:moderatorPrompt},{role:'user',content:JSON.stringify(input)}],max_tokens:600,temperature:.45,reasoning:{effort:'minimal',exclude:true},response_format:{type:'json_object'},...(provider?{provider:{order:[provider]}}:{})})});
    log.httpStatus=response.status;
@@ -34,7 +36,7 @@ export function createRuntimeModerator(env:NodeJS.ProcessEnv=process.env,onLog:(
    const data=await response.json();log.usage=data.usage??null;log.finishReason=data.choices?.[0]?.finish_reason??null;
    if(data.error||log.finishReason==='length')throw Error();
    stage='invalid choice';
-   const choice=validateModeratorChoice(JSON.parse(data.choices?.[0]?.message?.content??''),input);
+   const choice=validateModeratorChoice(parseModeratorResponse(data.choices?.[0]?.message?.content??''),input);
    log.choice=choice;log.outcome='selected';return choice;
   }catch{
    const message=signal.aborted?'Moderator deadline exceeded':`Moderator ${stage}`;
@@ -45,4 +47,13 @@ export function createRuntimeModerator(env:NodeJS.ProcessEnv=process.env,onLog:(
    try{onLog(log);}catch{console.error('Could not write moderator diagnostics.');}
   }
  };
+}
+
+function parseModeratorResponse(content:string){
+ if(new TextEncoder().encode(content).byteLength>8192)throw Error('Moderator response too large');
+ const text=content.trim();
+ const fence=/^```(?:json)?\s*\n([\s\S]*?)\n```$/i.exec(text);
+ const decoded=decodeText(fence?fence[1]!.trim():text,z.unknown());
+ if(!decoded.ok)throw Error('Invalid moderator JSON');
+ return decoded.value;
 }

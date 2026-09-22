@@ -86,7 +86,7 @@ it.each(['human','bots'] as const)('honors explicit moderator config over enviro
 });
 
 it('selects a moderator turn through the new hosted Messages proxy',async()=>{
- const fetcher=vi.spyOn(globalThis,'fetch').mockResolvedValue(Response.json({content:[{type:'text',text:JSON.stringify({slot:0,prompt:'ChatGPT, what would you add?'})}],stop_reason:'end_turn'}));
+ const fetcher=vi.spyOn(globalThis,'fetch').mockResolvedValue(Response.json({content:[{type:'text',text:'```json\n'+JSON.stringify({slot:0,prompt:'ChatGPT, what would you add?'})+'\n```'}],stop_reason:'end_turn'}));
  const log=vi.fn();
  try{
   const moderator=createRuntimeModerator({WCW_MODERATOR:'llm',AWS_ENDPOINT_URL_BEDROCK_RUNTIME:'http://localhost:9100',WCW_MODERATOR_BEDROCK_MODEL:'anthropic/claude-haiku-4.5'},log)!;

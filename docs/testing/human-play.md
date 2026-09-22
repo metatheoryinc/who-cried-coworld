@@ -243,3 +243,29 @@ direct replay link: the live page has no platform episode-request ID or saved
 replay URL. Local games retain their direct **Watch replay** link. End-screen
 role reveals use the final private snapshot, without fetching the terminating
 server. No server keepalive or lifecycle change is needed.
+
+## Hosted league lobby: choose the host
+
+In the next Coworld package, select `human` for **Human play · Classic host**
+or `human-llm` for **Human play · LLM host**. Both reserve seat 0 for one
+human and the remaining eight seats for policies. The host choice does not
+select the opponents' models. Existing uploaded versions do not acquire these
+changes until a new package is built, certified, and uploaded.
+
+After creating a league and submitting a policy that has become a competing
+champion, set `WCW_LEAGUE` to its league ID and create a draft:
+
+```sh
+uv run --project /Users/jt/projects/coworld-latest coworld lobby create \
+  "$WCW_LEAGUE" --variant human-llm --num-players 9
+```
+
+Use `--variant human` for the classic host. No moderator override is needed.
+Open the returned lobby URL and start with `coworld lobby start lby_...`.
+The host occupies seat 0 by default. Open the player view promptly: the current
+game still waits for the human to connect before starting.
+
+The LLM variant needs the hosted model endpoint or local runtime credentials;
+failed, invalid, or timed-out moderator calls use deterministic scheduling.
+The completed replay intentionally includes postgame role and private-chat
+reveals. Human league-lobby play still needs an end-to-end hosted test.

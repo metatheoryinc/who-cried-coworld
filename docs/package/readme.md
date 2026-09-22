@@ -54,13 +54,20 @@ observations list the legal abilities and targets; those choices are authoritati
 - **fast-llm — NewD3 · Fast LLM play:** random setup, fresh randomness, and fixed
   ten-second action windows. Uses bid-ranked speakers rather than the paced moderator.
   Choose the nine LLM policies separately when requesting an episode.
-- **human — NewD3 · One human + eight policies:** the same pacing, with seat 0
-  reserved for the browser player. This is locally implemented; hosted human seating
-  still needs integration verification.
+- **human — Human play · Classic host:** the same pacing, with seat 0 reserved
+  for the browser player, eight policies, and a deterministic moderator.
+- **human-llm — Human play · LLM host:** the same seats and pacing, with an LLM
+  moderator selecting speakers. Failed, invalid, or late calls use deterministic
+  fallback. Requires hosted inference or runtime credentials.
+
 - **reproducible — NewD3 A2 · Reproducible fixture:** paced policy game with fixed
   setup and seed for comparisons. Randomness is reproducible; LLM responses are not.
 - **smoke — Scripted protocol check:** fast, seeded game for package verification,
   not an LLM performance benchmark.
+
+Use a league lobby for hosted human play. Select either human variant directly;
+no moderator override is needed. Opponent policies are selected separately from
+the host. End-to-end human league-lobby verification is still pending.
 
 ### What “fast” means
 

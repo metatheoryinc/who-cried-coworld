@@ -17,8 +17,8 @@ export class HumanSession extends Session {
  private moderationController?:AbortController;
  cancelModerator(){const controller=this.moderationController;this.moderationController=undefined;controller?.abort();}
 
- readonly humanSlots=new Set(this.config.mode==='human'?(this.config.humanSlots??[this.config.humanSlot]):[]);
- isHuman(slot:number){return this.humanSlots.has(slot);}
+ readonly humanSlots=new Set<number>();
+ override isHuman(slot:number){return this.humanSlots.has(slot);}
  registerHuman(slot:number){
   if(this.config.mode!=='human')return false;
   if(this.isHuman(slot))return true;
@@ -59,7 +59,7 @@ export class HumanSession extends Session {
   if(this.period==='discussion'&&this.moderator&&eligibleSlots.length>0&&!moderated){
    this.cancelModerator();const controller=new AbortController();this.moderationController=controller;
    const day=this.state.day,window=this.window;
-   const input={day,eligibleSlots,humanSlot:this.config.humanSlot,humanSlots:[...this.humanSlots],roster:publicRoster(this.state,this.config).map(({slot,name,alive})=>({slot,name,alive})),counts:{...this.hostTurns},recent:[...this.recentSpeakers],humanMessage:humanMessage?.payload.kind==='speech'?{id:humanMessage.id,text:humanMessage.payload.speech.text}:null,transcript:visible.filter(e=>e.payload.kind==='speech').slice(-40).flatMap(e=>e.payload.kind==='speech'?[{id:e.id,slot:e.payload.speech.slot,text:e.payload.speech.text}]:[])};
+   const input={day,eligibleSlots,roster:publicRoster(this.state,this.config).map(({slot,name,alive})=>({slot,name,alive})),counts:{...this.hostTurns},recent:[...this.recentSpeakers],humanMessage:humanMessage?.payload.kind==='speech'?{id:humanMessage.id,text:humanMessage.payload.speech.text}:null,transcript:visible.filter(e=>e.payload.kind==='speech').slice(-40).flatMap(e=>e.payload.kind==='speech'?[{id:e.id,slot:e.payload.speech.slot,text:e.payload.speech.text}]:[])};
    let timeout:ReturnType<typeof setTimeout>;
    const expired=new Promise<never>((_,reject)=>{timeout=setTimeout(()=>{reject(Error('Moderator timed out'));controller.abort();},Math.min(2000,interval/4));});
    Promise.race([Promise.resolve().then(()=>this.moderator!(input,controller.signal)),expired]).then(raw=>validateModeratorChoice(raw,input)).catch(()=>undefined).then(selected=>{
@@ -68,7 +68,7 @@ export class HumanSession extends Session {
    });
    return;
   }
-  let host=this.period==='discussion'?chooseSpeaker({roster:publicRoster(this.state,this.config).filter(p=>eligibleSlots.includes(p.slot)),humanSlot:this.config.humanSlot,humanSlots:[...this.humanSlots],counts:this.hostTurns,recent:this.recentSpeakers,...(humanMessage?.payload.kind==='speech'?{humanMessage:{id:humanMessage.id,text:humanMessage.payload.speech.text}}:{})}):null;
+  let host=this.period==='discussion'?chooseSpeaker({roster:publicRoster(this.state,this.config).filter(p=>eligibleSlots.includes(p.slot)),counts:this.hostTurns,recent:this.recentSpeakers,...(humanMessage?.payload.kind==='speech'?{humanMessage:{id:humanMessage.id,text:humanMessage.payload.speech.text}}:{})}):null;
   if(choice&&this.isHuman(choice.slot))choice=undefined;
   if(host&&choice)host={...host,slot:choice.slot};
   if(host){this.hostTurns[host.slot]=(this.hostTurns[host.slot]??0)+1;this.recentSpeakers=[...this.recentSpeakers,host.slot].slice(-2);}

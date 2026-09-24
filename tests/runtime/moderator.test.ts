@@ -1,12 +1,12 @@
 import {expect,it,vi} from 'vitest';
 import {HumanSession} from '../../src/game/runtime/human-session.js';
 import {GameConfig} from '../../src/shared/config.js';
-const make=()=>new HumanSession(GameConfig.parse({mode:'human',setup:'A2',humanSlot:0,tokens:Array.from({length:9},(_,i)=>`t${i}`),players:Array.from({length:9},(_,i)=>({name:`P${i}`}))}),'test');
+const make=()=>{const s=new HumanSession(GameConfig.parse({mode:'human',setup:'A2',tokens:Array.from({length:9},(_,i)=>`t${i}`),players:Array.from({length:9},(_,i)=>({name:`P${i}`}))}),'test');s.registerHuman(0);return s;};
 it('uses a moderator selection and prompt with only public context',async()=>{
  const s=make();let captured:any;
  s.moderator=async input=>{captured=input;return {slot:4,prompt:'P4, what claim needs an answer?'};};
  s.start(0);await vi.waitFor(()=>expect(s.pending.get(4)?.request).toMatchObject({kind:'bid',host:{prompt:'P4, what claim needs an answer?'}}));
- expect(Object.keys(captured).sort()).toEqual(['eligibleSlots','counts','day','humanMessage','humanSlot','humanSlots','recent','roster','transcript'].sort());
+ expect(Object.keys(captured).sort()).toEqual(['eligibleSlots','counts','day','humanMessage','recent','roster','transcript'].sort());
  expect(captured.roster.every((p:any)=>Object.keys(p).sort().join(',')==='alive,name,slot')).toBe(true);
  expect(s.deadline).toBe(13000);expect(s.phaseDeadline).toBe(150000);
 });
@@ -37,7 +37,7 @@ it('rests a speaker for two turns after a missed public response',async()=>{
  expect(s.pending.get(4)?.request.kind).not.toBe('bid');
 });
 it('allows the former human seat to speak in an all-bot paced game',async()=>{
- const config=GameConfig.parse({mode:'bots',humanSlot:-1,tokens:Array.from({length:9},(_,i)=>`t${i}`),players:Array.from({length:9},(_,i)=>({name:`P${i}`}))});
+ const config=GameConfig.parse({mode:'bots',tokens:Array.from({length:9},(_,i)=>`t${i}`),players:Array.from({length:9},(_,i)=>({name:`P${i}`}))});
  const s=new HumanSession(config,'bots');s.moderator=async()=>({slot:0,prompt:'P0, what would you like to add?'});s.start(0);
  await vi.waitFor(()=>expect(s.pending.get(0)?.request.kind).toBe('bid'));
  expect(s.deadline).toBe(13000);expect(s.phaseDeadline).toBe(150000);

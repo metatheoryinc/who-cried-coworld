@@ -15,11 +15,11 @@ it('provides readable names from known models and validates overrides',()=>{
  expect(()=>modelDisplayName('unknown','<script>')).toThrow();
 });
 
-import {Session} from '../../src/game/runtime/session.js';
+import {HumanSession} from '../../src/game/runtime/human-session.js';
 import {GameConfig} from '../../src/shared/config.js';
 it('locks registrations at start, preserves human identity and records original policy',()=>{
- const config=GameConfig.parse({mode:'human',humanSlot:0,tokens:Array.from({length:9},(_,i)=>`t${i}`),players:Array.from({length:9},(_,i)=>({name:i===0?'Sonnet':`policy-${i}`}))});
- const s=new Session(config,'names');
+ const config=GameConfig.parse({mode:'human',tokens:Array.from({length:9},(_,i)=>`t${i}`),players:Array.from({length:9},(_,i)=>({name:i===0?'Sonnet':`policy-${i}`}))});
+ const s=new HumanSession(config,'names');s.registerHuman(0);
  s.registerName(0,'Impostor');s.registerName(2,'Sonnet');s.registerName(1,'Sonnet');s.registerName(1,'Changed');s.registerName(3,'<invalid>');s.start(0);
  expect(s.config.players.slice(0,4).map(p=>p.name)).toEqual(['Sonnet','Sonnet-2','Sonnet-3','policy-3']);
  s.registerName(1,'Reconnect');expect(s.config.players[1]!.name).toBe('Sonnet-2');

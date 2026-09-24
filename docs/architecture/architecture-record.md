@@ -25,7 +25,7 @@ the hosted lobby workflow.
 | Presentation | Shared event projection, presentation fold, and renderer; replay does not execute game mechanics | Proposed technical design | Selects event presentation option from Coworld static viewer contract |
 | Packaging | One root TypeScript package, one lockfile, one Dockerfile with game/player targets, static bundle | Accepted Manager decision | Replaces wholesale Tofu/benchmark imports |
 | Failure/time | Bounded requests/fallbacks; maxDays defaults to 8, then draw with all scores 0 | Day cap accepted; budget details proposed | Closes unbounded abstention gap in source games |
-| Night resolution | Block first; discard blocked kill nominations; seeded sorted-target tie break; no last-voter actor | Accepted Manager decision | Replaces Tofu arrival-order execution |
+| Night resolution | Block first; separate plurality votes for kill target and killer with independent seeded tie breaks (rules/3); no last-voter actor | Accepted Manager decision | Replaces Tofu arrival-order execution |
 | Seer resolution and death | Killed before inspection: server-only actor_dead evidence; living blocked Seer: bare private no_result | Accepted Manager revision | Supersedes earlier killed-Seer private no_result instruction |
 | Seat identity | Trusted config assigns public character or neutral presentation independently of occupying policy and secret role | Accepted Manager decision | Replaces name-based persona/provenance inference |
 | Protocol | Strict `wcw.player/1`, `wcw.events/1`, `wcw.replay/1` | Proposed technical design | No backward compatibility obligation to source protocols |
@@ -72,6 +72,12 @@ Historical context: [port assessment](../plans/2026-09-14-who-cried-wolf-coworld
 **Decision (Manager, 2026-09-15):** `maxDays` is configurable and defaults to 8. Check normal victory after Night 8 (or configured cap), then declare a draw with zero scores for all seats if no faction won. Bound phase/action budgets beneath Coworld's episode deadline. This closes the indefinite-abstention failure class without inventing a faction victory. A process/storage/platform failure remains a failure, not a draw.
 
 Resolve Alchemist blocks first; remove blocked actors' kill nominations before tallying. Living Wolf and Alchemist nominate; select a tied target using labeled seeded randomness over sorted targets; no valid nomination means no kill. This explicitly supersedes Tofu's last-arriving kill actor. The tradeoff is a documented parity deviation in return for reproducible simultaneous actions.
+
+**Superseding decision (2026-09-24, rules/3):** The kill is two collective pack votes. Each living Wolf casts one target vote and one knife (killer) vote; a target without a killer is a knife vote for the submitter. Target and knife are each decided by plurality with independent seeded tie-breaks. This replaces tallying (target, killer) pairs, where disagreeing about who performs the kill split the votes for an agreed target. A server-only `kill_resolution` event logs both tallies for debugging and divergence analysis and is revealed postgame under night choices. As in the implementation before this change, blocked Wolves' votes still count; a blocked selected killer blocks the kill.
+
+## Human drafts
+
+**Decision (2026-09-24):** Human seats keep their latest legal action as a draft until the request deadline; illegal or malformed revisions are rejected without discarding the draft or closing the request, and clearing to pass is legal. Policies still lock on their first valid answer. Drafts never enter the journal; only the final choice is resolved. During night actions each human Wolf's snapshot includes living packmates' current night drafts (`packDrafts`); no other recipient receives them and they are not exported.
 
 ## Seer resolution after death
 

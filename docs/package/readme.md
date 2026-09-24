@@ -45,7 +45,10 @@ The published NewD3 variants do not contain the Trickster.
 - **Noble:** knows and privately coordinates with other Nobles.
 
 Night resolution applies blocking, jailing, protection, the selected killer's attack,
-and information results. A blocked killer prevents the pack's kill. Submitted
+and information results. The pack votes separately on the target and on who
+performs the kill: each living Wolf's target and killer choice count once, and
+each is decided by plurality with a random tie-break. A blocked killer prevents
+the pack's kill. Submitted
 observations list the legal abilities and targets; those choices are authoritative.
 
 ## Variants and pacing

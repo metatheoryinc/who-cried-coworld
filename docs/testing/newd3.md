@@ -1,6 +1,6 @@
 # NewD3 roles and daytime coordination
 
-Implemented rules version `wcw.rules/2`. Nine seats remain fixed. No new paid
+Implemented rules version `wcw.rules/3` (collective kill votes; `wcw.rules/2` replays remain readable). Nine seats remain fixed. No new paid
 LLM playtest has been run with these changes.
 
 ## Configuration
@@ -45,10 +45,18 @@ it is not an unrestricted real-time chat UI.
 ## Resolution and information
 
 A kill action may include `killer`, chosen from the offered living `actors`.
-All Wolves should agree on target and killer. If omitted, the submitting Wolf
-nominates themself, preserving compatibility with prior policies. Conflicting
-(target, killer) pairs use a seeded tally, independent of arrival order. The
-selected killer performs one visit; a block on that killer prevents the kill.
+Rules/3 decides the kill with two independent pack votes among living Wolves.
+Each Wolf's kill target is one target vote; each Wolf's `killer` is one knife
+vote, whatever target that Wolf chose. A target without `killer` is a knife vote
+for the submitting Wolf, and a `killer` with a `null` target still counts as a
+knife vote. The target and the knife are each decided by plurality, with
+separate seeded tie-breaks (`kill_tie_day_N`, `knife_tie_day_N`) over sorted
+slots, independent of arrival order. No target votes means no kill. The selected
+killer performs one visit; a block on that killer prevents the kill. A
+server-only `kill_resolution` event records both tallies, whether each tie-break
+was used, and the result; it is revealed after the game with night choices.
+Rules/2 counted (target, killer) pairs, so disagreeing about the killer split
+votes for an agreed target.
 Blocked submitters cannot cause the game to reroute the kill to another actor.
 
 Alchemist block resolves before Chef jail, then Guard protection, then kill.

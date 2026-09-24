@@ -40,7 +40,7 @@ The layout and image assets are adapted from the original Discord `mafia-client`
 - Five-second dawn/dusk screens use the original death/no-death artwork. No actions or chat are accepted during these shared pauses.
 - During voting, select a card or use the target menu, then **Lock in vote**.
 - At night, choose each offered ability and, for Wolves, the killer. Lock all actions together. Sheep can simply wait or mark ready.
-- Accepted choices cannot be changed. Reconnect/reload restores the seat, history, accepted choice and original deadline. A disconnect does not pause the game. Only one browser controls a seat at a time.
+- The server keeps a human's latest legal vote or night choice as a draft until the timer ends; the stamp interface that exposes changing a choice is in progress, and the current dropdowns still lock after the first submission. Human Wolves' snapshots include packmates' current night drafts. Reconnect/reload restores the seat, history, accepted choice and original deadline. A disconnect does not pause the game. Only one browser controls a seat at a time.
 - Private information and prior ballots appear in the journal. Role visibility follows the server's seat projection. The full role list is revealed only after game over; the live seat never receives the seed.
 - Completed results and replay are written under `artifacts/human-*`. The original game-over artwork shows winners, all revealed role cards, and cause-of-death markers. **Watch replay** opens the branded spectator viewer; **Review village** returns to the completed board. Full replay is unavailable while the game is active.
 

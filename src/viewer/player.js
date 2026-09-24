@@ -248,8 +248,9 @@ function drawChat(){
  const allowed=state.chatEnabled&&(channel!=='town'||state.period==='discussion');
  $('message').disabled=!allowed||ws?.readyState!==WebSocket.OPEN;$('send').disabled=$('message').disabled||!!pendingChat;
  $('send').textContent=channel==='town'?'Send':`Send to ${names[channel]}`;
- $('message').placeholder=allowed?`Message ${names[channel]}…`:state.phase==='waiting'?'Chat opens when the game starts.':'Chat is closed for this phase.';
- $('chat-hint').textContent=allowed?'480 characters · Enter to send':state.phase==='waiting'?'Your role stays private.':state.self?.alive?'Chat reopens during discussion.':'You can watch the conversation.';
+ const dead=state.self&&!state.self.alive;
+ $('message').placeholder=allowed?`Message ${names[channel]}…`:state.phase==='waiting'?'Chat opens when the game starts.':dead?'The dead tell no tales…':'Chat is closed for this phase.';
+ $('chat-hint').textContent=allowed?'480 characters · Enter to send':state.phase==='waiting'?'Your role stays private.':state.self?.alive?'Chat reopens during discussion.':'You can still watch the living argue.';
 }
 function deathMark(cause){return cause?`<img class="death-mark ${cause==='wolf'?'claw':'meat'}" src="${asset(cause==='wolf'?'dead_icon_claw':'dead_icon_meat')}" alt="${cause==='wolf'?'Killed by wolves':'Eliminated by town'}">`:'';}
 let resultDismissed=false,lastInterlude='';

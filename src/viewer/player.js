@@ -40,16 +40,14 @@ function closedBallots(){
 function mark(kind,id,key,title,extra=''){const {x,y,r}=scatter(key);return `<span class="stamp-mark ${kind}" style="--x:${x}%;--y:${y}%;--r:${r}deg" title="${esc(title)}" ${extra}>${stampIcon(id,asset)}</span>`;}
 function seatMarks(target){
  const r=stampRequest(),own=r?stampsOn(placements,target):[],pack=(state?.packDrafts?packStamps(state.packDrafts):[]).filter(x=>x.slot===target);
- const closed=closedBallots(),votes=closed?closed.ballots.filter(b=>b.target===target):[],skips=closed?closed.ballots.filter(b=>b.target===null&&b.slot===target):[];
- const ownSkip=r?.kind==='vote'&&placements.skip&&target===state.self.slot;
+ // Passes are not stamped on anyone; the tray and journal record them.
+ const closed=closedBallots(),votes=closed?closed.ballots.filter(b=>b.target===target):[];
  const html=[
   ...votes.map(b=>mark('ballot','vote',`ballot:${b.slot}:${target}`,`${name(b.slot)} voted ${name(target)}`,`data-from="${b.slot}"`)),
-  ...skips.map(b=>mark('ballot skip','skip',`skip:${b.slot}`,`${name(b.slot)} skipped the vote`,`data-from="${b.slot}"`)),
   ...own.map(id=>mark(`own${freshStamp===`${id}:${target}`?' fresh':''}`,id,`${id}:${target}:self`,`Your ${stampLabels[id]}`)),
-  ...(ownSkip?[mark(`own skip${freshStamp==='skip'?' fresh':''}`,'skip','skip:self','You are skipping the vote')]:[]),
   ...pack.map(x=>mark('pack',x.id,`${x.id}:${target}:${x.by}`,`${name(x.by)}: ${stampLabels[x.id]}`).replace('</span>',`<b aria-hidden="true">${x.by+1}</b></span>`)),
  ].join('');
- return {own,html,described:[...own.map(id=>`your ${stampLabels[id]}`),...(ownSkip?['you are skipping the vote']:[]),...pack.map(x=>`${name(x.by)}'s ${stampLabels[x.id]}`),...(votes.length?[`${votes.length} vote${votes.length>1?'s':''}`]:[])].join(', ')};
+ return {own,html,described:[...own.map(id=>`your ${stampLabels[id]}`),...pack.map(x=>`${name(x.by)}'s ${stampLabels[x.id]}`),...(votes.length?[`${votes.length} vote${votes.length>1?'s':''}`]:[])].join(', ')};
 }
 function drawPlayers(){
  const roster=state?.roster??Array.from({length:9},(_,i)=>({slot:i,name:slot!==null&&i===Number(slot)?'You':`Player ${i+1}`,alive:true}));

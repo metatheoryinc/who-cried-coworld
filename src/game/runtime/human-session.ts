@@ -19,6 +19,7 @@ export class HumanSession extends Session {
 
  readonly humanSlots=new Set<number>();
  override isHuman(slot:number){return this.humanSlots.has(slot);}
+ protected override revisable(slot:number){return this.isHuman(slot);}
  registerHuman(slot:number){
   if(this.config.mode!=='human')return false;
   if(this.isHuman(slot))return true;

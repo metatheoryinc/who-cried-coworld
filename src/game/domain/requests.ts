@@ -54,16 +54,18 @@ function reject(p:Pending,code:Code):Receipt {
  if(p.attempt===0){p.attempt=1;p.failures.push({code,source:'game',disposition:'retry',attempt:1});return {status:'rejected',code,retry:true};}
  closeRequest(p,code);return {status:'rejected',code,retry:false};
 }
-export function submit(p:Pending,s:State,authenticatedSlot:number,text:unknown,now:number):Receipt {
+/** Revisable requests (human seats) keep the latest legal draft until the deadline; invalid drafts never close them. */
+export function submit(p:Pending,s:State,authenticatedSlot:number,text:unknown,now:number,revisable=false):Receipt {
  if(authenticatedSlot!==p.slot)return {status:'rejected',code:'illegal',retry:false};
  if(now>=p.deadline){closeRequest(p);return {status:'expired',code:'timeout',retry:false};}
  if(p.outcome)return {status:'expired',code:null,retry:false};
  const decoded=decodeText(text,Action);
- if(!decoded.ok)return p.accepted?{status:'rejected',code:'malformed',retry:false}:reject(p,'malformed');
+ if(!decoded.ok)return p.accepted||revisable?{status:'rejected',code:'malformed',retry:false}:reject(p,'malformed');
  const a=decoded.value;
  if(a.episodeId!==p.episodeId||a.requestId!==p.requestId||a.observationId!==p.observationId)return {status:'rejected',code:'illegal',retry:false};
- if(p.accepted)return JSON.stringify(p.accepted)===JSON.stringify(a)?{status:'duplicate',code:null,retry:false}:{status:'rejected',code:'illegal',retry:false};
- if(!legal(p,s,a.body))return reject(p,'illegal');
+ if(p.accepted&&JSON.stringify(p.accepted)===JSON.stringify(a))return {status:'duplicate',code:null,retry:false};
+ if(p.accepted&&!revisable)return {status:'rejected',code:'illegal',retry:false};
+ if(!legal(p,s,a.body))return revisable?{status:'rejected',code:'illegal',retry:false}:reject(p,'illegal');
  p.accepted=a;
  if(a.report)p.failures.push({code:a.report.code,source:'policy_report',disposition:'fallback',attempt:a.report.attempts});
  return {status:'accepted',code:null,retry:false};

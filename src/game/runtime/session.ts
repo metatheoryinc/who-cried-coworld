@@ -89,8 +89,10 @@ export class Session {
  receive(slot:number,text:unknown,now:number):Receipt{
   const p=this.pending.get(slot);
   if(!p||this.state.result)return {status:'expired',code:null,retry:false};
-  return submit(p,this.state,slot,text,now);
+  return submit(p,this.state,slot,text,now,this.revisable(slot));
  }
+ /** Seats whose choices stay editable until the deadline. */
+ protected revisable(_slot:number){return false;}
  disconnect(slot:number){const p=this.pending.get(slot);if(p&&!p.accepted)closeRequest(p,'disconnected');}
  advance(now:number){
   if(this.phase==='waiting')return;

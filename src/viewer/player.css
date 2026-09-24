@@ -231,3 +231,25 @@ body.lobby .action-panel p{margin:4px 0}
  .conn{width:26px;height:26px}
  .conn[data-state=ok]{display:none}
 }
+/* Chat channels: folder tabs in the channel's color, unread badges, and a channel-colored panel edge. */
+.chan-town{--chan:#c6a36b}.chan-wolves{--chan:#d0573f}.chan-nobles{--chan:#6d95d6}
+.chat-panel{border-color:var(--chan,#99734d);transition:border-color .2s}
+#channels{gap:4px;padding:0 14px;border-bottom:2px solid var(--chan,#71553c)}
+#channels .chan{position:relative;display:inline-flex;align-items:center;gap:6px;margin-bottom:-2px;padding:8px 12px 9px;border:2px solid transparent;border-bottom:0;border-radius:10px 10px 0 0;background:#3a2c21;color:#cdb795;font:600 12.5px system-ui}
+#channels .chan svg{width:16px;height:16px;color:var(--chan)}
+#channels .chan:hover:not(.active){background:#46362a}
+#channels .chan.active{background:#2b2018;color:#fbeed6;border-color:var(--chan)}
+.badge{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--chan);color:#20170f;font:700 10.5px/18px system-ui;text-align:center}
+.badge.mention{background:#ffd36b;color:#5a1d10;box-shadow:0 0 0 2px #2b2018,0 0 8px #ffd36b}
+#privacy{display:flex;align-items:center;gap:5px}
+#privacy svg{width:12px;height:12px;color:var(--chan)}
+.chat-panel.private #privacy{color:#f0dcc0}
+.new-divider{display:flex;align-items:center;gap:8px;margin:8px 0 0;color:var(--chan);font:700 10.5px system-ui;letter-spacing:1px;text-transform:uppercase}
+.new-divider::before,.new-divider::after{content:'';flex:1;height:1px;background:var(--chan);opacity:.6}
+/* Keep the village heading readable while the board scrolls under it. */
+@media(min-width:761px){.table-heading{position:sticky;top:0;z-index:6;padding:4px 0}.table-heading>*{background:#fff4dce0;padding:2px 10px;border-radius:9px}}
+@media(max-width:760px){
+ #channels{padding:6px 10px 0}
+ .chat-panel.private .chat-heading{display:block;padding:7px 12px 0}
+ .chat-panel.private .chat-heading h2{display:none}
+}

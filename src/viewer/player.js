@@ -5,6 +5,7 @@ import { deathCause,deathReveal,stageSummary } from './stage-summary.js';
 import { traySlots,placementsFrom,place,clear,bodyFor,packStamps,stampsOn } from './stamps.js';
 import { stampIcon,stampLabels } from './stamp-icons.js';
 import { systemLines } from './system-lines.js';
+import { unread } from './unread.js';
 import { roleNames,newD3Decks } from '../shared/roles.js';
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const assets=createAssetCache(),asset=assets.url;
@@ -160,16 +161,38 @@ function drawRole(){
  });
  $('journal').innerHTML=notes.length?notes.map(n=>`<p>${esc(n)}</p>`).join(''):'<p>Your private discoveries and voting history will appear here.</p>';
 }
+const chatIcon=d=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const channelInfo={
+ town:{name:'Town',title:'Village voices',note:'Public · everyone can read this',icon:chatIcon('<path d="M4 5h16v11H10l-5 4v-4H4z"/>')},
+ wolves:{name:'Wolves',title:'Wolves’ den',note:'Private · only living Wolves can read this',icon:chatIcon('<circle cx="7" cy="9" r="1.8"/><circle cx="12" cy="6.5" r="1.8"/><circle cx="17" cy="9" r="1.8"/><path d="M12 12c-3 0-5.5 3-5.5 5.2 0 1.5 1.3 2.3 2.8 2L12 18.5l2.7.7c1.5.3 2.8-.5 2.8-2C17.5 15 15 12 12 12z"/>')},
+ nobles:{name:'Nobles',title:'Noble chat',note:'Private · only Nobles can read this',icon:chatIcon('<path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z"/>')},
+};
+const lockIcon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+// Read position per channel (last seen message id), kept for this browser tab so a reload keeps badges honest.
+const seenKey=`wcw-seen:${storageKey}`;
+let lastSeen={},divider={channel:null,id:null};
+try{lastSeen=JSON.parse(sessionStorage.getItem(seenKey)??'{}')??{};}catch{}
 function drawChat(){
  if(!state.channels.includes(channel))channel='town';
- const names={town:'Town',wolves:'Wolves',nobles:'Nobles'};
- $('channels').innerHTML=state.channels.map(c=>`<button class="${c===channel?'active':''}" data-channel="${c}" aria-pressed="${c===channel}">${names[c]}</button>`).join('');
- $('channels').querySelectorAll('button').forEach(b=>b.onclick=()=>{channel=b.dataset.channel;drawChat();});
- $('privacy').textContent=channel==='town'?'Public conversation':`Private · living ${names[channel]} only`;
+ const selfSlot=state.self?.slot??-1,selfName=state.self?name(selfSlot):'',info=channelInfo[channel];
+ const active=unread(state.events,channel,lastSeen[channel],selfSlot,selfName);
+ if(divider.channel!==channel)divider={channel,id:active.firstId};
  const kind=channel==='town'?'speech':channel==='wolves'?'wolf_chat':'noble_chat';
- const items=state.events.flatMap(e=>e.payload.kind===kind?[e]:systemLines(e,state.roster,state.events).filter(l=>channel==='town'||l.scope==='all').map(l=>({line:l.text}))); 
+ const latest=state.events.filter(e=>e.payload.kind===kind).at(-1);
+ if(latest&&lastSeen[channel]!==latest.id){lastSeen[channel]=latest.id;try{sessionStorage.setItem(seenKey,JSON.stringify(lastSeen));}catch{}}
+ $('channels').innerHTML=state.channels.map(c=>{
+  const u=c===channel?{count:0}:unread(state.events,c,lastSeen[c],selfSlot,selfName),i=channelInfo[c];
+  const badge=u.count?`<span class="badge${u.mention?' mention':''}">${u.mention?'@':''}${u.count>9?'9+':u.count}</span>`:'';
+  return `<button class="chan chan-${c}${c===channel?' active':''}" role="tab" data-channel="${c}" aria-selected="${c===channel}" aria-label="${i.name}${u.count?`, ${u.count} unread${u.mention?', mentions you':''}`:''}">${i.icon}<span>${i.name}</span>${badge}</button>`;
+ }).join('');
+ $('channels').querySelectorAll('button').forEach(b=>b.onclick=()=>{channel=b.dataset.channel;drawChat();$('messages').scrollTop=$('messages').scrollHeight;});
+ $('chat-panel').className=`chat-panel chan-${channel}${channel==='town'?'':' private'}`;
+ $('chat-title').textContent=info.title;
+ $('privacy').innerHTML=`${channel==='town'?'':lockIcon}${esc(info.note)}`;
+ const names=Object.fromEntries(Object.entries(channelInfo).map(([k,v])=>[k,v.name]));
+ const items=state.events.flatMap(e=>e.payload.kind===kind?[e]:systemLines(e,state.roster,state.events).filter(l=>channel==='town'||l.scope==='all').map(l=>({line:l.text})));
  const el=$('messages'),atBottom=el.scrollTop+el.clientHeight>=el.scrollHeight-60;
- el.innerHTML=items.length?items.map(e=>{if(e.line)return `<p class="system-line">${esc(e.line)}</p>`;const p=e.payload,b=p.kind==='speech'?p.speech:p;return `<article class="message ${b.slot===state.self?.slot?'mine':''}"><small>Day ${e.day}</small><strong><b class="seat-no seat-c${b.slot}">${b.slot+1}</b>${esc(name(b.slot))}${b.slot===state.self?.slot?' · you':''}</strong><p>${esc(b.text)}</p></article>`;}).join(''):'<p class="empty">No messages in this channel yet.</p>';
+ el.innerHTML=items.length?items.map(e=>{if(e.line)return `<p class="system-line">${esc(e.line)}</p>`;const mark=e.id&&e.id===divider.id?'<p class="new-divider"><span>New</span></p>':'';const p=e.payload,b=p.kind==='speech'?p.speech:p;return `${mark}<article class="message ${b.slot===state.self?.slot?'mine':''}"><small>Day ${e.day}</small><strong><b class="seat-no seat-c${b.slot}">${b.slot+1}</b>${esc(name(b.slot))}${b.slot===state.self?.slot?' · you':''}</strong><p>${esc(b.text)}</p></article>`;}).join(''):'<p class="empty">No messages in this channel yet.</p>';
  if(atBottom)el.scrollTop=el.scrollHeight;
  const allowed=state.chatEnabled&&(channel!=='town'||state.period==='discussion');
  $('message').disabled=!allowed||ws?.readyState!==WebSocket.OPEN;$('send').disabled=$('message').disabled||!!pendingChat;

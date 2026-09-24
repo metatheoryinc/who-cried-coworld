@@ -290,3 +290,7 @@ body.lobby .action-panel p{margin:4px 0}
 body.holding{cursor:var(--stamp-cursor,default)}
 @media(max-width:760px){.card-stamps .stamp-mark{width:70%}.card-stamps .stamp-mark.pack{width:55%}.card-stamps .stamp-mark.pack>b{display:none}}
 .sheet-marks .stamp-mark.ballot{display:none}
+/* The composer takes the open channel's color so a private message never looks like public chat. */
+.chat-panel.private #message{border-color:var(--chan);box-shadow:0 0 0 1px var(--chan);background:#fff1ea}
+.chat-panel.private .compose-footer button{background:var(--chan);border-color:var(--chan);color:#fff}
+.chat-panel.private .compose-footer button:disabled{background:#4d3c2d;border-color:#6b5540;color:#a8957c}

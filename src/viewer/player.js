@@ -16,7 +16,9 @@ const labels={discussion:'Discuss & deduce',vote:'Cast your vote',coordination:'
 // Stamp drafts: placements are local until the server confirms them; they count when the timer ends.
 // freshStamp animates a stamp once, on the redraw right after it is placed.
 let freshStamp=null,placements={},held=null,draftKey=null,dirty=false,saveState='idle',changeSeq=0,sentSeq=0,sendTimer;
-let state=null,ws,channel='town',lastRender='',actionKey='',remainingUntil=0,joined=false,connecting=false,ended=false,pendingChat=null;
+let state=null,ws,channel='town',lastRender='',actionKey='',remainingUntil=0,joined=false,connecting=false,ended=false,pendingChat=null,pendingChannel=null;
+// Each channel keeps its own unsent draft so private text can never be sent to another channel after switching tabs.
+const drafts={};
 const params=new URLSearchParams(location.search);
 let slot=params.get('slot'),connection;
 /** Connection is a status light by the clock; the full message is its label, and errors are also shown as text. */
@@ -230,7 +232,7 @@ function drawChat(){
   const badge=u.count?`<span class="badge${u.mention?' mention':''}">${u.mention?'@':''}${u.count>9?'9+':u.count}</span>`:'';
   return `<button class="chan chan-${c}${c===channel?' active':''}" role="tab" data-channel="${c}" aria-selected="${c===channel}" aria-label="${i.name}${u.count?`, ${u.count} unread${u.mention?', mentions you':''}`:''}">${i.icon}<span>${i.name}</span>${badge}</button>`;
  }).join('');
- $('channels').querySelectorAll('button').forEach(b=>b.onclick=()=>{channel=b.dataset.channel;drawChat();$('messages').scrollTop=$('messages').scrollHeight;});
+ $('channels').querySelectorAll('button').forEach(b=>b.onclick=()=>{if(b.dataset.channel===channel)return;drafts[channel]=$('message').value;channel=b.dataset.channel;$('message').value=drafts[channel]??'';drawChat();$('messages').scrollTop=$('messages').scrollHeight;});
  $('chat-panel').className=`chat-panel chan-${channel}${channel==='town'?'':' private'}`;
  $('chat-title').textContent=info.title;
  $('privacy').innerHTML=`${channel==='town'?'':lockIcon}${esc(info.note)}`;
@@ -241,6 +243,7 @@ function drawChat(){
  if(atBottom)el.scrollTop=el.scrollHeight;
  const allowed=state.chatEnabled&&(channel!=='town'||state.period==='discussion');
  $('message').disabled=!allowed||ws?.readyState!==WebSocket.OPEN;$('send').disabled=$('message').disabled||!!pendingChat;
+ $('send').textContent=channel==='town'?'Send':`Send to ${names[channel]}`;
  $('message').placeholder=allowed?`Message ${names[channel]}…`:state.phase==='waiting'?'Chat opens when the game starts.':'Chat is closed for this phase.';
  $('chat-hint').textContent=allowed?'480 characters · Enter to send':state.phase==='waiting'?'Your role stays private.':state.self?.alive?'Chat reopens during discussion.':'You can watch the conversation.';
 }
@@ -292,13 +295,13 @@ async function connect(){if(!connection||connecting||ws?.readyState===WebSocket.
   if(p.type==='snapshot')render(p);
   if(p.type==='receipt'&&draftKey)draftReceipt(p);
   else if(p.type==='receipt')feedback(['accepted','duplicate'].includes(p.status)?'Choice recorded.':p.status==='expired'?'The action window has closed.':`Choice rejected${p.retry?' — please try again':''}.`);
-  if(p.type==='chat_receipt'&&p.id===pendingChat){pendingChat=null;if(['accepted','duplicate'].includes(p.status))$('message').value='';else feedback(p.message??'Message was not sent.');drawChat();}
+  if(p.type==='chat_receipt'&&p.id===pendingChat){pendingChat=null;if(['accepted','duplicate'].includes(p.status)){drafts[pendingChannel]='';if(channel===pendingChannel)$('message').value='';}else feedback(p.message??'Message was not sent.');drawChat();}
  };
  ws.onclose=()=>{connecting=false;pendingChat=null;setConnection(ended?'ok':'warn',ended?'Game complete':'Disconnected · reconnecting…');if(state)drawChat();if(joined&&!ended)setTimeout(connect,1500);};
  ws.onerror=()=>setConnection('error','Connection unavailable. Check your seat link.');
 }
 $('join').onclick=connect;$('chat-join').onclick=connect;
-$('chat-form').onsubmit=e=>{e.preventDefault();const text=$('message').value.trim();if(!text||!state||ws?.readyState!==WebSocket.OPEN||pendingChat)return;pendingChat=`chat_${crypto.randomUUID().replaceAll('-','')}`;ws.send(JSON.stringify({protocol:'wcw.human/1',type:'chat',episodeId:state.episodeId,id:pendingChat,phaseKey:state.phaseKey,channel,text}));$('send').disabled=true;};
+$('chat-form').onsubmit=e=>{e.preventDefault();const text=$('message').value.trim();if(!text||!state||ws?.readyState!==WebSocket.OPEN||pendingChat)return;pendingChat=`chat_${crypto.randomUUID().replaceAll('-','')}`;pendingChannel=channel;ws.send(JSON.stringify({protocol:'wcw.human/1',type:'chat',episodeId:state.episodeId,id:pendingChat,phaseKey:state.phaseKey,channel,text}));$('send').disabled=true;};
 $('message').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('chat-form').requestSubmit();}};
 drawPlayers();setInterval(updateClock,200);
 if(sessionStorage.getItem(storageKey)==='1')connect();

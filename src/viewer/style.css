@@ -585,3 +585,9 @@ body::after {
 
 /* Keep copy clear of decorative scroll edges. */
 .knell,.outcome{background-image:none;}
+/* Scores: headline plus the metric columns that apply to the seat. */
+.rrow { flex-wrap: wrap; }
+.rrow .cols { flex-basis: 100%; padding-left: 32px; font-size: 11px; color: var(--text-faint); }
+/* Private suspicion: each Town player's top suspects as short bars. */
+.susp { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; font-size: 12px; }
+.susp-bar { display: inline-block; width: 36px; height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--wolf, #c0392b) var(--w), var(--line-soft, #ddd) var(--w)); }

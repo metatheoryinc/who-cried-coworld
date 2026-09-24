@@ -347,7 +347,7 @@ const plainLine = html => `<li class="line" style="grid-template-columns:1fr"><p
 /* Consecutive private events of the same kind become one panel. A wolf conversation
    reads as a conversation; five headers read as a log file. */
 function coalesce(evs) {
-  const GROUP = { noble_chat: 1, wolf_chat: 1, night_choices: 1, confessional: 1, bid: 1, night_outcome: 1 };
+  const GROUP = { noble_chat: 1, wolf_chat: 1, night_choices: 1, confessional: 1, bid: 1, night_outcome: 1, suspicion: 1 };
   const out = [];
   for (const e of evs) {
     const k = e.payload.kind;
@@ -417,6 +417,13 @@ function revealParts(e) {
         inner: `<ul>${plainLine(`<strong>Target votes</strong> &middot; ${tally(p.targetVotes, 'target')}${p.targetTie ? ' &middot; <em>tie broken by seed</em>' : ''}`)}${plainLine(`<strong>Knife votes</strong> &middot; ${tally(p.knifeVotes, 'killer')}${p.knifeTie ? ' &middot; <em>tie broken by seed</em>' : ''}`)}${plainLine(p.target === null ? 'No target: the pack did not kill.' : `<strong>${esc(nameOf(p.killer))}</strong> takes the knife to <strong>${esc(nameOf(p.target))}</strong>.`)}</ul>`, };
     }
 
+    case 'suspicion':
+      return { title: 'What Town believed',
+        inner: `<ul>${e.group.map(g => {
+          const top = [...g.payload.reports].sort((a, b) => b.wolf - a.wolf).slice(0, 3);
+          return lineOf(g.payload.slot, top.map(r => `<span class="susp"><span class="susp-bar" style="--w:${Math.round(r.wolf * 100)}%"></span>${esc(nameOf(r.slot))} ${Math.round(r.wolf * 100)}%</span>`).join(' '), 'Private wolf probabilities submitted with the vote');
+        }).join('')}</ul>` };
+
     case 'private_result':
       return { title: 'Private result',
         inner: `<ul>${lineOf(p.slot, `<strong>${ABILITY[p.result.ability]} ${esc(nameOf(p.result.target))}</strong>
@@ -454,13 +461,15 @@ function outcomeBeat(e) {
                  jester_win:'The Trickster has the last laugh.', draw: 'The village never settled it.' };
   const WHY = { jester_voted_out:'The Trickster was voted out.', wolves_eliminated: 'All wolves are gone.',
                 wolf_parity: 'The wolves reached parity.',
-                day_cap: 'The day cap arrived with no faction ahead. Every seat scores zero.' };
+                day_cap: 'The day cap arrived with no faction ahead. Nobody wins; read and hidden bonuses still count.' };
   return `<section class="beat outcome">
     <h2>${esc(HEAD[r.outcome] || r.outcome)}</h2>
     <p class="detail">${esc(WHY[r.reason] || r.reason)} ${r.daysCompleted} night${r.daysCompleted === 1 ? '' : 's'} completed.</p>
-    <div class="roster">${r.scores.map((sc, slot) => `
+    <div class="roster">${r.scores.map((sc, slot) => {
+      const m = r.metrics?.[slot], cols = m ? [['read', 'read'], ['hidden', 'hidden'], ['vote_hit', 'vote hit'], ['survived', 'survived']].filter(([k]) => m[k] !== undefined).map(([k, label]) => `${label} ${m[k].toFixed(2)}`).join(' · ') : '';
+      return `
       <div class="rrow">${avatar(slot)}<span class="nm">${esc(nameOf(slot))}</span>
-        ${roleBadge(slot)}<span class="sc">${sc}</span></div>`).join('')}
+        ${roleBadge(slot)}<span class="sc">${Number(sc).toFixed(2)}</span>${cols ? `<span class="cols">${esc(cols)}</span>` : ''}</div>`;}).join('')}
     </div>
   </section>`;
 }

@@ -366,8 +366,7 @@ function revealParts(e) {
   switch (p.kind) {
     case 'noble_chat':case 'wolf_chat':
       return { title: p.kind==='noble_chat'?'Noble channel':'Wolf channel',
-        inner: `<ul>${e.group.map((w, i) => lineOf(w.payload.slot, esc(w.payload.text), `Turn ${i + 1}`)).join('')}</ul>`,
-        note: 'Delivered only to living members of this private channel, one turn at a time.' };
+        inner: `<ul>${e.group.map((w, i) => lineOf(w.payload.slot, esc(w.payload.text), `Turn ${i + 1}`)).join('')}</ul>`, };
 
     case 'bid': {
       const rows = e.group.map(b => b.payload).sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99));
@@ -377,15 +376,13 @@ function revealParts(e) {
       return { title: `${rows.filter(b => !b.selected).length} bids not taken · day ${e.day} · window ${p.window}`,
         inner: `<ul>${rows.map(b => lineOf(b.slot, esc(b.bid.text),
           `${b.rank===null?'Not ranked':`Ranked ${b.rank+1}`} &middot; urgency ${b.bid.urgency} &middot; ${esc(b.bid.reason)}` +
-          (b.selected ? ' &middot; <b style="color:var(--lamp)">took the floor</b>' : ''))).join('')}</ul>`,
-        note: 'Ranked on public evidence only: speech count, direct reply, urgency, rotating seat priority. The winning text is committed directly, not generated again.' };
+          (b.selected ? ' &middot; <b style="color:var(--lamp)">took the floor</b>' : ''))).join('')}</ul>`, };
     }
 
     case 'confessional':
       return { title: p.requestKind === 'vote' ? 'Why they voted' : 'Confessionals',
         inner: `<ul>${e.group.map(c => lineOf(c.payload.slot, esc(c.payload.text),
-          `Authored with their ${esc(REQUEST_KIND[c.payload.requestKind] || c.payload.requestKind)}`)).join('')}</ul>`,
-        note: 'Written by each policy for the audience as part of a committed action. Not model reasoning.' };
+          `Authored with their ${esc(REQUEST_KIND[c.payload.requestKind] || c.payload.requestKind)}`)).join('')}</ul>`, };
 
     case 'night_choices': {
       const acted = e.group.filter(g => g.payload.actions.length);
@@ -399,8 +396,7 @@ function revealParts(e) {
       }).join('');
       const tail = idle.length
         ? plainLine(`<span style="color:var(--text-faint)">${idle.map(nameOf).map(esc).join(', ')} had no ability to use.</span>`) : '';
-      return { title: 'Night actions', inner: `<ul>${rows}${tail}</ul>`,
-        note: 'Every living seat received the night request at the same moment, including seats with nothing to do.' };
+      return { title: 'Night actions', inner: `<ul>${rows}${tail}</ul>`, };
     }
 
     case 'night_outcome':
@@ -413,29 +409,24 @@ function revealParts(e) {
             : o.ability === 'kill' ? 'var(--wolf)' : 'var(--text-dim)';
           return plainLine(`<strong>${ABILITY[o.ability]}</strong> &middot; ${actor} &rarr; ${target}
             &middot; <span style="color:${tone}">${esc(OUTCOME[o.outcome] || o.outcome)}</span>`);
-        }).join('')}</ul>`,
-        note: 'Server-only while the episode ran. The recorded rules version determines action order. '
-            + 'An actor killed before resolution is sent nothing at all, so this row is the only record that the action happened.' };
+        }).join('')}</ul>`, };
 
     case 'kill_resolution': {
       const tally = (rows, key) => rows.length ? rows.map(r => `${esc(nameOf(r[key]))} (${r.votes})`).join(', ') : 'none';
-      return { title: 'How the pack decided',
-        inner: `<ul>${plainLine(`<strong>Target votes</strong> &middot; ${tally(p.targetVotes, 'target')}${p.targetTie ? ' &middot; <em>tie broken by seed</em>' : ''}`)}${plainLine(`<strong>Knife votes</strong> &middot; ${tally(p.knifeVotes, 'killer')}${p.knifeTie ? ' &middot; <em>tie broken by seed</em>' : ''}`)}${plainLine(p.target === null ? 'No target: the pack did not kill.' : `<strong>${esc(nameOf(p.killer))}</strong> takes the knife to <strong>${esc(nameOf(p.target))}</strong>.`)}</ul>`,
-        note: 'Server-only while the episode ran. Every living Wolf casts one target vote and one knife vote; each is decided by plurality with a seeded tie-break.' };
+      return { title: 'How the pack decided', note: 'Each Wolf votes for a target and for who holds the knife; ties are broken at random.',
+        inner: `<ul>${plainLine(`<strong>Target votes</strong> &middot; ${tally(p.targetVotes, 'target')}${p.targetTie ? ' &middot; <em>tie broken by seed</em>' : ''}`)}${plainLine(`<strong>Knife votes</strong> &middot; ${tally(p.knifeVotes, 'killer')}${p.knifeTie ? ' &middot; <em>tie broken by seed</em>' : ''}`)}${plainLine(p.target === null ? 'No target: the pack did not kill.' : `<strong>${esc(nameOf(p.killer))}</strong> takes the knife to <strong>${esc(nameOf(p.target))}</strong>.`)}</ul>`, };
     }
 
     case 'private_result':
       return { title: 'Private result',
         inner: `<ul>${lineOf(p.slot, `<strong>${ABILITY[p.result.ability]} ${esc(nameOf(p.result.target))}</strong>
-          &rarr; <span class="verdict" data-v="${esc(p.result.result)}">${esc(Array.isArray(p.result.result)?(p.result.result.map(nameOf).join(', ')||'No visits'):RESULT_WORD[p.result.result]||ROLE_LABEL[p.result.result]||(p.result.result==='vanilla'?'Vanilla':p.result.result==='town'?'Confirmed town':p.result.result))}</span>`)}</ul>`,
-        note: 'Only a living actor is sent a result. A blocked inspection returns No result with no reason attached, and the reason is recorded above, server-side.' };
+          &rarr; <span class="verdict" data-v="${esc(p.result.result)}">${esc(Array.isArray(p.result.result)?(p.result.result.map(nameOf).join(', ')||'No visits'):RESULT_WORD[p.result.result]||ROLE_LABEL[p.result.result]||(p.result.result==='vanilla'?'Vanilla':p.result.result==='town'?'Confirmed town':p.result.result))}</span>`)}</ul>`, };
 
     case 'failure':
       return { title: 'Fallback',
         inner: `<ul>${lineOf(p.slot, `<strong>${esc(p.requestKind)} &middot; ${esc(p.code)}</strong> &mdash; ${esc(FALLBACK[p.requestKind] || 'Legal fallback applied.')}`,
           (p.source === 'game' ? 'The game applied a legal fallback' : 'The policy reported a failure and supplied a legal action')
-          + ` &middot; attempt ${p.attempt} &middot; ${esc(p.disposition)}`)}</ul>`,
-        note: 'Publicly this is indistinguishable from a deliberate choice. That is the accepted cost.' };
+          + ` &middot; attempt ${p.attempt} &middot; ${esc(p.disposition)}`)}</ul>`, };
   }
   return null;
 }

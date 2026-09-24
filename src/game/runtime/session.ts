@@ -1,5 +1,5 @@
 import { Results } from '../../shared/results.js';
-import { validSuspicion,scoreEpisode,type ScoringInput } from '../domain/scoring.js';
+import { checkSuspicion,scoreEpisode,type ScoringInput } from '../domain/scoring.js';
 import { newD3Decks,NewD3Setup } from '../../shared/roles.js';
 import { draw } from '../domain/random.js';
 import { randomBytes } from 'node:crypto';
@@ -110,9 +110,11 @@ export class Session {
    this.tally(slot,request,outcome);
    for(const failure of outcome.failures)this.emit({kind:'failure',slot,requestKind:request.kind,...failure});
    if('summary' in outcome.body&&outcome.body.summary)this.emit({kind:'confessional',slot,requestKind:request.kind,text:outcome.body.summary});
-   if(request.kind==='vote'&&request.suspicion&&outcome.body.kind==='vote'){
-    const reports=validSuspicion(outcome.body.suspicion,this.living().filter(s=>s!==slot));
-    if(reports)this.emit({kind:'suspicion',slot,reports},{kind:'server'});
+   // A fallen-back vote is already explained by its failure event; otherwise record the report or why it was dropped.
+   if(request.kind==='vote'&&request.suspicion&&outcome.body.kind==='vote'&&!outcome.fallback){
+    const check=checkSuspicion(outcome.body.suspicion,this.living().filter(s=>s!==slot));
+    if(check.ok)this.emit({kind:'suspicion',slot,reports:check.reports},{kind:'server'});
+    else this.emit({kind:'suspicion_dropped',slot,reason:check.reason,...(check.player!==undefined?{player:check.player}:{})},{kind:'server'});
    }
   }
   if(this.stage==='bid'){

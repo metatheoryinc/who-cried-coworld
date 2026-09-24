@@ -39,6 +39,7 @@ export const Payload=z.discriminatedUnion('kind',[
  z.object({kind:z.literal('private_result'),slot:Slot,result:PrivateResult}).strict(),
  z.object({kind:z.literal('elimination'),slot:Slot,cause:z.enum(['vote','wolf']),role:Role.optional(),faction:Faction.optional()}).strict().refine(p=>(p.role===undefined&&p.faction===undefined)||(p.role!==undefined&&p.faction===factionOf(p.role)),'Invalid death reveal'),
  z.object({kind:z.literal('suspicion'),slot:Slot,reports:z.array(z.object({slot:Slot,wolf:z.number().min(0).max(1)}).strict()).min(1).max(8)}).strict(),
+ z.object({kind:z.literal('suspicion_dropped'),slot:Slot,reason:z.enum(['missing','wrong_count','unknown_player','duplicate_player','out_of_range']),player:Slot.optional()}).strict(),
  z.object({kind:z.literal('kill_resolution'),targetVotes:z.array(z.object({target:Slot,votes:z.number().int().min(1).max(9)}).strict()).max(9),knifeVotes:z.array(z.object({killer:Slot,votes:z.number().int().min(1).max(9)}).strict()).max(9),targetTie:z.boolean(),knifeTie:z.boolean(),target:Slot.nullable(),killer:Slot.nullable()}).strict(),
  z.object({kind:z.literal('night_resolved'),eliminated:z.array(Slot).max(9).refine(sortedSlots)}).strict(),
  z.object({kind:z.literal('failure'),slot:Slot,requestKind:RequestKind,code:Code,source:z.enum(['game','policy_report']),disposition:z.enum(['retry','fallback']),attempt:z.number().int().min(0).max(2)}).strict(),
@@ -61,7 +62,7 @@ export const revealFor=(p:Payload):z.infer<typeof Reveal>=>{
   case 'confessional':return 'confessional';
   case 'bid':return 'discarded_bids';
   case 'night_choices':case 'night_outcome':case 'kill_resolution':case 'private_result':return 'night_choices';
-  case 'failure':return 'failures';
+  case 'failure':case 'suspicion_dropped':return 'failures';
   case 'suspicion':return 'beliefs';
   default:return 'public';
  }
@@ -69,7 +70,7 @@ export const revealFor=(p:Payload):z.infer<typeof Reveal>=>{
 export const Event=z.object({schema:z.literal('wcw.events/1'),seq:z.number().int().min(1).max(20000),day:Day,phase:Phase,audience:Audience,reveal:Reveal,payload:Payload}).strict().refine(e=>{
  if(e.reveal!==revealFor(e.payload))return false;
  if(e.reveal==='public')return e.audience.kind==='public';
- if(['roles','seed','night_outcome','kill_resolution','suspicion'].includes(e.payload.kind))return e.audience.kind==='server';
+ if(['roles','seed','night_outcome','kill_resolution','suspicion','suspicion_dropped'].includes(e.payload.kind))return e.audience.kind==='server';
  if(e.audience.kind!=='seats'||!('slot' in e.payload))return false;
  return ['wolf_chat','noble_chat'].includes(e.payload.kind)?e.audience.slots.includes(e.payload.slot):e.audience.slots.length===1&&e.audience.slots[0]===e.payload.slot;
 });

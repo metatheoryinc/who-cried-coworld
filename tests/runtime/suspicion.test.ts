@@ -36,3 +36,22 @@ it('keeps suspicion events server-only in the event schema',()=>{
  expect(Event.safeParse(wrap({kind:'seats',slots:[0]})).success).toBe(false);
  expect(Event.safeParse(wrap({kind:'public'})).success).toBe(false);
 });
+
+const dropped=(s:HumanSession)=>s.journal.filter(e=>e.payload.kind==='suspicion_dropped');
+it.each([
+ ['missing',undefined,{reason:'missing'}],
+ ['wrong_count',report(()=>0.2).slice(1),{reason:'wrong_count'}],
+ ['unknown_player',[...report(()=>0.2).slice(1),{slot:0,wolf:0.1}],{reason:'unknown_player',player:0}],
+ ['duplicate_player',[...report(()=>0.2).slice(1),{slot:2,wolf:0.3}],{reason:'duplicate_player',player:2}],
+ ['out_of_range',report(x=>x===4?1.5:0.1),{reason:'out_of_range',player:4}],
+])('records why a report was not scored: %s',(_,suspicion,expected)=>{
+ const s=game();vote(s,0,suspicion===undefined?{}:{suspicion});s.advance(195000);
+ const e=dropped(s);expect(e).toHaveLength(1);
+ expect(e[0]).toMatchObject({audience:{kind:'server'},reveal:'failures',payload:{kind:'suspicion_dropped',slot:0,...expected}});
+ expect(Event.safeParse(e[0]).success).toBe(true);
+ expect(JSON.stringify(s.snapshot(0,195000))).not.toContain('suspicion_dropped');
+});
+it('does not record a dropped report when the whole vote fell back',()=>{
+ const s=game();s.advance(195000);
+ expect(dropped(s).filter(e=>e.payload.kind==='suspicion_dropped'&&e.payload.slot===0)).toHaveLength(0);
+});

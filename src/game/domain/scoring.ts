@@ -67,10 +67,17 @@ function hiddenOn(day:number,wolf:number,input:ScoringInput){
  return Math.max(0,(chance-mean(seen))/chance);
 }
 
-/** A report must give exactly one probability in [0, 1] to each other living player; anything else is treated as no report. */
-export function validSuspicion(raw:{slot:number;wolf:number}[]|undefined,others:number[]){
- if(!raw||raw.length!==others.length)return null;
+export type DropReason='missing'|'wrong_count'|'unknown_player'|'duplicate_player'|'out_of_range';
+/** A report must give exactly one probability in [0, 1] to each other living player; otherwise it is dropped with a reason. */
+export function checkSuspicion(raw:{slot:number;wolf:number}[]|undefined,others:number[]):{ok:true;reports:{slot:number;wolf:number}[]}|{ok:false;reason:DropReason;player?:number}{
+ if(!raw)return {ok:false,reason:'missing'};
  const seen=new Set<number>();
- for(const r of raw){if(!others.includes(r.slot)||seen.has(r.slot)||!Number.isFinite(r.wolf)||r.wolf<0||r.wolf>1)return null;seen.add(r.slot);}
- return [...raw].sort((a,b)=>a.slot-b.slot).map(({slot,wolf})=>({slot,wolf}));
+ for(const r of raw){
+  if(!others.includes(r.slot))return {ok:false,reason:'unknown_player',...(r.slot>=0&&r.slot<=8?{player:r.slot}:{})};
+  if(seen.has(r.slot))return {ok:false,reason:'duplicate_player',player:r.slot};
+  if(!Number.isFinite(r.wolf)||r.wolf<0||r.wolf>1)return {ok:false,reason:'out_of_range',player:r.slot};
+  seen.add(r.slot);
+ }
+ if(raw.length!==others.length)return {ok:false,reason:'wrong_count'};
+ return {ok:true,reports:[...raw].sort((a,b)=>a.slot-b.slot).map(({slot,wolf})=>({slot,wolf}))};
 }

@@ -81,7 +81,7 @@ Resolve Alchemist blocks first; remove blocked actors' kill nominations before t
 
 **Reasoning:** Win-only scoring gave Town almost no individual signal: in the benchmark's 200-game batch Day-1 Town votes hit wolves at chance (24.7% vs 25.0%). A proper scoring rule on private reports measures reading skill directly, rewards honesty, and cannot be gamed by vote politics; live probes showed clear separation between models on the same evidence.
 
-**Consequences:** Town vote requests carry `suspicion: true`; the optional `suspicion` list never affects vote legality and is journaled as a server-only `suspicion` event (reveal `beliefs`). Scores are computed at game end from the journal (`src/game/domain/scoring.ts`); the rules still decide the outcome. Replays validate wins through the `win` column. `valid_actions` counts only requests with a real decision.
+**Consequences:** Town vote requests carry `suspicion: true`; the optional `suspicion` list never affects vote legality and is journaled as a server-only `suspicion` event (reveal `beliefs`). Scores are computed at game end from the journal (`src/game/domain/scoring.ts`); the rules still decide the outcome. Replays validate wins through the `win` column. When a non-fallback Town vote's report is missing or invalid, a server-only `suspicion_dropped` event records the reason (`missing`, `wrong_count`, `unknown_player`, `duplicate_player`, `out_of_range`, with the offending player), revealed postgame with failures. `valid_actions` counts only requests with a real decision.
 
 ## Human drafts
 

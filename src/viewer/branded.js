@@ -347,7 +347,7 @@ const plainLine = html => `<li class="line" style="grid-template-columns:1fr"><p
 /* Consecutive private events of the same kind become one panel. A wolf conversation
    reads as a conversation; five headers read as a log file. */
 function coalesce(evs) {
-  const GROUP = { noble_chat: 1, wolf_chat: 1, night_choices: 1, confessional: 1, bid: 1, night_outcome: 1, suspicion: 1 };
+  const GROUP = { noble_chat: 1, wolf_chat: 1, night_choices: 1, confessional: 1, bid: 1, night_outcome: 1, suspicion: 1, suspicion_dropped: 1 };
   const out = [];
   for (const e of evs) {
     const k = e.payload.kind;
@@ -423,6 +423,16 @@ function revealParts(e) {
           const top = [...g.payload.reports].sort((a, b) => b.wolf - a.wolf).slice(0, 3);
           return lineOf(g.payload.slot, top.map(r => `<span class="susp"><span class="susp-bar" style="--w:${Math.round(r.wolf * 100)}%"></span>${esc(nameOf(r.slot))} ${Math.round(r.wolf * 100)}%</span>`).join(' '), 'Private wolf probabilities submitted with the vote');
         }).join('')}</ul>` };
+
+    case 'suspicion_dropped': {
+      const why = x => ({ missing: 'no suspicion list was submitted',
+        wrong_count: 'the list did not cover exactly the other living players',
+        unknown_player: `it included ${x.player === undefined ? 'an invalid seat' : esc(nameOf(x.player))}, who was not another living player`,
+        duplicate_player: `it listed ${esc(nameOf(x.player))} twice`,
+        out_of_range: `${esc(nameOf(x.player))}'s probability was not between 0 and 1` }[x.reason] || x.reason);
+      return { title: 'Suspicion not scored',
+        inner: `<ul>${e.group.map(g => lineOf(g.payload.slot, why(g.payload), 'The vote counted; this report scored as a know-nothing guess')).join('')}</ul>` };
+    }
 
     case 'private_result':
       return { title: 'Private result',

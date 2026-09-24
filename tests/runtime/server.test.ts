@@ -115,3 +115,16 @@ it('starts a partly filled human lobby only after the first join and wait',async
   await new Promise(r=>setTimeout(r,900));expect(server.session.phase).not.toBe('waiting');
  }finally{for(const ws of clients)ws.terminate();await server.close();}
 },5000);
+
+it('sends joined humans lobby seat status and the auto-start countdown before play',async()=>{
+ const config=GameConfig.parse({...c(),mode:'human',setup:'A2',player_connect_timeout_seconds:3});
+ const server=await startServer(config,{port:0,host:'127.0.0.1'}),clients:WebSocket[]=[];
+ try{
+  for(const slot of [2,3])clients.push(await new Promise<WebSocket>((yes,no)=>{const ws=new WebSocket(`ws://127.0.0.1:${server.port}/player?slot=${slot}&token=t${slot}`);ws.once('open',()=>yes(ws));ws.once('error',no);}));
+  const lobby=await new Promise<any>((yes,no)=>{const ws=new WebSocket(`ws://127.0.0.1:${server.port}/player?slot=0&token=t0`);clients.push(ws);ws.on('error',no);
+   ws.on('message',b=>{const p=JSON.parse(b.toString());if(p.type==='ready')ws.send(JSON.stringify({protocol:'wcw.human/1',type:'join'}));if(p.type==='snapshot'&&p.phase==='waiting'&&p.lobby?.seats[0]==='human')yes(p.lobby);});});
+  expect(lobby.seats).toEqual(['human','open','ai','ai','open','open','open','open','open']);
+  expect(lobby.startsInMs).toBeGreaterThan(2000);expect(lobby.startsInMs).toBeLessThanOrEqual(3000);
+  await new Promise(r=>setTimeout(r,3300));expect(server.session.phase).not.toBe('waiting');
+ }finally{for(const ws of clients)ws.terminate();await server.close();}
+},8000);

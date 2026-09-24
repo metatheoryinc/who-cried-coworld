@@ -30,6 +30,8 @@ Eight cycles including transition allowance take at most 37 minutes 20 seconds. 
 
 ## Player screen
 
+Before play starts, the lobby leads with **Join the village** (in the table and in place of the chat composer) and hides the role and journal panels. After joining, each seat shows **You**, **Joined** (human), **AI ready**, or **Open seat**, and the clock counts down to auto-start once the first human has joined; this lobby status is sent only while the game is waiting. On desktop widths the board and chat stay inside the painted frame (about the top 78% of the window); between 761 and 1100 px wide the seats use two rows so the action panel stays visible.
+
 The layout and image assets are adapted from the original Discord `mafia-client` in `tofu-tech`: player cards, day/night backgrounds, role illustrations, village branding, journal and channel controls. The old Discord game-state provider is replaced with the Coworld seat protocol. No Discord login is needed locally. Sounds, Discord avatars and the original animations are not included.
 
 - Your player-card portrait shows your own role. Confirmed teammates and exact private role discoveries update the corresponding portraits; unknown roles keep the sheep artwork. Alignment-only and ambiguous vanilla results do not reveal an exact role. The bottom role area contains your role description, confirmed teammates and the Game setup button. The Game setup guide lists all nine candidate setups for NewD3, including when a fixed setup is selected for testing, role abilities, win conditions and phase timers. It never reveals the selected NewD3 setup or other role assignments. Custom decks list their unassigned composition.

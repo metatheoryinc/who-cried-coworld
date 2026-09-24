@@ -42,6 +42,11 @@ export async function startServer(config:GameConfig,options:{port:number;host:st
  });
  const wss=new WebSocketServer({noServer:true,maxPayload:8192,perMessageDeflate:false});
  const send=(ws:WebSocket,value:unknown)=>{if(ws.readyState===WebSocket.OPEN){if(ws.bufferedAmount>1024*1024){ws.close(1008,'Slow client');return;}ws.send(JSON.stringify(value));}};
+ // Seat status and auto-start countdown shown to joined humans before play.
+ const lobby=(session:HumanSession,now:number)=>({
+  seats:Array.from({length:9},(_,slot)=>!policies.has(slot)?'open':session.isHuman(slot)?'human':'ai'),
+  startsInMs:firstHumanAt===undefined?null:Math.max(0,Math.ceil(firstHumanAt+config.player_connect_timeout_seconds*1000-now)),
+ });
  const flush=()=>{
   for(const [ws,viewer] of viewers){
    const events=project(session.journal,viewer.slot);
@@ -51,7 +56,7 @@ export async function startServer(config:GameConfig,options:{port:number;host:st
    const p=session.pending.get(slot);
    if(session instanceof HumanSession&&session.isHuman(slot!)){
     const now=performance.now(),key=`${session.journal.length}:${p?.requestId}:${p?.attempt}:${!!p?.accepted}:${Math.floor(now/1000)}`;
-    if(sent.get(ws)!==key){send(ws,session.snapshot(slot,now));sent.set(ws,key);}continue;
+    if(sent.get(ws)!==key){send(ws,{...session.snapshot(slot,now),lobby:session.phase==='waiting'?lobby(session,now):null});sent.set(ws,key);}continue;
    }
    if(!p||p.outcome||p.accepted)continue;
    const key=`${p.requestId}:${p.attempt}`;

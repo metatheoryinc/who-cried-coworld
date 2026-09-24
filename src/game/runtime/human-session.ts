@@ -145,6 +145,15 @@ export class HumanSession extends Session {
   else this.teamMessage(slot,m.channel==='wolves'?'wolf_chat':'noble_chat',m.text);
   return {status:'accepted'};
  }
+ /** A Wolf sees living packmates' current night drafts during night actions; nobody else does. */
+ private packDrafts(slot:number){
+  const seat=this.state.seats[slot]!;
+  if(this.period!=='actions'||seat.faction!=='wolf'||this.state.result)return [];
+  return this.state.seats.filter(p=>p.alive&&p.faction==='wolf'&&p.slot!==slot).flatMap(p=>{
+   const body=this.pending.get(p.slot)?.accepted?.body;
+   return body?.kind==='night'?[{slot:p.slot,actions:body.actions}]:[];
+  });
+ }
  snapshot(slot:number,now:number){
   const seat=this.state.seats[slot]!,p=this.pending.get(slot),started=this.phase!=='waiting';
   const floor=[...this.pending.values()].find(p=>p.request.kind==='bid');
@@ -156,6 +165,7 @@ export class HumanSession extends Session {
    teammates:started?this.state.seats.filter(p=>seat.faction==='wolf'?p.faction==='wolf':seat.role==='noble'?p.role==='noble':false).map(p=>({slot:p.slot,role:p.role})):[],
    channels:started?channels:['town'],chatEnabled:started&&seat.alive&&!this.state.result&&(this.period==='discussion'||this.period==='coordination'),
    observation:started&&seat.alive?this.observation(slot,now):null,accepted:p?.accepted?.body??null,
+   packDrafts:this.packDrafts(slot),
    revealedRoles:this.state.result?this.state.seats.map(p=>({slot:p.slot,role:p.role,faction:p.faction})):[],
    events:project(this.journal,slot),result:this.state.result??null};
  }

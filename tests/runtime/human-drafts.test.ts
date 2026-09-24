@@ -38,3 +38,18 @@ it('still locks a policy seat on its first valid answer',()=>{
  expect(s.receive(1,action(s,1,vote(5),VOTE),VOTE+2)).toMatchObject({status:'rejected',code:'illegal'});
  s.advance(VOTE_END);expect(ballot(s,1)).toBe(3);
 });
+
+const ACTIONS=230000;
+const night=(actions:unknown[])=>({kind:'night',actions,summary:''});
+it('shows each Wolf its packmates’ draft night stamps and hides them from everyone else',()=>{
+ const s=game([0,1]);s.advance(VOTE);s.advance(VOTE_END);s.advance(200000);
+ expect(s.snapshot(1,200000).packDrafts).toEqual([]);
+ s.advance(ACTIONS);expect(s.period).toBe('actions');
+ expect(s.receive(5,action(s,5,night([{ability:'kill',target:3,killer:5},{ability:'block',target:null}]),ACTIONS),ACTIONS+1).status).toBe('accepted');
+ expect(s.receive(1,action(s,1,night([{ability:'kill',target:4}]),ACTIONS),ACTIONS+2).status).toBe('accepted');
+ expect(s.snapshot(1,ACTIONS+2).packDrafts).toEqual([{slot:5,actions:[{ability:'kill',target:3,killer:5},{ability:'block',target:null}]}]);
+ expect(s.snapshot(0,ACTIONS+2).packDrafts).toEqual([]);
+ expect(JSON.stringify(s.snapshot(0,ACTIONS+2))).not.toContain('"killer"');
+ s.receive(1,action(s,1,night([{ability:'kill',target:3,killer:5}]),ACTIONS),ACTIONS+3);
+ expect(s.snapshot(1,ACTIONS+3).accepted).toMatchObject({actions:[{ability:'kill',target:3,killer:5}]});
+});

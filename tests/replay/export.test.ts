@@ -20,3 +20,13 @@ it('refuses incomplete, inconsistent and structurally corrupted replays',()=>{
  expect(Replay.safeParse({...r,result:{...r.result,daysCompleted:0}}).success).toBe(false);
  expect(Replay.safeParse({...r,events:r.events.map((e,i)=>i===0?{...e,cursor:5}:e)}).success).toBe(false);
 });
+
+it('exports a complete scripted game with version 2 scores',async()=>{
+ const {Session}=await import('../../src/game/runtime/session.js');const {GameConfig}=await import('../../src/shared/config.js');
+ const {scriptedAction}=await import('../../src/player/scripted.js');const {exportReplay}=await import('../../src/shared/replay.js');
+ const c=GameConfig.parse({tokens:Array.from({length:9},(_,i)=>`t${i}`),players:Array.from({length:9},(_,i)=>({name:`S${i}`})),seed:'000102030405060708090a0b0c0d0e0f',maxDays:8,windowMs:100});
+ const s=new Session(c,'ep');s.start(0);let t=0;
+ while(!s.state.result&&t<10_000_000){for(const slot of s.pending.keys()){const o=s.observation(slot,t);if(o)s.receive(slot,JSON.stringify(scriptedAction(o)),t);}t+=100;s.advance(t);}
+ const replay=exportReplay('ep',8,s.journal,s.state.result!);
+ expect(replay.result.schema).toBe('wcw.results/2');
+});

@@ -24,7 +24,9 @@ export const Replay=z.object({
  if(end.kind!=='finished'||JSON.stringify(end.result)!==JSON.stringify(r.result))return false;
  const roles=r.events.find(e=>e.payload.kind==='roles')!.payload;
  if(roles.kind!=='roles')return false;
- return roles.roles.every(p=>r.result.scores[p.slot]===(r.result.outcome==='draw'?0:r.result.outcome==='town_win'?Number(p.faction==='town'):r.result.outcome==='jester_win'?Number(p.role==='jester'):Number(p.faction==='wolf')));
+ // Version 2 scores include bonuses; the win column must still match the outcome.
+ const wins=r.result.schema==='wcw.results/2'?r.result.metrics.map(m=>m.win):r.result.scores;
+ return roles.roles.every(p=>wins[p.slot]===(r.result.outcome==='draw'?0:r.result.outcome==='town_win'?Number(p.faction==='town'):r.result.outcome==='jester_win'?Number(p.role==='jester'):Number(p.faction==='wolf')));
 },'Inconsistent replay evidence');
 export type Replay=z.infer<typeof Replay>;
 export function exportReplay(episodeId:string,maxDays:number,journal:Event[],result:Results):Replay{

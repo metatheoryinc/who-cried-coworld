@@ -2,13 +2,17 @@ import {createAssetCache} from './asset-cache.js';
 import { playerConnection } from './connection.js';
 import { knownRole } from './known-role.js';
 import { deathCause,deathReveal,stageSummary } from './stage-summary.js';
-import { voteMarks } from './vote-marks.js';
+import { traySlots,placementsFrom,place,clear,bodyFor,packStamps,stampsOn } from './stamps.js';
+import { stampIcon,stampLabels } from './stamp-icons.js';
+import { systemLines } from './system-lines.js';
 import { roleNames,newD3Decks } from '../shared/roles.js';
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const assets=createAssetCache(),asset=assets.url;
 const art={wolf:'Role_Wolf_outline',alchemist:'Role_Alchemist_outline',track_reader:'Role_Track_reader_outline',seer:'Role_Seer_outline',guard:'Role_Guard_outline',chef:'Role_Chef_outline',dairy_maid:'Role_Dairymaid_outline',priest:'Role_Priest_outline',noble:'Role_Noble_01_outline',sheep:'Role_Villager_outline',jester:'Role_Villager_outline'};
 const descriptions={wolf:'Hide among the sheep. Coordinate with your pack and choose a killer each night.',alchemist:'A wolf with a potion: block one player and nominate your pack’s kill each night.',track_reader:'A wolf who learns roles. Sheep and ordinary Wolves both appear as vanilla.',seer:'Each night, inspect one player to learn whether they are a wolf.',guard:'Protect one other player from the wolves each night.',chef:'Jail one player each night: block their action and protect them from the kill.',dairy_maid:'Visit someone at night. They learn that you are town.',priest:'Track one player each night to see whom they actually visited.',noble:'You know your fellow Nobles are town. Coordinate in your private channel.',sheep:'Your voice and your vote are your powers. Find the wolves before they outnumber you.',jester:'Convince the village to vote you out. Dying at night does not count.'};
 const labels={discussion:'Discuss & deduce',vote:'Cast your vote',coordination:'Night whispers',actions:'Make your move',dusk:'The Night Begins…',dawn:'The Day Begins…'};
+// Stamp drafts: placements are local until the server confirms them; they count when the timer ends.
+let placements={},held=null,draftKey=null,dirty=false,saveState='idle',changeSeq=0,sentSeq=0,sendTimer;
 let state=null,ws,channel='town',lastRender='',actionKey='',remainingUntil=0,joined=false,connecting=false,ended=false,pendingChat=null;
 const params=new URLSearchParams(location.search);
 let slot=params.get('slot'),connection;
@@ -18,53 +22,79 @@ function name(slot){return state?.roster[slot]?.name??`Seat ${slot+1}`;}
 function feedback(t){$('feedback').textContent=t;}
 function drawPlayers(){
  const roster=state?.roster??Array.from({length:9},(_,i)=>({slot:i,name:slot!==null&&i===Number(slot)?'You':`Player ${i+1}`,alive:true}));
- const request=state?.observation?.request,eligible=request?.kind==='vote'&&!state?.accepted?request.targets:[];
+ const r=stampRequest(),slots=r?traySlots(r):[],heldTargets=held?slots.find(x=>x.id===held)?.targets??[]:[];
+ const pack=state?.packDrafts?packStamps(state.packDrafts):[];
  $('players').innerHTML=roster.map(p=>{
   const known=knownRole(state,p.slot),you=state?.self?.slot===p.slot;
   const cause=deathCause(state?.events??[],p.slot);
   const seat=state?.lobby?.seats[p.slot];
   const status=seat?(you||p.slot===state.self?.slot||p.slot===Number(slot)&&seat==='human'?'You':{human:'Joined',ai:'AI ready',open:'Open seat'}[seat]):!state&&!joined?'':!p.alive?(cause==='wolf'?'Killed by wolves':cause==='vote'?'Eliminated by town':'Eliminated'):you?`${roleNames[state.self.role]} · You`:known?roleNames[known]:'Role unknown';
   const tag=!p.alive&&deathReveal(state?.events??[],p.slot)?`${deathReveal(state.events,p.slot)} · ${status}`:status;
-  const votes=voteMarks(state,p.slot);
-  const positions=[[34,32,-24],[53,43,23],[29,52,-8],[51,23,38],[43,60,-32],[20,34,12],[62,56,18],[22,63,-20],[63,27,30]];
-  const stamps=positions.slice(0,p.alive?votes.count:0).map(([x,y,angle])=>`<img class="vote-stamp" src="${asset('vote_banner_town_hoof')}" alt="" style="--x:${x}%;--y:${y}%;--angle:${angle}deg">`).join('');
-  const badge=votes.count?`<span class="vote-badge${votes.own?' own-vote':''}" title="${votes.own?'Your locked vote':`${votes.count} votes; majority ${votes.majority}`}"><span>${votes.own?'Yours':`${votes.count}/${votes.majority}`}</span></span>`:'';
-  return `<button class="player ${p.alive?'':'dead'} ${seat==='open'?'open-seat':''} ${eligible.includes(p.slot)?'eligible':''}" data-slot="${p.slot}" title="${esc(p.policyName?`Policy: ${p.policyName}`:p.name)}" ${eligible.includes(p.slot)?'':'disabled'} aria-label="${esc(p.name)}, ${esc(tag)}${votes.count?`, ${votes.own?'your locked vote':`${votes.count} votes, majority ${votes.majority}`}`:''}${eligible.includes(p.slot)?', select for vote':''}"><img src="${asset('base_playercard_shadow')}" alt=""><img class="${known?'known-role':'sheep'}" src="${asset(known?art[known]:'Player_sheep_base')}" alt="">${stamps}${eligible.includes(p.slot)?`<img class="vote-preview" src="${asset('vote_banner_town_hoof')}" alt="">`:""}${!p.alive?deathMark(cause):''}${badge}<span class="card-foot"><span class="name">${esc(p.name)}</span>${tag?`<small>${esc(tag)}</small>`:''}</span></button>`;
+  const own=r?stampsOn(placements,p.slot):[],target=heldTargets.includes(p.slot),pick=!held&&own.length>0;
+  const marks=[...own.map(id=>`<span class="stamp-mark own" title="Your ${stampLabels[id]}">${stampIcon(id,asset)}</span>`),...pack.filter(x=>x.slot===p.slot).map(x=>`<span class="stamp-mark pack" title="${esc(name(x.by))}: ${stampLabels[x.id]}">${stampIcon(x.id,asset)}<b>${x.by+1}</b></span>`)].join('');
+  const described=[...own.map(id=>`your ${stampLabels[id]}`),...pack.filter(x=>x.slot===p.slot).map(x=>`${name(x.by)}'s ${stampLabels[x.id]}`)].join(', ');
+  return `<button class="player ${p.alive?'':'dead'} ${seat==='open'?'open-seat':''} ${target?'eligible':''} ${held&&!target?'dim':''}" data-slot="${p.slot}" title="${esc(p.policyName?`Policy: ${p.policyName}`:p.name)}" ${target||pick?'':'disabled'} aria-label="${esc(p.name)}, ${esc(tag)}${described?`, ${esc(described)}`:''}${target?`, place ${stampLabels[held]}`:pick?', pick up your stamp':''}"><img src="${asset('base_playercard_shadow')}" alt=""><img class="${known?'known-role':'sheep'}" src="${asset(known?art[known]:'Player_sheep_base')}" alt="">${marks?`<span class="card-stamps">${marks}</span>`:''}${!p.alive?deathMark(cause):''}<span class="card-foot"><span class="name">${esc(p.name)}</span>${tag?`<small>${esc(tag)}</small>`:''}</span></button>`;
  }).join('');
- $('players').querySelectorAll('.eligible').forEach(b=>b.onclick=()=>{const select=$('vote-target');if(select){select.value=b.dataset.slot;highlight();}});
+ $('players').querySelectorAll('.player:not(:disabled)').forEach(b=>b.onclick=()=>onCard(Number(b.dataset.slot)));
  const filled=state?.lobby?.seats.filter(s=>s!=='open').length;
  $('alive').textContent=inLobby()?(filled===undefined?'9 seats':`${filled} of 9 seats filled`):`${roster.filter(p=>p.alive).length} alive · Majority ${Math.floor(roster.filter(p=>p.alive).length/2)+1}`;
 }
-function highlight(){document.querySelectorAll('.player').forEach(b=>b.classList.toggle('selected',b.dataset.slot===$('vote-target')?.value));}
-function options(targets,pass=true){return (pass?'<option value="">Pass</option>':'')+targets.map(s=>`<option value="${s}">${esc(name(s))}</option>`).join('');}
 function drawAction(){
- const o=state.observation,key=`${JSON.stringify(state.lobby)}:${state.phase}:${state.period}:${o?.requestId}:${JSON.stringify(state.accepted)}:${state.self?.alive}:${state.result?.outcome}:${state.floor?.turn}`;
+ if(stampRequest()){actionKey='';drawTray();return;}
+ const o=state.observation,key=`${JSON.stringify(state.lobby)}:${state.phase}:${state.period}:${o?.requestId}:${state.self?.alive}:${state.result?.outcome}:${state.floor?.turn}`;
  if(key===actionKey)return;actionKey=key;feedback('');
  if(state.result){$('action').innerHTML=`<span class="eyebrow">THE STORY ENDS</span><h2 class="result">${esc({town_win:'The village prevails',wolf_win:'The wolves prevail',jester_win:'The Trickster wins',draw:'A village divided'}[state.result.outcome])}</h2><p>${state.result.scores[Number(slot)]?'You won.':'The game is complete.'} ${esc(connection.replayNotice)}</p><a href="${esc(connection.replayPage)}" target="_blank" rel="noopener noreferrer">${esc(connection.replayLabel)}</a>`;return;}
  if(!state.self){const seats=state.lobby?.seats??[],humans=seats.filter(s=>s==='human').length,filled=seats.filter(s=>s!=='open').length;
   $('action').innerHTML=`<h2>You have a seat</h2><p>${filled} of 9 seats filled · ${humans} ${humans===1?'human':'humans'} joined.</p><p class="hint">Play starts when every seat is filled${state.lobby?.startsInMs!=null?', or when the countdown ends':''}. Your secret role is dealt when the game begins.</p>`;return;}
  if(!state.self.alive){$('action').innerHTML='<h2>Your story lives on</h2><p>You have been eliminated. Follow the public conversation while the village plays on.</p>';return;}
- if(state.accepted){$('action').innerHTML=`<h2>Choice locked in</h2><p>${esc(state.accepted.kind==='vote'?`Your vote: ${state.accepted.target===null?'Pass':name(state.accepted.target)}.`:'Your night actions are recorded.')} The phase ends when the timer reaches zero.</p>`;return;}
- const r=o?.request;
- if(r?.kind==='vote'){
-  $('action').innerHTML=`<h2>Who do you suspect?</h2><p>A strict majority is needed to eliminate someone. Select a card or choose below.</p><form id="decision" class="choices"><label>Vote for<select id="vote-target">${options(r.targets)}</select></label><button class="primary">Lock in vote</button></form>`;
-  $('vote-target').onchange=highlight;
- }else if(r?.kind==='night'){
-  $('action').innerHTML=`<h2>${r.choices.length?'Choose your night actions':'Rest until morning'}</h2><p>${r.choices.length?'Choose every action before locking in. Pass leaves that ability unused.':'You have no night ability. The village wakes when the timer runs out.'}</p><form id="decision" class="choices">${r.choices.map((c,i)=>`<label>${esc(c.ability)}<select id="choice-${i}">${options(c.targets)}</select></label>${c.ability==='kill'?`<label>Wolf performing the kill<select id="killer-${i}">${options(c.actors??[state.self.slot],false)}</select></label>`:''}`).join('')}<button class="primary">${r.choices.length?'Lock in actions':'Ready for morning'}</button></form>`;
- }else{$('action').innerHTML=`<h2>${state.period==='coordination'?'The village sleeps':'The floor is open'}</h2><p>${state.period==='coordination'?'Wolves and Nobles can coordinate privately. Night actions follow in a moment.':state.floor?`The host called on ${esc(name(state.floor.slot))}${state.floor.replyingToHuman?' to respond to you':''}.${state.floor.prompt?` ${esc(state.floor.prompt)}`:''} One bot speaks each 13-second turn. You can chat at any time.`:'Share your suspicions in Town chat.'}</p>`;return;}
- $('decision').onsubmit=e=>{e.preventDefault();if(ws?.readyState!==WebSocket.OPEN)return feedback('Reconnect before submitting.');const value=id=>$(id).value===''?null:Number($(id).value);
-  const body=r.kind==='vote'?{kind:'vote',target:value('vote-target'),summary:''}:{kind:'night',actions:r.choices.map((c,i)=>({ability:c.ability,target:value(`choice-${i}`),...(c.ability==='kill'?{killer:value(`killer-${i}`)}:{})})),summary:''};
-  ws.send(JSON.stringify({protocol:'wcw.player/1',type:'action',episodeId:o.episodeId,requestId:o.requestId,observationId:o.observationId,body,report:null}));feedback('Sending your choice…');
- };
+ $('action').innerHTML=`<h2>${state.period==='coordination'?'The village sleeps':'The floor is open'}</h2><p>${state.period==='coordination'?'Wolves and Nobles can coordinate privately. Night actions follow in a moment.':state.floor?`The host called on ${esc(name(state.floor.slot))}${state.floor.replyingToHuman?' to respond to you':''}.${state.floor.prompt?` ${esc(state.floor.prompt)}`:''} One bot speaks each 13-second turn. You can chat at any time.`:'Share your suspicions in Town chat.'}</p>`;
 }
+function stampRequest(){const r=state?.observation?.request;return !state?.result&&state?.self?.alive&&(r?.kind==='vote'||r?.kind==='night')?r:null;}
+/** Adopt the server's draft for a new request, or when no local change is waiting to be saved. */
+function syncStamps(){
+ const r=stampRequest(),key=r?state.observation.requestId:null;
+ if(key!==draftKey){draftKey=key;held=null;dirty=false;clearTimeout(sendTimer);placements=r?placementsFrom(r,state.accepted):{};saveState=state.accepted?'saved':'idle';}
+ else if(r&&!dirty)placements=placementsFrom(r,state.accepted);
+}
+function drawTray(){
+ const r=stampRequest(),slots=traySlots(r);
+ if(!slots.length){$('action').innerHTML='<h2>Rest until morning</h2><p>You have no night ability. The village wakes when the timer runs out.</p>';return;}
+ const focused=document.activeElement?.dataset?.stamp,any=slots.some(x=>placements[x.id]!=null);
+ const status={idle:'Nothing stamped yet · you pass if the timer ends',saving:'Saving…',saved:any?'Saved · counts when the timer ends':'Saved · you pass when the timer ends',error:'Could not save that change · your last saved choice still counts'}[saveState];
+ const target=(x)=>{const t=placements[x.id];return t==null?'pass':x.id==='knife'&&t===state.self.slot?'You':name(t);};
+ $('action').innerHTML=`<h2>${r.kind==='vote'?'Who do you suspect?':'Your night actions'}</h2><p>${held?`Click a glowing player to place ${esc(stampLabels[held])}. Press Esc to cancel.`:`Pick up a stamp, then click a player.${r.kind==='vote'?' A strict majority eliminates someone.':''} You can change it until the timer ends.`}</p><div class="tray">${slots.map(x=>`<div class="stamp-slot"><button type="button" class="stamp${held===x.id?' held':''}" data-stamp="${x.id}" aria-pressed="${held===x.id}">${stampIcon(x.id,asset)}<span>${stampLabels[x.id]}</span><small>${esc(target(x))}</small></button>${placements[x.id]!=null?`<button type="button" class="stamp-clear" data-clear="${x.id}" aria-label="Clear ${stampLabels[x.id]}">×</button>`:''}</div>`).join('')}</div><p class="draft-status ${saveState}" role="status">${status}</p>`;
+ $('action').querySelectorAll('[data-stamp]').forEach(b=>b.onclick=()=>{held=held===b.dataset.stamp?null:b.dataset.stamp;refreshStamps();});
+ $('action').querySelectorAll('[data-clear]').forEach(b=>b.onclick=()=>{placements=clear(placements,b.dataset.clear);held=null;scheduleSend();refreshStamps();});
+ if(focused)$('action').querySelector(`[data-stamp="${focused}"]`)?.focus();
+}
+function refreshStamps(){drawPlayers();drawTray();}
+function onCard(target){
+ const r=stampRequest();if(!r)return;
+ if(held){placements=place(placements,r,held,target,state.self.slot);held=null;scheduleSend();}
+ else{const own=stampsOn(placements,target);if(own.length)held=own[0];}
+ refreshStamps();
+}
+function scheduleSend(){dirty=true;saveState='saving';changeSeq++;clearTimeout(sendTimer);sendTimer=setTimeout(sendDraft,250);}
+function sendDraft(){
+ const r=stampRequest(),o=state?.observation;if(!r||!o)return;
+ if(ws?.readyState!==WebSocket.OPEN){saveState='error';drawTray();return;}
+ sentSeq=changeSeq;ws.send(JSON.stringify({protocol:'wcw.player/1',type:'action',episodeId:o.episodeId,requestId:o.requestId,observationId:o.observationId,body:bodyFor(r,placements),report:null}));
+}
+function draftReceipt(p){
+ if(['accepted','duplicate'].includes(p.status)){if(sentSeq===changeSeq){dirty=false;saveState='saved';}}
+ else{dirty=false;saveState='error';const r=stampRequest();if(r)placements=placementsFrom(r,state.accepted);}
+ if(stampRequest())refreshStamps();
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&held){held=null;refreshStamps();}});
 function bindSetup(){
  $('setup-open').onclick=()=>{
   const supplied=state.gameSetup;if(!supplied)return;
   const setup=/NewD3/.test(supplied.name)?{...supplied,name:'NewD3',decks:Object.entries(newD3Decks).map(([name,roles])=>({name,roles}))}:supplied;
   const roles=[...new Set(setup.decks.flatMap(d=>d.roles))];
   const deckText=deck=>[...new Set(deck)].map(r=>`${deck.filter(x=>x===r).length} × ${roleNames[r]}`).join(', ');
-  $('setup-title').textContent=setup.name;
-  $('setup-content').innerHTML=`<p>Nine players. Role assignments are secret. ${setup.decks.length>1?'One of the following setups is selected secretly.':'This is the role composition for this game.'}</p><ul>${setup.decks.map(d=>`<li><strong>${esc(d.name)}</strong>: ${esc(deckText(d.roles))}</li>`).join('')}</ul><h3>Roles</h3><dl>${roles.map(r=>`<dt>${esc(roleNames[r])}${r==='noble'?' (Mason)':''}</dt><dd>${esc(descriptions[r])}</dd>`).join('')}</dl><h3>How to win</h3><p>Town wins when all wolves are eliminated. Wolves win at parity with town.${roles.includes('jester')?' The Trickster wins if eliminated by the town vote.':''} After ${setup.maxDays} completed nights without a winner, the game is a draw.</p><h3>Voting and chat</h3><p>A strict majority of living players is required to eliminate someone. Otherwise nobody is eliminated. Votes are sealed until the window closes; locked votes cannot be changed. Town chat is open during the day. Wolves and Nobles have separate private channels during discussion and night coordination. Eliminated players cannot act or chat.</p><h3>Phase timers</h3><p>Discussion ${setup.timers.dayMs/1000}s · Vote ${setup.timers.voteMs/1000}s · Night coordination ${setup.timers.coordinationMs/1000}s · Night actions ${setup.timers.nightMs/1000}s · Transitions ${setup.timers.transitionMs/1000}s.</p><p>During normal discussion the host selects a speaker every 13 seconds and prioritizes human messages. The phase clock keeps running while this guide is open.</p>`;
+  $('setup-title').textContent='How to play';
+  const stamping=roles.some(r=>['wolf','alchemist','track_reader'].includes(r));
+  $('setup-content').innerHTML=`<p class="guide-sub">This game: ${setup.decks.length>1?`one of ${setup.decks.length} ${esc(setup.name)} role mixes, chosen secretly`:`${esc(setup.name)} setup`} · nine players · roles are secret.</p><h3>Roles in this game</h3><ul>${setup.decks.map(d=>`<li><strong>${esc(d.name)}</strong>: ${esc(deckText(d.roles))}</li>`).join('')}</ul><dl>${roles.map(r=>`<dt>${esc(roleNames[r])}${r==='noble'?' (Mason)':''}</dt><dd>${esc(descriptions[r])}</dd>`).join('')}</dl><h3>How to win</h3><p>Town wins when all wolves are eliminated. Wolves win at parity with town.${roles.includes('jester')?' The Trickster wins if eliminated by the town vote.':''} After ${setup.maxDays} completed nights without a winner, the game is a draw.</p><h3>Voting &amp; chat</h3><p>Votes and night abilities are <strong>stamps</strong>: pick one up, then click a player. You can move or remove a stamp until the timer ends; whatever is placed then counts, and no stamp means pass. A strict majority of living players eliminates someone; otherwise nobody is eliminated. Votes stay sealed until the vote closes.${stamping?' Wolves see each other’s night stamps. The pack casts two votes: every Wolf’s <strong>kill target</strong> stamp counts once, and every Wolf’s <strong>knife</strong> stamp chooses who performs the kill. Each is decided by the most votes, with ties broken at random, and your knife starts on you.':''}</p><p>Town chat is open during the day. Wolves and Nobles have private channels during discussion and night coordination. Eliminated players cannot act or chat.</p><h3>Timing</h3><p>Discussion ${setup.timers.dayMs/1000}s · Vote ${setup.timers.voteMs/1000}s · Night coordination ${setup.timers.coordinationMs/1000}s · Night actions ${setup.timers.nightMs/1000}s · Transitions ${setup.timers.transitionMs/1000}s. Phases never end early.</p><p>During discussion the host picks a speaker every 13 seconds and prioritizes human messages. The clock keeps running while this guide is open.</p>`;
   $('setup-guide').showModal();
  };
 }
@@ -75,7 +105,7 @@ function drawRole(){
  const team=state.teammates.filter(t=>t.slot!==self.slot);
  const teamLabel=self.faction==='wolf'?'Your pack':self.role==='noble'?'Fellow Nobles (Masons)':null;
  if(teamLabel)$('role').querySelector('div').insertAdjacentHTML('beforeend',`<p class="teammates">${teamLabel}: ${team.map(t=>`${esc(name(t.slot))} · ${esc(roleNames[t.role])}${state.roster.find(p=>p.slot===t.slot)?.alive?'':' (eliminated)'}`).join('; ')}</p>`);
- $('role').querySelector('div').insertAdjacentHTML('beforeend',`<button id="setup-open" ${state.gameSetup?'':'disabled'}>Game setup</button>`);
+ $('role').querySelector('div').insertAdjacentHTML('beforeend',`<button id="setup-open" ${state.gameSetup?'':'disabled'}>How to play</button>`);
  bindSetup();
  const notes=state.events.flatMap(e=>{const p=e.payload;
   if(p.kind==='private_result'){const r=p.result,result=Array.isArray(r.result)?(r.result.length?r.result.map(name).join(', '):'no visits'):r.result==='no_result'?'No result (your action was blocked)':r.result==='not_wolf'?'Not a wolf':roleNames[r.result]??r.result;return [`Night ${r.day} · ${name(r.target)}: ${result}`];}
@@ -90,9 +120,10 @@ function drawChat(){
  $('channels').innerHTML=state.channels.map(c=>`<button class="${c===channel?'active':''}" data-channel="${c}" aria-pressed="${c===channel}">${names[c]}</button>`).join('');
  $('channels').querySelectorAll('button').forEach(b=>b.onclick=()=>{channel=b.dataset.channel;drawChat();});
  $('privacy').textContent=channel==='town'?'Public conversation':`Private · living ${names[channel]} only`;
- const messages=state.events.filter(e=>channel==='town'?e.payload.kind==='speech':e.payload.kind===(channel==='wolves'?'wolf_chat':'noble_chat'));
+ const kind=channel==='town'?'speech':channel==='wolves'?'wolf_chat':'noble_chat';
+ const items=state.events.flatMap(e=>e.payload.kind===kind?[e]:systemLines(e,state.roster,state.events).filter(l=>channel==='town'||l.scope==='all').map(l=>({line:l.text}))); 
  const el=$('messages'),atBottom=el.scrollTop+el.clientHeight>=el.scrollHeight-60;
- el.innerHTML=messages.length?messages.map(e=>{const p=e.payload,b=p.kind==='speech'?p.speech:p;return `<article class="message ${b.slot===state.self?.slot?'mine':''}"><small>Day ${e.day}</small><strong>${esc(name(b.slot))}${b.slot===state.self?.slot?' · you':''}</strong><p>${esc(b.text)}</p></article>`;}).join(''):'<p class="empty">No messages in this channel yet.</p>';
+ el.innerHTML=items.length?items.map(e=>{if(e.line)return `<p class="system-line">${esc(e.line)}</p>`;const p=e.payload,b=p.kind==='speech'?p.speech:p;return `<article class="message ${b.slot===state.self?.slot?'mine':''}"><small>Day ${e.day}</small><strong>${esc(name(b.slot))}${b.slot===state.self?.slot?' · you':''}</strong><p>${esc(b.text)}</p></article>`;}).join(''):'<p class="empty">No messages in this channel yet.</p>';
  if(atBottom)el.scrollTop=el.scrollHeight;
  const allowed=state.chatEnabled&&(channel!=='town'||state.period==='discussion');
  $('message').disabled=!allowed||ws?.readyState!==WebSocket.OPEN;$('send').disabled=$('message').disabled||!!pendingChat;
@@ -126,10 +157,10 @@ function drawInterlude(){
  }
  $('interlude-title')?.focus({preventScroll:true});
 }
-function render(s){state=s;if(s.self)slot=s.self.slot;
+function render(s){state=s;if(s.self)slot=s.self.slot;syncStamps();
 ended=!!s.result;document.body.classList.toggle('lobby',s.phase==='waiting');
  remainingUntil=performance.now()+(s.phase==='waiting'?s.lobby?.startsInMs??0:s.remainingMs);
- const key=JSON.stringify([s.lobby,s.events.length,s.phase,s.period,s.observation?.requestId,s.observation?.attempt,s.accepted,s.self?.alive,s.floor?.turn]);
+ const key=JSON.stringify([s.lobby,s.packDrafts,s.events.length,s.phase,s.period,s.observation?.requestId,s.observation?.attempt,s.accepted,s.self?.alive,s.floor?.turn]);
  if(key!==lastRender){lastRender=key;document.body.classList.toggle('night',s.phase==='night');$('day').textContent=s.phase==='waiting'?'GATHERING THE VILLAGE':`DAY ${s.day} · ${s.phase==='night'?'AFTER DARK':'THE VILLAGE'}`;$('phase').textContent=s.result?'Game over':s.phase==='waiting'?'Take your seat':labels[s.period];drawPlayers();drawRole();drawAction();drawChat();drawInterlude();}
  updateClock();
 }
@@ -140,11 +171,12 @@ async function connect(){if(!connection||connecting||ws?.readyState===WebSocket.
  try{await assets.preload([...Object.values(art),'base_rolecard_blue','base_rolecard_red','bg_gameover_day','bg_gameover_night','dead_icon_claw','dead_icon_meat']);}
  catch{connecting=false;$('join').disabled=false;$('chat-join').disabled=false;$('connection').textContent='Could not load artwork. Click Join to retry.';return;}
  joined=true;document.body.classList.add('joined');sessionStorage.setItem(storageKey,'1');$('connection').textContent='Connecting…';ws=new WebSocket(connection.socket);
- ws.onopen=()=>{connecting=false;$('connection').textContent='Connected · your seat is private';if(state)drawChat();};
+ ws.onopen=()=>{connecting=false;if(dirty)setTimeout(sendDraft,300);$('connection').textContent='Connected · your seat is private';if(state)drawChat();};
  ws.onmessage=e=>{let p;try{p=JSON.parse(e.data);}catch{return;}
   if(p.type==='ready'){slot=p.slot;ws.send(JSON.stringify({protocol:'wcw.human/1',type:'join'}));drawPlayers();}
   if(p.type==='snapshot')render(p);
-  if(p.type==='receipt')feedback(['accepted','duplicate'].includes(p.status)?'Choice recorded.':p.status==='expired'?'The action window has closed.':`Choice rejected${p.retry?' — please try again':''}.`);
+  if(p.type==='receipt'&&draftKey)draftReceipt(p);
+  else if(p.type==='receipt')feedback(['accepted','duplicate'].includes(p.status)?'Choice recorded.':p.status==='expired'?'The action window has closed.':`Choice rejected${p.retry?' — please try again':''}.`);
   if(p.type==='chat_receipt'&&p.id===pendingChat){pendingChat=null;if(['accepted','duplicate'].includes(p.status))$('message').value='';else feedback(p.message??'Message was not sent.');drawChat();}
  };
  ws.onclose=()=>{connecting=false;pendingChat=null;$('connection').textContent=ended?'Game complete':'Disconnected · reconnecting…';if(state)drawChat();if(joined&&!ended)setTimeout(connect,1500);};

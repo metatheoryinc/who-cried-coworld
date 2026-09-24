@@ -26,7 +26,7 @@ const models=contestants.map(p=>inference?.provider==='bedrock'?inference.model:
 if(llm&&models.some(m=>!m))throw new Error('Every benchmark player must have a model configured.');
 const players=llm?contestants.map((p,i)=>({name:p.model?.startsWith('qwen/')&&models[i]==='openai/gpt-oss-120b'?'GPT-OSS':p.displayName})):Array.from({length:9},(_,i)=>({name:`Villager ${i+1}`}));
 for(const [index,slot] of humanSlots.entries())players[slot]={name:index===0?(process.env.WCW_HUMAN_NAME??'Human'):`Human-${index+1}`};
-const config=lib.GameConfig.parse({mode:allBots?'bots':'human',seed:process.env.WCW_SEED,tokens:Array.from({length:9},()=>randomUUID()),players,setup:process.env.WCW_SETUP??'random',maxDays:8,...(smoke?{humanTimers:allBots?{dayMs:600,voteMs:200,coordinationMs:200,nightMs:200,transitionMs:100}:{dayMs:6000,voteMs:8000,coordinationMs:2000,nightMs:8000}}:{})});
+const config=lib.GameConfig.parse({mode:allBots?'bots':'human',seed:process.env.WCW_SEED,tokens:Array.from({length:9},()=>randomUUID()),players,setup:process.env.WCW_SETUP??'random',maxDays:8,...(smoke?{humanTimers:allBots?{dayMs:600,voteMs:200,coordinationMs:200,nightMs:200,transitionMs:100}:{dayMs:6000,voteMs:8000,coordinationMs:2000,nightMs:8000}}:{}),...(process.env.WCW_HUMAN_TIMERS?{humanTimers:JSON.parse(process.env.WCW_HUMAN_TIMERS)}:{})});
 const dir=resolve(process.env.WCW_ARTIFACT_DIR??`artifacts/${allBots?'bots':'human'}-${Date.now()}`);await mkdir(dir,{recursive:true});
 const clients=[],calls=[];
 let logWrites=Promise.resolve();

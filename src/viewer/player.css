@@ -8,11 +8,11 @@
 @media(min-width:1101px){.player{height:min(18vh,165px);aspect-ratio:auto}.players{row-gap:12px}}
 /* Original hoof stamps, with explicit elimination marks that preserve card colour. */
 .player.dead,.player.dead:disabled{filter:none;opacity:1}
-.player img.vote-stamp,.player img.vote-preview{z-index:2;inset:auto;left:var(--x,37%);top:var(--y,37%);width:25%;height:26%;transform:rotate(var(--angle,-24deg));pointer-events:none}
-.player img.vote-preview{display:none;opacity:.45}
-.player.selected img.vote-preview{display:block}
-.vote-badge{position:absolute;z-index:4;right:2%;top:0;width:49%;height:30%;background:url('assets/play/vote_banner_town.png') center/100% 100% no-repeat;pointer-events:none}
-.vote-badge>span{position:absolute;left:43%;right:6%;top:40%;color:#9b2415;font:bold clamp(11px,1.2vw,16px)/1.1 Georgia;text-align:center}
+
+
+
+
+
 .player .name,.player small{z-index:5}
 .clock{color:var(--ink)}
 .player img.death-mark{z-index:3;inset:auto;pointer-events:none}.player img.death-mark.claw{left:18%;top:18%;width:65%;height:55%}.player img.death-mark.meat{left:10%;top:4%;width:29%;height:40%;transform:rotate(12deg)}
@@ -34,8 +34,8 @@ body.night .player small{color:#fff1d8}
 .role .teammates{font:600 12px/1.5 system-ui}.role #setup-open{font:600 12px system-ui;margin-top:5px}
 
 /* The card carries the hoof stamp; its ownership label needs no second icon. */
-.vote-badge.own-vote{top:3%;right:6%;width:auto;height:auto;background:#fff0c5;border:1px solid #a77b3c;border-radius:4px;padding:4px 8px;box-shadow:0 2px 0 #77501d40}
-.vote-badge.own-vote>span{position:static;display:block;font:bold clamp(11px,1.1vw,15px)/1.2 Georgia;white-space:nowrap}
+
+
 
 /* Stack plaque + status so a wrapped status pushes the plaque up instead of overlapping it. */
 .player .card-foot{position:absolute;left:5%;right:5%;bottom:0;z-index:5;display:flex;flex-direction:column;align-items:stretch;gap:3px;pointer-events:none}
@@ -78,3 +78,29 @@ body.lobby .action-panel p{margin:4px 0}
  #setup-guide{max-height:calc(85dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom))}
 }
 @media(max-width:420px){.player .name{font-size:10.5px;padding:3px 1px}.player small{font-size:9px}}
+/* Action stamps: a tray of stamps, placed onto player cards. */
+.tray{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0 6px}
+.stamp-slot{position:relative}
+.stamp{display:grid;grid-template-columns:34px auto;grid-template-rows:auto auto;column-gap:9px;align-items:center;text-align:left;padding:7px 14px 7px 9px;min-height:48px;background:#fffaf0;border:1.5px solid #b08a57;border-radius:10px;box-shadow:0 3px 0 #7a5a3340;color:var(--ink)}
+.stamp>img,.stamp>svg{grid-row:1/span 2;width:34px;height:34px;object-fit:contain;color:#7b3322}
+.stamp>span{font:700 14px/1.1 system-ui}
+.stamp>small{font:12px/1.2 system-ui;color:#6d5840}
+.stamp.held{background:#f6dfa9;border-color:#8e392b;transform:translateY(-3px) rotate(-2deg);box-shadow:0 7px 0 #7a5a3355}
+.stamp-clear{position:absolute;top:-8px;right:-8px;width:24px;height:24px;padding:0;border-radius:50%;font:700 14px/1 system-ui;background:#fff;border-color:#b08a57}
+.draft-status{font:12px system-ui!important;color:#6d5840;margin:4px 0 0!important}
+.draft-status.saved{color:#3f6b3a}
+.draft-status.error{color:#a32b20}
+.player.eligible{cursor:pointer;filter:drop-shadow(0 0 7px #ffd36b) drop-shadow(0 0 2px #b8741a)}
+.player.eligible:hover{transform:translateY(-5px)}
+.player.dim{opacity:.45;filter:grayscale(.4)}
+.player:not(:disabled){cursor:pointer}
+.card-stamps{position:absolute;z-index:4;top:6%;left:10%;right:10%;display:flex;flex-wrap:wrap;justify-content:center;gap:2px;pointer-events:none}
+.stamp-mark{position:relative;display:grid;place-items:center;width:clamp(26px,34%,58px);aspect-ratio:1;border-radius:50%;background:#fff6e3e6;border:2px solid #8e392b;color:#7b3322;transform:rotate(-12deg);box-shadow:0 2px 0 #5d2a1a40;animation:thunk .18s ease-out}
+.stamp-mark>img,.stamp-mark>svg{width:74%;height:74%;object-fit:contain}
+.stamp-mark.pack{border-color:#4c3a78;color:#4c3a78;width:clamp(20px,26%,44px);transform:rotate(10deg);animation:none}
+.stamp-mark.pack>b{position:absolute;right:-5px;bottom:-5px;min-width:16px;height:16px;border-radius:8px;background:#4c3a78;color:#fff;font:700 10px/16px system-ui;text-align:center}
+@keyframes thunk{from{transform:scale(1.6) rotate(-20deg);opacity:0}to{transform:rotate(-12deg);opacity:1}}
+.system-line{margin:10px 0;text-align:center;font:600 11.5px/1.4 system-ui;color:#d9c29a;letter-spacing:.2px}
+.system-line::before,.system-line::after{content:'—';margin:0 8px;color:#7a6149}
+@media(prefers-reduced-motion:reduce){.stamp-mark{animation:none}}
+.guide-sub{font:13px system-ui;color:#6d5840;margin-top:0}

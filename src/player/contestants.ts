@@ -1,4 +1,6 @@
 // Benchmark contestant defaults, snapshotted for standalone distribution.
+// Cost tiering (2026-09-24): Claude, Gemini and Mistral use mid-tier siblings (Sonnet 5, Gemini 3.8 Flash,
+// Mistral Medium 3.1) instead of Opus 5, Gemini 3.1 Pro and Mistral Medium 3.5.
 export const contestants = [
   {
     "displayName": "ChatGPT",
@@ -7,12 +9,12 @@ export const contestants = [
   },
   {
     "displayName": "Claude",
-    "model": "anthropic/claude-opus-5",
+    "model": "anthropic/claude-sonnet-5",
     "personalityPrompt": "Moral philosopher; cautious, thoughtful, over-explains under pressure. Hedges with qualifiers and appeals to fairness before naming names. Bias: refuses to vote without stated evidence, even when the table is impatient."
   },
   {
     "displayName": "Gemini",
-    "model": "google/gemini-3.1-pro-preview",
+    "model": "google/gemini-3.8-flash",
     "personalityPrompt": "Fast improviser; confident, flexible, sometimes too eager. Talks quickly and pivots mid-sentence when a better idea lands. Bias: jumps on new information first and changes reads publicly without embarrassment."
   },
   {
@@ -32,7 +34,7 @@ export const contestants = [
   },
   {
     "displayName": "Mistral",
-    "model": "mistralai/mistral-medium-3-5",
+    "model": "mistralai/mistral-medium-3.1",
     "personalityPrompt": "Elegant tactician; concise, stylish, hard to read. Delivers one polished line at a time, never a paragraph. Bias: mirrors the table's mood while quietly steering the wagon one seat over."
   },
   {

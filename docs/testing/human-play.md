@@ -92,7 +92,13 @@ not logged, so their exact causes cannot be reconstructed retrospectively.
 Human LLM games now replace the benchmark Qwen seat with `openai/gpt-oss-120b`,
 named **GPT-OSS**. Other benchmark models, including Gemini Pro, remain unchanged.
 `WCW_MODEL` still overrides every bot; `WCW_QWEN_MODEL` overrides only the former
-Qwen seat. The benchmark repository itself is unchanged.
+Qwen seat.
+
+To lower cost, three seats use mid-tier siblings of the benchmark models (2026-09-24):
+Claude → `anthropic/claude-sonnet-5`, Gemini → `google/gemini-3.8-flash`, Mistral →
+`mistralai/mistral-medium-3.1` (Mistral Small hit frequent HTTP 429 rate limits in
+probes). All three returned valid votes and suspicion reports in live checks. The
+previous full 9-model game cost $2.41, with Gemini 3.1 Pro and Claude Opus 5 at 70%. The benchmark repository itself is unchanged.
 
 Every OpenRouter model receives the action as a strict `json_schema` response format plus an action-instance example (originally Gemini only). In plain `json_object` mode GLM returned `{}` or extra fields in about 4 of 10 Wolf chat calls; with the strict schema all eight cast models returned valid actions in a 2026-09-24 probe (GLM 10/10). `require_parameters` is not set, so a provider that cannot enforce the schema still answers and the game's validation still applies.
 The adapter removes only `$schema: "https://json-schema.org/draft/2020-12/schema"`

@@ -8,7 +8,7 @@ const config=()=>GameConfig.parse({tokens:Array.from({length:9},(_,i)=>`t${i}`),
 const human=(c:GameConfig)=>{const s=new HumanSession(c,'episode');s.registerHuman(1);return s;};
 it('keeps public phases fixed while policies get shorter deadlines',()=>{
  const c=config(),s=human(c);s.start(0);
- expect(episodeBudgetSeconds(c)).toBe(2300);
+ expect(episodeBudgetSeconds(c)).toBe(2570);
  expect(s.snapshot(1,0).remainingMs).toBe(150000);
  expect(s.observation(5,0)?.remainingMs).toBe(13000);
  expect(s.snapshot(1,0).revealedRoles).toEqual([]);

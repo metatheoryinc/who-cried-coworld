@@ -10,8 +10,8 @@ it('normalizes exactly nine distinct neutral presentations and bounded defaults'
 it.each([
  {tokens:Array(9).fill('same')},{tokens:['one']},{players:[]},
  {seed:'A'.repeat(32)},{seed:'0'.repeat(31)},{seed:'g'.repeat(32)},
- {maxDays:33},{maxDays:9,windowMs:10000},{windowMs:99},{windowMs:100.5},{windowMs:10001},
- {player_connect_timeout_seconds:181},{extra:true},{presentation:[]},
+ {maxDays:33},{maxDays:14,windowMs:10000},{windowMs:99},{windowMs:100.5},{windowMs:10001},
+ {player_connect_timeout_seconds:181},{extra:true},{humanSlot:0},{humanSlots:[]},{mode:'human',player_connect_timeout_seconds:301},{presentation:[]},
  {presentation:Array(9).fill({kind:'neutral',role:'wolf'})},
  {presentation:Array(9).fill({kind:'character',characterId:'../wolf',persona:'x'})},
 ])('rejects malformed or over-budget configuration %j',patch=>{
@@ -22,9 +22,14 @@ it('allows the fast fixture and normalized character metadata',()=>{
  expect(episodeBudgetSeconds(c)).toBeCloseTo(293.2);
 });
 
-it('allows ten-second fast LLM windows within the forty-minute package budget',()=>{
+it('allows ten-second fast LLM windows within the sixty-minute package budget',()=>{
  const c=GameConfig.parse({...input(),mode:'fast',setup:'random',maxDays:8,windowMs:10000,player_connect_timeout_seconds:30});
  expect(episodeBudgetSeconds(c)).toBe(2140);
+});
+it('gives human lobbies a five-minute wait within the sixty-minute budget',()=>{
+ const c=GameConfig.parse({...input(),mode:'human'});
+ expect([c.player_connect_timeout_seconds,episodeBudgetSeconds(c)]).toEqual([300,2570]);
+ expect(GameConfig.safeParse({...input(),maxDays:13,windowMs:10000}).success).toBe(true);
 });
 it('validates moderator selection independently of paced variant settings',()=>{
  for(const mode of ['human','bots'])for(const moderator of ['default','llm','auto'])expect(GameConfig.parse({...input(),mode,moderator}).moderator).toBe(moderator);

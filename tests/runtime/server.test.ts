@@ -46,15 +46,15 @@ it('completes with silent and malformed policies without leaking their failures 
   expect(publicPackets.join('')).not.toMatch(/DO_NOT_EXPORT|"roles"|"seed"|"failure"|"night_choices"|"audience"/);
  }finally{for(const ws of clients)ws.terminate();await server.close();}
 },10000);
-it('reserves a human seat, waits in lobby, and reconnects with private state',async()=>{
- const config=GameConfig.parse({...c(),mode:'human',humanSlot:1});
+it('waits for a human, then reconnects with private state',async()=>{
+ const config=GameConfig.parse({...c(),mode:'human'});
  const server=await startServer(config,{port:0,host:'127.0.0.1'}),clients:WebSocket[]=[];
  const connect=(path:string)=>new Promise<WebSocket>((yes,no)=>{const ws=new WebSocket(`ws://127.0.0.1:${server.port}${path}`);clients.push(ws);ws.once('open',()=>yes(ws));ws.once('error',no);});
  try{
   await expect(connect('/player?slot=1&token=bad')).rejects.toThrow();
   for(const slot of [0,2,3,4,5,6,7,8])await connect(`/player?slot=${slot}&token=t${slot}`);
   await new Promise(r=>setTimeout(r,1100));expect(server.session.phase).toBe('waiting');
-  const snapshot=new Promise<any>((yes,no)=>{const ws=new WebSocket(`ws://127.0.0.1:${server.port}/player?slot=1&token=t1`);clients.push(ws);ws.on('error',no);ws.on('message',b=>{const p=JSON.parse(b.toString());if(p.type==='snapshot'&&p.self)yes(p);});});
+  const snapshot=new Promise<any>((yes,no)=>{const ws=new WebSocket(`ws://127.0.0.1:${server.port}/player?slot=1&token=t1`);clients.push(ws);ws.on('error',no);ws.on('message',b=>{const p=JSON.parse(b.toString());if(p.type==='ready')ws.send(JSON.stringify({protocol:'wcw.human/1',type:'join'}));if(p.type==='snapshot'&&p.self)yes(p);});});
   const first=await snapshot;expect(first.self.slot).toBe(1);expect(first.remainingMs).toBeGreaterThan(140000);
   expect(JSON.stringify(first)).not.toMatch(/"seed"|"kind":"roles"|"tokens"/);
   const human=clients.at(-1)!;
@@ -85,7 +85,7 @@ it('registers names through real clients in reverse connection order and freezes
 },10000);
 
 it('identifies two hosted browsers on arbitrary seats and reconnects with isolated private state',async()=>{
- const config=GameConfig.parse({...c(),mode:'human',humanSlots:[],setup:'A2',player_connect_timeout_seconds:1});
+ const config=GameConfig.parse({...c(),mode:'human',setup:'A2',player_connect_timeout_seconds:1});
  const server=await startServer(config,{port:0,host:'127.0.0.1'}),clients:WebSocket[]=[];
  const connectHuman=(slot:number)=>new Promise<{ws:WebSocket;snapshot:any}>((resolve,reject)=>{
   const ws=new WebSocket(`ws://127.0.0.1:${server.port}/player?slot=${slot}&token=t${slot}`);clients.push(ws);ws.on('error',reject);
@@ -100,5 +100,18 @@ it('identifies two hosted browsers on arbitrary seats and reconnects with isolat
   expect([...server.session.pending.keys()]).not.toContain(1);expect([...server.session.pending.keys()]).not.toContain(5);
   a.ws.close();await new Promise(r=>setTimeout(r,40));
   const rejoined=await connectHuman(1);expect(rejoined.snapshot.self).toEqual(a.snapshot.self);
+ }finally{for(const ws of clients)ws.terminate();await server.close();}
+},5000);
+
+it('starts a partly filled human lobby only after the first join and wait',async()=>{
+ const config=GameConfig.parse({...c(),mode:'human',setup:'A2',player_connect_timeout_seconds:1});
+ const server=await startServer(config,{port:0,host:'127.0.0.1'}),clients:WebSocket[]=[];
+ try{
+  for(const slot of [2,3])clients.push(await new Promise<WebSocket>((yes,no)=>{const ws=new WebSocket(`ws://127.0.0.1:${server.port}/player?slot=${slot}&token=t${slot}`);ws.once('open',()=>yes(ws));ws.once('error',no);}));
+  await new Promise(r=>setTimeout(r,1300));expect(server.session.phase).toBe('waiting');
+  const ws=new WebSocket(`ws://127.0.0.1:${server.port}/player?slot=0&token=t0`);clients.push(ws);
+  ws.on('message',b=>{if(JSON.parse(b.toString()).type==='ready')ws.send(JSON.stringify({protocol:'wcw.human/1',type:'join'}));});
+  await new Promise(r=>setTimeout(r,500));expect(server.session.phase).toBe('waiting');
+  await new Promise(r=>setTimeout(r,900));expect(server.session.phase).not.toBe('waiting');
  }finally{for(const ws of clients)ws.terminate();await server.close();}
 },5000);

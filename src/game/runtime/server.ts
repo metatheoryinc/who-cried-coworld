@@ -63,8 +63,8 @@ export async function startServer(config:GameConfig,options:{port:number;host:st
    if(completed)return;
    const now=performance.now();
    const namesReady=[...nameDeadlines.values()].every(deadline=>now>=deadline);
-   const humanReady=config.mode!=='human'||(firstHumanAt!==undefined&&(
-    (session instanceof HumanSession&&[...session.humanSlots].every(slot=>policies.has(slot)))||now-firstHumanAt>=config.player_connect_timeout_seconds*1000));
+   // Human lobbies wait for the first join, then for a full table or the connection wait.
+   const humanReady=config.mode!=='human'||firstHumanAt!==undefined;
    if(session.phase==='waiting'&&humanReady&&namesReady&&(policies.size===9||now-(firstHumanAt??readyAt)>=config.player_connect_timeout_seconds*1000))session.start(now);
    session.advance(now);flush();
    if(session.state.result){

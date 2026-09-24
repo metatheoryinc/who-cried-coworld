@@ -23,7 +23,7 @@ The fixed nine-seat v1 role mix is:
 - 1 Guard
 - 5 Sheep
 
-Faction victory is the scored result. Behavioral, cooperation, deception, and pacing measurements are diagnostics and do not alter incentives in v1.
+Faction victory is the scored result. Behavioral, cooperation, deception, and pacing measurements are diagnostics and do not alter incentives in v1. *(Superseded 2026-09-24: the headline score adds a 25% read/hidden bonus from private suspicion reports; see the architecture record's Scoring section.)*
 
 ## Viewer contract
 

@@ -75,6 +75,14 @@ Resolve Alchemist blocks first; remove blocked actors' kill nominations before t
 
 **Superseding decision (2026-09-24, rules/3):** The kill is two collective pack votes. Each living Wolf casts one target vote and one knife (killer) vote; a target without a killer is a knife vote for the submitter. Target and knife are each decided by plurality with independent seeded tie-breaks. This replaces tallying (target, killer) pairs, where disagreeing about who performs the kill split the votes for an agreed target. A server-only `kill_resolution` event logs both tallies for debugging and divergence analysis and is revealed postgame under night choices. As in the implementation before this change, blocked Wolves' votes still count; a blocked selected killer blocks the kill.
 
+## Scoring
+
+**Decision (2026-09-24, `wcw.results/2`):** Each seat scores `0.75 × win + 0.25 × bonus`. Town's bonus (`read`) is the Brier skill of private wolf-probability reports submitted with each vote, relative to a know-nothing report and floored at 0; a missing or invalid report counts as 0. A Wolf's bonus (`hidden`) is how far below chance submitted Town suspicion of that Wolf stayed, averaged over days. Draws give every seat `win = 0` but keep bonuses, superseding the v1 rule that draws score 0 and the contract's "diagnostics do not alter incentives". Per-seat `metrics` columns (`win`, `read`, `hidden`, `vote_hit`, `survived`, `valid_actions`) are omitted where not applicable.
+
+**Reasoning:** Win-only scoring gave Town almost no individual signal: in the benchmark's 200-game batch Day-1 Town votes hit wolves at chance (24.7% vs 25.0%). A proper scoring rule on private reports measures reading skill directly, rewards honesty, and cannot be gamed by vote politics; live probes showed clear separation between models on the same evidence.
+
+**Consequences:** Town vote requests carry `suspicion: true`; the optional `suspicion` list never affects vote legality and is journaled as a server-only `suspicion` event (reveal `beliefs`). Scores are computed at game end from the journal (`src/game/domain/scoring.ts`); the rules still decide the outcome. Replays validate wins through the `win` column. `valid_actions` counts only requests with a real decision.
+
 ## Human drafts
 
 **Decision (2026-09-24):** Human seats keep their latest legal action as a draft until the request deadline; illegal or malformed revisions are rejected without discarding the draft or closing the request, and clearing to pass is legal. Policies still lock on their first valid answer. Drafts never enter the journal; only the final choice is resolved. During night actions each human Wolf's snapshot includes living packmates' current night drafts (`packDrafts`); no other recipient receives them and they are not exported.

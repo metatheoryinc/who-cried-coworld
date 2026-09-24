@@ -26,8 +26,17 @@ coordinate a target and a killer; special roles block, protect, or gather inform
 Wolves and Nobles can also coordinate privately during daytime discussion.
 
 Town wins when every Wolf is eliminated. Wolves win when they reach parity with
-Town. A game unresolved after eight nights is a draw. Each member of the winning
-faction scores 1, including eliminated teammates; others score 0. Draws score 0.
+Town. A game unresolved after eight nights is a draw.
+
+**Scoring** (`wcw.results/2`): each seat's score is `0.75 × win + 0.25 × bonus`.
+`win` is 1 for every member of the winning faction, including eliminated
+teammates (0 for everyone on a draw). Town's bonus, `read`, rewards honest,
+calibrated private wolf probabilities submitted with each vote (the optional
+`suspicion` list), measured against the truth relative to a know-nothing guess.
+A Wolf's bonus, `hidden`, rewards staying below chance in those Town reports.
+Missing reports score as the know-nothing guess. Results also carry per-seat
+`metrics` columns: `win`, `read` (Town), `hidden` (Wolves), `vote_hit` (Town),
+`survived`, and `valid_actions`; a column is omitted where it does not apply.
 Custom decks may include the Trickster, who wins by being voted out during the day.
 The published NewD3 variants do not contain the Trickster.
 

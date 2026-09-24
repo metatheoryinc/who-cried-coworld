@@ -269,3 +269,24 @@ body.lobby .action-panel p{margin:4px 0}
 /* Center the day text itself; the light sun/moon hangs to its left so the title reads as centered. */
 @media(min-width:761px){#day{display:inline-block;position:relative}#day-icon{position:absolute;right:100%;top:50%;transform:translateY(-50%);margin-right:10px}}
 @media(min-width:761px){.night .table-heading>*{background:#2b2018d0;color:#fff4df}}
+/* Stamps as raw marks scattered over the card art: no ring, stable random spot and tilt per stamp. */
+.card-stamps{position:absolute;inset:0;z-index:4;display:block;pointer-events:none}
+.card-stamps .stamp-mark{position:absolute;left:var(--x);top:var(--y);width:44%;aspect-ratio:1;border:0;border-radius:0;box-shadow:none;background:none;mix-blend-mode:normal;opacity:.95;transform:rotate(var(--r));filter:drop-shadow(0 1px 1px #3b1d0e66);color:#8e1f14}
+.card-stamps .stamp-mark>img,.card-stamps .stamp-mark>svg{width:100%;height:100%;object-fit:contain}
+.card-stamps .stamp-mark.ballot{width:33%}
+.card-stamps .stamp-mark.skip{width:48%}
+.card-stamps .stamp-mark.pack{width:34%;opacity:.62;filter:grayscale(.2) drop-shadow(0 1px 1px #1f1a4a66)}
+.card-stamps .stamp-mark.pack>b{position:absolute;right:-4px;bottom:-4px;color:#3b2c7a;font:800 12px/1 Georgia;text-shadow:0 0 2px #fff,0 0 3px #fff}
+.card-stamps .stamp-mark.fresh{animation:thunk-raw .22s ease-out}
+@keyframes thunk-raw{from{transform:scale(1.8) rotate(0deg);opacity:0}to{transform:rotate(var(--r));opacity:.95}}
+@media(prefers-reduced-motion:reduce){.card-stamps .stamp-mark.fresh{animation:none}}
+.sheet-marks .stamp-mark{position:static;display:inline-grid;width:22px;border:0;box-shadow:none;background:none;transform:rotate(var(--r));opacity:.95}
+.sheet-marks .stamp-mark>img,.sheet-marks .stamp-mark>svg{width:100%;height:100%;object-fit:contain}
+.sheet-marks .stamp-mark.pack>b{display:none}
+.stamp>img,.stamp>svg{color:#8e1f14}
+.stamp.skip>img{transform:rotate(-8deg)}
+/* The stamp you are applying becomes the cursor over players you can stamp. */
+.player.eligible,.sheet-seat.eligible{cursor:var(--stamp-cursor,pointer)}
+body.holding{cursor:var(--stamp-cursor,default)}
+@media(max-width:760px){.card-stamps .stamp-mark{width:70%}.card-stamps .stamp-mark.pack{width:55%}.card-stamps .stamp-mark.pack>b{display:none}}
+.sheet-marks .stamp-mark.ballot{display:none}

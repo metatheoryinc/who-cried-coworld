@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {traySlots,placementsFrom,place,clear,bodyFor,packStamps,stampsOn} from '../../src/viewer/stamps.js';
+import {traySlots,placementsFrom,place,clear,bodyFor,packStamps,stampsOn,skipVote} from '../../src/viewer/stamps.js';
 const vote={kind:'vote' as const,targets:[0,2,3],allowPass:true as const};
 const night={kind:'night' as const,choices:[{ability:'kill' as const,targets:[2,3,4],actors:[1,5],allowPass:true as const},{ability:'block' as const,targets:[0,2,3,4,5],allowPass:true as const}]};
 it('offers one stamp per decision, with a knife after the kill',()=>{
@@ -34,4 +34,11 @@ it('clears a stamp and builds legal bodies',()=>{
 it('lists pack kill and knife stamps and own stamps per seat',()=>{
  expect(packStamps([{slot:5,actions:[{ability:'kill',target:3,killer:5},{ability:'block',target:2}]}])).toEqual([{id:'kill',slot:3,by:5},{id:'knife',slot:5,by:5}]);
  expect(stampsOn({kill:4,knife:1,block:4},4)).toEqual(['kill','block']);
+});
+it('skips the vote with a dove until a player is stamped',()=>{
+ const skipped=skipVote({vote:3});expect(skipped).toEqual({vote:null,skip:true});
+ expect(bodyFor(vote,skipped)).toEqual({kind:'vote',target:null,summary:''});
+ expect(place(skipped,vote,'vote',2,1)).toEqual({vote:2,skip:false});
+ expect(placementsFrom(vote,{kind:'vote',target:null,summary:''})).toEqual({vote:null,skip:true});
+ expect(clear({vote:2},'vote')).toEqual({vote:null});
 });

@@ -2,8 +2,8 @@ import {createAssetCache} from './asset-cache.js';
 import { playerConnection } from './connection.js';
 import { knownRole } from './known-role.js';
 import { deathCause,deathReveal,stageSummary } from './stage-summary.js';
-import { traySlots,placementsFrom,place,clear,bodyFor,packStamps,stampsOn } from './stamps.js';
-import { stampIcon,stampLabels } from './stamp-icons.js';
+import { traySlots,placementsFrom,place,clear,bodyFor,packStamps,stampsOn,skipVote } from './stamps.js';
+import { stampIcon,stampLabels,stampArt,scatter,knifeSvg } from './stamp-icons.js';
 import { systemLines } from './system-lines.js';
 import { unread } from './unread.js';
 import { roleNames,newD3Decks } from '../shared/roles.js';
@@ -29,10 +29,25 @@ const phone=matchMedia('(max-width:760px)');
 let sheetOpen=true,sheetKey=null;
 /** The stamp a click places: the one picked up, or the only stamp when a decision has just one. */
 function activeStamp(){const r=stampRequest();if(!r)return null;const slots=traySlots(r);return held??(slots.length===1?slots[0].id:null);}
+/** The closed vote of the current day stays stamped on the cards through dusk and night. */
+function closedBallots(){
+ if(!state||['discussion','vote'].includes(state.period)||state.phase==='waiting')return null;
+ const e=state.events.filter(e=>e.payload.kind==='ballots'&&e.day===state.day).at(-1);
+ return e?{id:e.id,ballots:e.payload.ballots}:null;
+}
+function mark(kind,id,key,title,extra=''){const {x,y,r}=scatter(key);return `<span class="stamp-mark ${kind}" style="--x:${x}%;--y:${y}%;--r:${r}deg" title="${esc(title)}" ${extra}>${stampIcon(id,asset)}</span>`;}
 function seatMarks(target){
  const r=stampRequest(),own=r?stampsOn(placements,target):[],pack=(state?.packDrafts?packStamps(state.packDrafts):[]).filter(x=>x.slot===target);
- return {own,html:[...own.map(id=>`<span class="stamp-mark own${freshStamp===`${id}:${target}`?' fresh':''}" title="Your ${stampLabels[id]}">${stampIcon(id,asset)}</span>`),...pack.map(x=>`<span class="stamp-mark pack" title="${esc(name(x.by))}: ${stampLabels[x.id]}">${stampIcon(x.id,asset)}<b aria-hidden="true">${x.by+1}</b></span>`)].join(''),
-  described:[...own.map(id=>`your ${stampLabels[id]}`),...pack.map(x=>`${name(x.by)}'s ${stampLabels[x.id]}`)].join(', ')};
+ const closed=closedBallots(),votes=closed?closed.ballots.filter(b=>b.target===target):[],skips=closed?closed.ballots.filter(b=>b.target===null&&b.slot===target):[];
+ const ownSkip=r?.kind==='vote'&&placements.skip&&target===state.self.slot;
+ const html=[
+  ...votes.map(b=>mark('ballot','vote',`ballot:${b.slot}:${target}`,`${name(b.slot)} voted ${name(target)}`,`data-from="${b.slot}"`)),
+  ...skips.map(b=>mark('ballot skip','skip',`skip:${b.slot}`,`${name(b.slot)} skipped the vote`,`data-from="${b.slot}"`)),
+  ...own.map(id=>mark(`own${freshStamp===`${id}:${target}`?' fresh':''}`,id,`${id}:${target}:self`,`Your ${stampLabels[id]}`)),
+  ...(ownSkip?[mark(`own skip${freshStamp==='skip'?' fresh':''}`,'skip','skip:self','You are skipping the vote')]:[]),
+  ...pack.map(x=>mark('pack',x.id,`${x.id}:${target}:${x.by}`,`${name(x.by)}: ${stampLabels[x.id]}`).replace('</span>',`<b aria-hidden="true">${x.by+1}</b></span>`)),
+ ].join('');
+ return {own,html,described:[...own.map(id=>`your ${stampLabels[id]}`),...(ownSkip?['you are skipping the vote']:[]),...pack.map(x=>`${name(x.by)}'s ${stampLabels[x.id]}`),...(votes.length?[`${votes.length} vote${votes.length>1?'s':''}`]:[])].join(', ')};
 }
 function drawPlayers(){
  const roster=state?.roster??Array.from({length:9},(_,i)=>({slot:i,name:slot!==null&&i===Number(slot)?'You':`Player ${i+1}`,alive:true}));
@@ -48,6 +63,7 @@ function drawPlayers(){
   return `<button class="player ${p.alive?'':'dead'} ${seat==='open'?'open-seat':''} ${target?'eligible':''} ${active&&!target?'dim':''} ${speaking?'speaking':''}" data-slot="${p.slot}" title="${esc(p.policyName?`Policy: ${p.policyName}`:p.name)}" ${target||pick||open?'':'disabled'} aria-label="Seat ${p.slot+1}, ${esc(p.name)}, ${esc(tag)}${speaking?', speaking':''}${m.described?`, ${esc(m.described)}`:''}${target?`, place ${stampLabels[active]}`:pick?', pick up your stamp':open?', show player card':''}"><img src="${asset('base_playercard_shadow')}" alt=""><img class="${known?'known-role':'sheep'}" src="${asset(known?art[known]:'Player_sheep_base')}" alt=""><span class="seat-no seat-c${p.slot}">${p.slot+1}</span>${m.html?`<span class="card-stamps">${m.html}</span>`:''}${!p.alive?deathMark(cause):''}<span class="card-foot"><span class="name">${esc(p.name)}</span>${tag?`<small>${esc(tag)}</small>`:''}</span></button>`;
  }).join('');
  $('players').querySelectorAll('.player:not(:disabled)').forEach(b=>b.onclick=()=>onCard(Number(b.dataset.slot)));
+ revealBallots();updateCursor();
  const filled=state?.lobby?.seats.filter(s=>s!=='open').length;
  $('alive').textContent=inLobby()?(filled===undefined?'9 seats':`${filled} of 9 seats filled`):`${roster.filter(p=>p.alive).length} alive · Majority ${Math.floor(roster.filter(p=>p.alive).length/2)+1}`;
 }
@@ -73,10 +89,11 @@ function drawTray(){
  if(!slots.length){$('action').innerHTML='<h2>Rest until morning</h2><p>You have no night ability. The village wakes when the timer runs out.</p>';return;}
  const focused=document.activeElement?.dataset?.stamp,any=slots.some(x=>placements[x.id]!=null);
  const status={idle:'Nothing stamped yet · you pass if the timer ends',saving:'Saving…',saved:any?'Saved · counts when the timer ends':'Saved · you pass when the timer ends',error:'Could not save that change · your last saved choice still counts'}[saveState];
- const target=(x)=>{const t=placements[x.id];return t==null?'pass':x.id==='knife'&&t===state.self.slot?'You':name(t);};
- $('action').innerHTML=`<h2>${r.kind==='vote'?'Who do you suspect?':'Your night actions'}</h2><p>${held?`Tap a glowing player to place ${esc(stampLabels[held])}. Press Esc to cancel.`:slots.length===1?`Tap a player to ${r.kind==='vote'?'vote for them. A strict majority eliminates someone':`use ${esc(stampLabels[slots[0].id])}`}. You can change it until the timer ends.`:'Pick up a stamp, then tap a player. You can change it until the timer ends.'}</p><div class="tray">${slots.map(x=>`<div class="stamp-slot"><button type="button" class="stamp${held===x.id?' held':''}" data-stamp="${x.id}" aria-pressed="${held===x.id}">${stampIcon(x.id,asset)}<span>${stampLabels[x.id]}</span><small>${esc(target(x))}</small></button>${placements[x.id]!=null?`<button type="button" class="stamp-clear" data-clear="${x.id}" aria-label="Clear ${stampLabels[x.id]}">×</button>`:''}</div>`).join('')}</div><div class="sheet-seats phone-only">${sheetSeats(r)}</div><p class="draft-status ${saveState}" role="status">${status}</p>`;
+ const target=(x)=>{const t=placements[x.id];return t==null?(x.id==='vote'&&placements.skip?'skipped':'pass'):x.id==='knife'&&t===state.self.slot?'You':name(t);};
+ $('action').innerHTML=`<h2>${r.kind==='vote'?'Who do you suspect?':'Your night actions'}</h2><p>${held?`Tap a glowing player to place ${esc(stampLabels[held])}. Press Esc to cancel.`:slots.length===1?`Tap a player to ${r.kind==='vote'?'vote for them. A strict majority eliminates someone':`use ${esc(stampLabels[slots[0].id])}`}. You can change it until the timer ends.`:'Pick up a stamp, then tap a player. You can change it until the timer ends.'}</p><div class="tray">${r.kind==='vote'?`<div class="stamp-slot"><button type="button" class="stamp skip${placements.skip?' held':''}" data-skip aria-pressed="${!!placements.skip}">${stampIcon('skip',asset)}<span>Skip vote</span><small>${placements.skip?'Skipping this vote':'Pass this vote'}</small></button></div>`:''}${slots.map(x=>`<div class="stamp-slot"><button type="button" class="stamp${held===x.id?' held':''}" data-stamp="${x.id}" aria-pressed="${held===x.id}">${stampIcon(x.id,asset)}<span>${stampLabels[x.id]}</span><small>${esc(target(x))}</small></button>${placements[x.id]!=null?`<button type="button" class="stamp-clear" data-clear="${x.id}" aria-label="Clear ${stampLabels[x.id]}">×</button>`:''}</div>`).join('')}</div><div class="sheet-seats phone-only">${sheetSeats(r)}</div><p class="draft-status ${saveState}" role="status">${status}</p>`;
  $('action').querySelectorAll('.sheet-seat:not(:disabled)').forEach(b=>b.onclick=()=>onCard(Number(b.dataset.slot)));
  $('action').querySelectorAll('[data-stamp]').forEach(b=>b.onclick=()=>{held=held===b.dataset.stamp?null:b.dataset.stamp;refreshStamps();});
+ $('action').querySelector('[data-skip]')?.addEventListener('click',()=>{placements=skipVote(placements);held=null;freshStamp='skip';scheduleSend();refreshStamps();});
  $('action').querySelectorAll('[data-clear]').forEach(b=>b.onclick=()=>{placements=clear(placements,b.dataset.clear);held=null;scheduleSend();refreshStamps();});
  if(focused)$('action').querySelector(`[data-stamp="${focused}"]`)?.focus();
 }
@@ -130,6 +147,33 @@ function draftReceipt(p){
  if(['accepted','duplicate'].includes(p.status)){if(sentSeq===changeSeq){dirty=false;saveState='saved';}}
  else{dirty=false;saveState='error';const r=stampRequest();if(r)placements=placementsFrom(r,state.accepted);}
  if(stampRequest())refreshStamps();
+}
+let revealed=null,revealUntil=0;
+/** When the vote closes, each ballot flies from its voter's card and stamps its target; the dusk screen waits for it. */
+function revealBallots(){
+ const closed=closedBallots();
+ if(!closed||revealed===closed.id||state.period!=='dusk')return;
+ revealed=closed.id;
+ if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+ const marks=[...$('players').querySelectorAll('.stamp-mark.ballot')];
+ marks.forEach((m,i)=>{
+  const from=$('players').querySelector(`.player[data-slot="${m.dataset.from}"]`)?.getBoundingClientRect(),to=m.getBoundingClientRect();if(!from)return;
+  const dx=from.left+from.width/2-(to.left+to.width/2),dy=from.top+from.height/2-(to.top+to.height/2),r=getComputedStyle(m).getPropertyValue('--r').trim()||'0deg';
+  m.animate([{transform:`translate(${dx}px,${dy}px) scale(.6) rotate(0deg)`,opacity:0},{transform:`translate(${dx*.25}px,${dy*.25}px) scale(2.1) rotate(${r})`,opacity:1,offset:.75},{transform:`translate(0,0) scale(1) rotate(${r})`,opacity:.95}],{duration:650,delay:250+i*160,easing:'cubic-bezier(.3,.7,.4,1)',fill:'backwards'});
+ });
+ revealUntil=performance.now()+250+marks.length*160+650+700;
+ setTimeout(()=>{lastInterlude='';drawInterlude();},revealUntil-performance.now()+20);
+}
+/** The held stamp (or the only stamp of a one-stamp decision) becomes the mouse cursor over eligible players. */
+const cursorCache=new Map();
+function updateCursor(){
+ const id=activeStamp();document.body.classList.toggle('holding',!!held);
+ if(!id){document.body.style.removeProperty('--stamp-cursor');return;}
+ const set=url=>{if(activeStamp()===id)document.body.style.setProperty('--stamp-cursor',`url("${url}") 20 20, crosshair`);};
+ if(cursorCache.has(id))return set(cursorCache.get(id));
+ const artName=stampArt(id),img=new Image();
+ img.onload=()=>{const c=document.createElement('canvas');c.width=c.height=40;const k=Math.min(40/img.width,40/img.height),w=img.width*k,h=img.height*k;c.getContext('2d').drawImage(img,(40-w)/2,(40-h)/2,w,h);try{const url=c.toDataURL('image/png');cursorCache.set(id,url);set(url);}catch{}};
+ img.src=artName?asset(artName):`data:image/svg+xml;utf8,${encodeURIComponent(knifeSvg.replace('viewBox','width="40" height="40" style="color:#8e1f14" viewBox'))}`;
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&held){held=null;refreshStamps();}});
 phone.addEventListener('change',()=>{document.body.classList.remove('you-open');if(state){lastRender='';render(state);}else drawPlayers();});
@@ -203,7 +247,8 @@ function drawChat(){
 function deathMark(cause){return cause?`<img class="death-mark ${cause==='wolf'?'claw':'meat'}" src="${asset(cause==='wolf'?'dead_icon_claw':'dead_icon_meat')}" alt="${cause==='wolf'?'Killed by wolves':'Eliminated by town'}">`:'';}
 let resultDismissed=false,lastInterlude='';
 function drawInterlude(){
- const summary=stageSummary(state),show=!!summary||!!state.result&&!resultDismissed;
+ const holding=state.period==='dusk'&&performance.now()<revealUntil;
+ const summary=holding?null:stageSummary(state),show=!!summary||!!state.result&&!resultDismissed;
  const panel=$('interlude');panel.hidden=!show;
  document.querySelectorAll('body>header,body>main').forEach(el=>{el.inert=show;});
  document.body.classList.toggle('show-interlude',show);
@@ -238,7 +283,7 @@ function inLobby(){return !state||state.phase==='waiting';}
 function updateClock(){const n=Math.max(0,Math.ceil((remainingUntil-performance.now())/1000)),waiting=inLobby()&&state?.lobby?.startsInMs==null;$('timer').textContent=state&&!ended&&!waiting?`${Math.floor(n/60)}:${String(n%60).padStart(2,'0')}`:'—:—';$('timer').classList.toggle('urgent',!!state&&!waiting&&n<=10&&!ended);$('timer-label').textContent=ended?'Complete':inLobby()?(waiting?(joined?'Waiting for players':'Lobby open'):'Auto-start in'):state?state.period==='discussion'?'Until voting':state.period==='coordination'?'Until actions':'Time remaining':'Not started';if(!$('sheet-pill').hidden)$('sheet-pill').textContent=`${state?.observation?.request?.kind==='vote'?'Vote':'Night actions'} · ${Math.floor(n/60)}:${String(n%60).padStart(2,'0')}`;if($('transition-countdown'))$('transition-countdown').textContent=n>0?`The next phase starts in ${n}s`:'Waiting for the next phase…';}
 async function connect(){if(!connection||connecting||ws?.readyState===WebSocket.OPEN)return;connecting=true;
  $('join').disabled=true;$('chat-join').disabled=true;setConnection('busy','Preparing village artwork…');
- try{await assets.preload([...Object.values(art),'base_rolecard_blue','base_rolecard_red','bg_gameover_day','bg_gameover_night','dead_icon_claw','dead_icon_meat']);}
+ try{await assets.preload([...Object.values(art),'vote_banner_town_hoof','vote_banner_wolfs_claw','abstain_town','guard_icon','potion_icon','seer_icon','chef_icon','milk_icon','priest_icon','track_icon','base_rolecard_blue','base_rolecard_red','bg_gameover_day','bg_gameover_night','dead_icon_claw','dead_icon_meat']);}
  catch{connecting=false;$('join').disabled=false;$('chat-join').disabled=false;setConnection('error','Could not load artwork. Click Join to retry.');return;}
  joined=true;document.body.classList.add('joined');sessionStorage.setItem(storageKey,'1');setConnection('busy','Connecting…');ws=new WebSocket(connection.socket);
  ws.onopen=()=>{connecting=false;if(dirty)setTimeout(sendDraft,300);setConnection('ok','Connected · your seat is private');if(state)drawChat();};

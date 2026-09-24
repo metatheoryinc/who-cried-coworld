@@ -1,5 +1,5 @@
 // Benchmark contestant defaults, snapshotted for standalone distribution.
-// Cost tiering (2026-09-24): Claude, Gemini and Mistral use mid-tier siblings (Sonnet 5, Gemini 3.8 Flash,
+// Cost tiering (2026-09-24): Claude, Gemini and Mistral use cheaper siblings (Haiku 4.5, Gemini 3.8 Flash,
 // Mistral Medium 3.1) instead of Opus 5, Gemini 3.1 Pro and Mistral Medium 3.5.
 export const contestants = [
   {
@@ -9,7 +9,7 @@ export const contestants = [
   },
   {
     "displayName": "Claude",
-    "model": "anthropic/claude-sonnet-5",
+    "model": "anthropic/claude-haiku-4.5",
     "personalityPrompt": "Moral philosopher; cautious, thoughtful, over-explains under pressure. Hedges with qualifiers and appeals to fairness before naming names. Bias: refuses to vote without stated evidence, even when the table is impatient."
   },
   {

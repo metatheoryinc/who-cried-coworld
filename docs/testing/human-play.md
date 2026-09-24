@@ -94,8 +94,8 @@ named **GPT-OSS**. Other benchmark models, including Gemini Pro, remain unchange
 `WCW_MODEL` still overrides every bot; `WCW_QWEN_MODEL` overrides only the former
 Qwen seat.
 
-To lower cost, three seats use mid-tier siblings of the benchmark models (2026-09-24):
-Claude → `anthropic/claude-sonnet-5`, Gemini → `google/gemini-3.8-flash`, Mistral →
+To lower cost, three seats use cheaper siblings of the benchmark models (2026-09-24):
+Claude → `anthropic/claude-haiku-4.5` (the model already proven on the hosted proxy), Gemini → `google/gemini-3.8-flash`, Mistral →
 `mistralai/mistral-medium-3.1` (Mistral Small hit frequent HTTP 429 rate limits in
 probes). All three returned valid votes and suspicion reports in live checks. The
 previous full 9-model game cost $2.41, with Gemini 3.1 Pro and Claude Opus 5 at 70%. The benchmark repository itself is unchanged.

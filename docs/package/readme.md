@@ -73,7 +73,10 @@ Existing leagues with an explicit default retain that setting.
 
 Use a league lobby for hosted human play. Select either human variant directly;
 no moderator override is needed. Opponent policies are selected separately from
-the host. End-to-end human league-lobby verification is still pending.
+the host. Any seat becomes human when its player opens the seat and joins; no
+seat is reserved in configuration. Play starts when all nine seats are connected,
+or five minutes after the first human joins. End-to-end human league-lobby
+verification is still pending.
 
 ### What “fast” means
 
@@ -85,7 +88,7 @@ A bid round selects one public speaker by deterministic bid ranking.
 
 At ten seconds per window, a full cycle takes **4 minutes 20 seconds**. Eight
 full cycles take **34 minutes 40 seconds**, plus connection and completion overhead
-(the configured budget is **35 minutes 40 seconds**, within the 40-minute package
+(the configured budget is **35 minutes 40 seconds**, within the 60-minute package
 limit). Games can finish earlier when a faction wins. Early replies do **not**
 close windows early; this variant is not an immediate-response scheduler and is
 only modestly faster than the paced variant at this window size. Provider retries

@@ -29,7 +29,7 @@ the hosted lobby workflow.
 | Seer resolution and death | Killed before inspection: server-only actor_dead evidence; living blocked Seer: bare private no_result | Accepted Manager revision | Supersedes earlier killed-Seer private no_result instruction |
 | Seat identity | Trusted config assigns public character or neutral presentation independently of occupying policy and secret role | Accepted Manager decision | Replaces name-based persona/provenance inference |
 | Protocol | Strict `wcw.player/1`, `wcw.events/1`, `wcw.replay/1` | Proposed technical design | No backward compatibility obligation to source protocols |
-| Human seats | Per-seat token authenticates any number of human browsers; `humanSlots` set drives scheduling | Accepted (2026-09-24) | Supersedes single `humanSlot`; v1 contract deferred mixed seats |
+| Human seats | A seat is human only when its token-authenticated browser joins; no config reserves seats | Accepted (2026-09-24) | Supersedes single `humanSlot`; v1 contract deferred mixed seats |
 | Floor host | Deterministic host by default; optional LLM host over public information with deterministic fallback | Accepted (2026-09-22) | Supersedes “deterministic narration for v1” in Policy/runtime |
 
 Exact design: [Who Cried Wolf Coworld system and protocol](../plans/2026-09-15-who-cried-wolf-coworld-design.md).
@@ -91,11 +91,13 @@ Exact variant validation and bounds live in the system design's player primitive
 
 **Context:** The v1 contract deferred mixed human and AI seats and assumed deterministic narration. Human-paced play shipped first with one reserved `humanSlot`, then an optional LLM moderator, then multiple humans.
 
-**Decision (2026-09-24):** In `mode: human`, a seat becomes human when its authenticated browser connects to `/human` or sends `wcw.human/1` `join`. The per-seat token is the only identity proof; the packet cannot name another seat. `HumanSession.humanSlots` is the single runtime source of which seats are human. Optional `humanSlots` config reserves seats for local games; hosted variants pass an empty list and discover humans on connection. The game starts when every known human is connected, or after `player_connect_timeout_seconds` from the first human connection. A human who arrives late takes over the seat's pending action window; any pending bot speech request is dropped.
+**Decision (2026-09-24):** In `mode: human`, a seat becomes human when its authenticated browser connects to `/human` or sends `wcw.human/1` `join`. The per-seat token is the only identity proof; the packet cannot name another seat. `HumanSession.humanSlots` is the single runtime source of which seats are human. No configuration field reserves or names human seats; `humanSlot` and `humanSlots` were removed and the strict config schema rejects them. The game waits for the first human join, then starts when all nine seats are connected or `player_connect_timeout_seconds` (default 300 in human mode) after that join. A human who arrives late takes over the seat's pending action window; any pending bot speech request is dropped.
 
-The floor host never selects a human seat. The LLM host (`moderator: llm`) receives only public roster, counts, and transcript, and its choice is validated against eligibility, the name-prefix rule, and the no-third-repeat rule. Any invalid, late, or failed call falls back to the deterministic host. The host never touches rules or results.
+The floor host never selects a human seat. The deterministic and LLM hosts receive only `eligibleSlots`, which exclude human seats; neither sees which seats are human. The LLM host (`moderator: llm`) receives only public roster, counts, eligible seats, and transcript, and its choice is validated against eligibility, the name-prefix rule, and the no-third-repeat rule. Any invalid, late, or failed call falls back to the deterministic host. The host never touches rules or results.
 
-**Compatibility:** The legacy `humanSlot` config field and moderator-input field remain because the Coworld manifest publishes the field and the certified LLM moderator sees its input as JSON. Removing it is a versioned change: regenerate the manifest and re-certify the moderator.
+**Episode limit:** The five-minute lobby wait pushes the default human worst case to 42 m 50 s, so the manifest declares a 60-minute episode limit (Coworld allows up to 100) and the config budget check allows 3,600 seconds.
+
+**Compatibility:** Published variants never sent `humanSlot`, and their `humanSlots: []` was dropped with the field. The moderator's input JSON no longer contains either field; the next package certification covers that change.
 
 ## Open reconciliation
 

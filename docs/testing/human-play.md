@@ -10,7 +10,7 @@ The launcher prints a private seat link on `127.0.0.1:8772`. Open it and click *
 
 For a free test, use `npm run play:human`. For accelerated UI checks, use `npm run play:human -- --smoke` (6-second discussion, 8-second vote/action windows, 2-second coordination). Smoke mode cannot use LLM opponents.
 
-Optional environment variables: `WCW_PORT`, `WCW_HUMAN_SLOT` (0–8), `WCW_HUMAN_NAME`, `WCW_SETUP` (default random; a fixed code can be used for testing), `WCW_SEED` (32 hexadecimal characters; omit for random), `WCW_MODEL` (optional override to use one model for every opponent), `WCW_BENCHMARK_PATH`, `WCW_ARTIFACT_DIR`.
+Optional environment variables: `WCW_PORT`, `WCW_HUMAN_SLOTS` (comma-separated seats 0–8, default `0`; the older `WCW_HUMAN_SLOT` still works), `WCW_HUMAN_NAME`, `WCW_SETUP` (default random; a fixed code can be used for testing), `WCW_SEED` (32 hexadecimal characters; omit for random), `WCW_MODEL` (optional override to use one model for every opponent), `WCW_BENCHMARK_PATH`, `WCW_ARTIFACT_DIR`.
 
 ## Timing
 
@@ -26,7 +26,7 @@ Each 150-second day has eleven 13-second turns and a final 7-second turn. An LLM
 
 One other bot per private Wolf/Noble channel can coordinate alongside each public turn. Human Town and team chat remain open throughout discussion. Night coordination retains two rounds for all team bots. Moderator selection has a two-second limit within the 13-second turn; the player receives the remaining time. A failed, invalid or late moderator choice uses the deterministic fallback, which prioritizes human mentions then rotates by turn count. The first discussion call gets the whole remaining turn (minus a 100 ms delivery margin); voting and night decisions have at most 15 seconds. An early failure can retry once if at least two seconds remain. Timeouts and permanent HTTP request errors are not retried. Empty night-action requests return a legal empty action without calling an LLM. Missing votes/actions safely pass; missing speeches stay silent. No response closes a phase early.
 
-Eight cycles including transition allowance take at most 37 minutes 20 seconds; the default 30-second human connection allowance plus finalization bring the budget to 38 minutes 20 seconds. Longer custom timing/connection settings must still fit the 40-minute limit. Fast policy mode retains its 180-second connection default. Early wins finish sooner. The local lobby wait is outside the gameplay clock. Hosted manifest declares 40 minutes; hosted seating and timeout behavior still need platform validation.
+Eight cycles including transition allowance take at most 37 minutes 20 seconds. Human play waits for the first human to join, then starts when all nine seats are connected or five minutes (`player_connect_timeout_seconds`, default and maximum 300) after that first join. The wait plus finalization brings the worst-case budget to 42 minutes 50 seconds. Custom timing/connection settings must fit the 60-minute limit. Fast policy mode retains its 180-second connection default. Early wins finish sooner. Time before the first human joins is outside the budget calculation but still counts against the platform's episode clock. Hosted manifest declares 60 minutes; hosted seating and timeout behavior still need platform validation.
 
 ## Player screen
 
@@ -44,7 +44,7 @@ The layout and image assets are adapted from the original Discord `mafia-client`
 
 ## Protocol and verification
 
-`mode: human` accepts authenticated human browsers at any seat. After `ready`, the browser sends `{protocol:"wcw.human/1",type:"join"}` on the supplied `/player` WebSocket. The authenticated connection determines its seat; the packet cannot choose another seat. `/human?slot=N&token=T` remains a local alias. `humanSlots` optionally reserves seats for local games; the legacy `humanSlot` is used only when that list is omitted. Hosted Play variants use an empty list and identify humans on connection. `wcw.human/1` snapshots contain permitted state; chat carries episode ID, phase key and an idempotency ID. Actions retain the existing `wcw.player/1` binding and legal validation. Chat is limited to 480 characters, one message per two seconds, 30 messages per phase/channel.
+`mode: human` accepts authenticated human browsers at any seat. After `ready`, the browser sends `{protocol:"wcw.human/1",type:"join"}` on the supplied `/player` WebSocket. The authenticated connection determines its seat; the packet cannot choose another seat. `/human?slot=N&token=T` remains a local alias. No configuration reserves human seats: a seat is human only once its browser joins. The local launcher simply starts no bot on the seats listed in `WCW_HUMAN_SLOTS`. `wcw.human/1` snapshots contain permitted state; chat carries episode ID, phase key and an idempotency ID. Actions retain the existing `wcw.player/1` binding and legal validation. Chat is limited to 480 characters, one message per two seconds, 30 messages per phase/channel.
 
 Restart the launcher to use scheduler changes; an already-running game keeps its existing code.
 

@@ -30,3 +30,24 @@ it('still gives Wolves their team and private-chat framing',()=>{
  expect(prompt).toContain('Your mafia team: Bo, Fay');
  expect(prompt).toMatch(/kind "wolf_chat"/);
 });
+
+const withResults=(slot:number,privateResults:Observation['privateResults'])=>({...as(slot,{kind:'vote',targets:[0,1,2],allowPass:true}),privateResults}) as Observation;
+it('turns a Dairy Maid visit into a plain confirmed-town statement',()=>{
+ const prompt=playerSystemPrompt(withResults(2,[{day:1,ability:'inform',target:6,result:'town'}]),'');
+ expect(prompt).toContain('Night 1: Gus (the Dairy Maid) visited you. Gus is confirmed town.');
+ expect(prompt).toMatch(/Besides Gus, other players' roles and alignments are unknown/);
+});
+it('states Seer, Track Reader and Priest results in plain language',()=>{
+ const prompt=playerSystemPrompt(withResults(2,[
+  {day:1,ability:'inspect',target:1,result:'wolf'},{day:2,ability:'inspect',target:3,result:'not_wolf'},{day:3,ability:'inspect',target:0,result:'no_result'},
+  {day:1,ability:'check',target:4,result:'noble'},{day:2,ability:'check',target:5,result:'vanilla'},
+  {day:1,ability:'track',target:6,result:[0,3]},{day:2,ability:'track',target:6,result:[]},
+ ]),'');
+ for(const line of ['Night 1: you inspected Bo: WOLF.','Night 2: you inspected Di: not a wolf.','Night 3: your inspect was blocked, so you learned nothing.',
+  'Night 1: you checked Eve: Noble.','Night 2: you checked Fay: vanilla (a Sheep or an ordinary Wolf).',
+  'Night 1: you tracked Gus: they visited Ann and Di.','Night 2: you tracked Gus: they visited no one.'])expect(prompt).toContain(line);
+ expect(prompt).toContain('Your private results (only you know these; treat them as hard evidence)');
+});
+it('adds nothing when there are no private results',()=>{
+ expect(playerSystemPrompt(withResults(2,[]),'')).not.toContain('Your private results');
+});

@@ -51,3 +51,18 @@ it('states Seer, Track Reader and Priest results in plain language',()=>{
 it('adds nothing when there are no private results',()=>{
  expect(playerSystemPrompt(withResults(2,[]),'')).not.toContain('Your private results');
 });
+
+import {actionSchema,outputInstruction} from '../../src/player/llm.js';
+const townVote=as(2,{kind:'vote',targets:[0,1,2,3,4,5,6,7,8],allowPass:true,suspicion:true});
+const wolfVote=as(1,{kind:'vote',targets:[0,1,2,3,4,5,6,7,8],allowPass:true});
+it('asks Town voters for calibrated private wolf probabilities, and only Town',()=>{
+ const prompt=playerSystemPrompt(townVote,'');
+ expect(prompt).toMatch(/private suspicion/i);expect(prompt).toMatch(/honest, calibrated/);expect(prompt).toMatch(/never changes your vote/);
+ expect(playerSystemPrompt(wolfVote,'')).not.toMatch(/private suspicion/i);
+});
+it('requires the suspicion list in the Town vote schema and omits it for Wolves',()=>{
+ const town=actionSchema(townVote) as any,wolf=actionSchema(wolfVote) as any;
+ expect(town.required).toContain('suspicion');expect(town.properties.suspicion.items.required).toEqual(['slot','wolf']);
+ expect(wolf.properties).not.toHaveProperty('suspicion');expect(wolf.required).not.toContain('suspicion');
+ expect(outputInstruction(townVote)).toContain('"suspicion":[{"slot":0,"wolf":');
+});

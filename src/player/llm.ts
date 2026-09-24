@@ -8,11 +8,16 @@ export function actionSchema(o:Observation){
  for(const [key,limit] of Object.entries({text:480,summary:240,reason:240})){
   const property=schema.properties?.[key];if(property&&typeof property==='object')property.maxLength=limit;
  }
+ // Town votes must include the private suspicion list; every other request omits it.
+ const props=schema.properties as Record<string,unknown>|undefined;
+ if(o.request.kind==='vote'&&o.request.suspicion)schema.required=[...(schema.required??[]),'suspicion'];
+ else if(props)delete props.suspicion;
  delete schema.$schema;
  return schema;
 }
 export function outputInstruction(o:Observation){
- const example=o.request.kind==='bid'?{kind:'bid',wantsToSpeak:true,urgency:1,text:'Your own brief contribution goes here.',replyTo:null,accusation:null,reason:'Your brief explanation.'}:fallbackBody(o.request);
+ const example=o.request.kind==='bid'?{kind:'bid',wantsToSpeak:true,urgency:1,text:'Your own brief contribution goes here.',replyTo:null,accusation:null,reason:'Your brief explanation.'}
+  :o.request.kind==='vote'&&o.request.suspicion?{...fallbackBody(o.request),suspicion:o.roster.filter(p=>p.alive&&p.slot!==o.self.slot).map(p=>({slot:p.slot,wolf:0.25}))}:fallbackBody(o.request);
  return `Return exactly one bare JSON object: the ACTION INSTANCE, never a JSON Schema document. Start with { and end with }. Do not wrap it in Markdown code fences, XML tags, or quotation marks. Do not add prose, analysis, or commentary before or after the object. Do not output $schema, type, properties, required, or additionalProperties. Example of the response shape (replace values with your decision): ${JSON.stringify(example)}. Contract describing allowed fields, not the answer: ${JSON.stringify(actionSchema(o))}\nUse numeric zero-based slot targets from the offered request, or null to pass. For a non-pass kill, include killer: the numeric slot of the living Wolf agreed to perform it, selected from actors. All Wolf nominations should agree on target AND killer. Include every offered night ability in the offered order. No extra keys. Text limits: text: 480 characters; summary and reason: 240 characters. No tabs or control characters. Keep speech under 30 words, other text under 40 words and all character limits. urgency is an INTEGER 0..3. A silent bid must have empty text, urgency 0, replyTo null, accusation null. Summary/reason is a brief decision explanation, not hidden chain-of-thought. For sheep with no night abilities return actions: []. Current legal request: ${JSON.stringify(o.request)}.`;
 }
 export function parseModelAction(content:string,o:Observation){

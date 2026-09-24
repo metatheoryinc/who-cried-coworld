@@ -29,8 +29,16 @@ it('keeps mandatory reasoning enabled at minimal effort for Qwen',async()=>{
  });
  await expect(providerCompletion({...input(),model:'qwen/qwen3.8-max'},fetcher)).resolves.toBe('{}');
 });
-it('sends Gemini the action schema as a structured output contract',async()=>{
+it.each(['google/gemini-3.1-pro-preview','z-ai/glm-5.3','openai/gpt-oss-120b','anthropic/claude-opus-5'])('sends %s the action schema as a strict structured output contract',async model=>{
  const fetcher=vi.fn().mockResolvedValue(Response.json({choices:[{finish_reason:'stop',message:{content:'{}'}}]}));
- await providerCompletion({...input(),model:'google/gemini-3.1-pro-preview',schema:{type:'object'}},fetcher);
- expect(JSON.parse(fetcher.mock.calls[0]![1].body).response_format).toMatchObject({type:'json_schema',json_schema:{name:'game_action',strict:true,schema:{type:'object'}}});
+ await providerCompletion({...input(),model,schema:{type:'object'}},fetcher);
+ const body=JSON.parse(fetcher.mock.calls[0]![1].body);
+ expect(body.response_format).toMatchObject({type:'json_schema',json_schema:{name:'game_action',strict:true,schema:{type:'object'}}});
+ // Unsupported providers fall back to unconstrained output instead of failing the request.
+ expect(body.provider).not.toHaveProperty('require_parameters');
+});
+it('falls back to JSON mode when no action schema is supplied',async()=>{
+ const fetcher=vi.fn().mockResolvedValue(Response.json({choices:[{finish_reason:'stop',message:{content:'{}'}}]}));
+ await providerCompletion({...input(),model:'z-ai/glm-5.3'},fetcher);
+ expect(JSON.parse(fetcher.mock.calls[0]![1].body).response_format).toEqual({type:'json_object'});
 });

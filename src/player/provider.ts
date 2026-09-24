@@ -9,8 +9,9 @@ export function modelSettings(model:string){
  if(model.startsWith('meta-llama/'))return {max_tokens:800};
  return {max_tokens:1000,reasoning:{effort:'minimal',exclude:true}};
 }
+/** Every model gets the strict action schema when one is supplied: plain JSON mode let models return `{}` or extra fields. Without require_parameters, providers that cannot enforce it still answer. */
 export async function providerCompletion(input:{model:string;messages:unknown[];schema?:Record<string,unknown>;key:string;signal:AbortSignal;metadata:(data:Record<string,unknown>)=>void},fetcher:typeof fetch=fetch){
- const response=await fetcher('https://openrouter.ai/api/v1/chat/completions',{method:'POST',signal:input.signal,headers:{Authorization:`Bearer ${input.key}`,'Content-Type':'application/json'},body:JSON.stringify({model:input.model,messages:input.messages,...modelSettings(input.model),temperature:.7,response_format:input.model.startsWith('google/')&&input.schema?{type:'json_schema',json_schema:{name:'game_action',strict:true,schema:input.schema}}:{type:'json_object'},provider:{sort:'throughput'}})});
+ const response=await fetcher('https://openrouter.ai/api/v1/chat/completions',{method:'POST',signal:input.signal,headers:{Authorization:`Bearer ${input.key}`,'Content-Type':'application/json'},body:JSON.stringify({model:input.model,messages:input.messages,...modelSettings(input.model),temperature:.7,response_format:input.schema?{type:'json_schema',json_schema:{name:'game_action',strict:true,schema:input.schema}}:{type:'json_object'},provider:{sort:'throughput'}})});
  input.metadata({httpStatus:response.status});
  if(!response.ok){
   let detail;

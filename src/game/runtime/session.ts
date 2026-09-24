@@ -53,7 +53,7 @@ export class Session {
   if(this.phase!=='waiting')throw new Error('Episode already started');
   const names=assignDisplayNames(this.config.players.map(p=>p.name),this.displayNames);
   this.config.players=this.config.players.map((p,slot)=>this.displayNames.has(slot)?{name:names[slot]!,policyName:p.policyName??p.name}:p);
-  this.emit({kind:'started',roster:publicRoster(this.state,this.config),rulesVersion:'wcw.rules/2'});
+  this.emit({kind:'started',roster:publicRoster(this.state,this.config),rulesVersion:'wcw.rules/3'});
   this.emit({kind:'roles',roles:this.state.seats.map(p=>({slot:p.slot,role:p.role,faction:p.faction}))});
   this.emit({kind:'seed',seed:this.state.seed,randomVersion:'sha256-counter/1'});
   this.enterDay(now);

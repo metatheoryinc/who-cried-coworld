@@ -21,3 +21,8 @@ it('requires canonical roster and role slots and faction mapping',()=>{
  expect(Event.safeParse(wrap({kind:'roles',roles:[...roles].reverse()},{kind:'server'},'roles')).success).toBe(false);
  expect(Event.safeParse(wrap({kind:'roles',roles:roles.map(r=>({...r,faction:'town'}))},{kind:'server'},'roles')).success).toBe(false);
 });
+it('keeps kill resolution server-only and revealed with night choices',()=>{
+ const r={kind:'kill_resolution',targetVotes:[{target:4,votes:2}],knifeVotes:[{killer:0,votes:2}],targetTie:false,knifeTie:false,target:4,killer:0};
+ expect(Event.safeParse(wrap(r,{kind:'server'},'night_choices')).success).toBe(true);
+ for(const audience of [{kind:'public'},{kind:'seats',slots:[0]}])expect(Event.safeParse(wrap(r,audience,'night_choices')).success).toBe(false);
+});

@@ -4,7 +4,7 @@ import { Results } from './results.js';
 import { Id } from './primitives.js';
 import { project } from './presentation/project.js';
 export const Replay=z.object({
- schema:z.literal('wcw.replay/1'),eventSchema:z.literal('wcw.events/1'),gameVersion:z.literal('0.1.0'),rulesVersion:z.enum(['wcw.rules/1','wcw.rules/2']),complete:z.literal(true),
+ schema:z.literal('wcw.replay/1'),eventSchema:z.literal('wcw.events/1'),gameVersion:z.literal('0.1.0'),rulesVersion:z.enum(['wcw.rules/1','wcw.rules/2','wcw.rules/3']),complete:z.literal(true),
  episodeId:Id,maxDays:z.number().int().min(1).max(32),revealPolicy:z.literal('postgame_allowlist/1'),events:z.array(ProjectedEvent).min(3).max(20000),result:Results,
 }).strict().refine(r=>{
  if(r.rulesVersion!==r.result.rulesVersion)return false;

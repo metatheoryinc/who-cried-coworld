@@ -18,7 +18,8 @@ export type RuleEvent=
  | {kind:'elimination';slot:number;cause:'vote'|'wolf';role:Role;faction:Faction}
  | {kind:'night_outcome';ability:Ability;actor:number|null;target:number|null;outcome:'applied'|'blocked'|'protected'|'passed'|'actor_dead'}
  | {kind:'private_result';slot:number;result:PrivateResult}
- | {kind:'night_resolved';eliminated:number[]};
+ | {kind:'night_resolved';eliminated:number[]}
+ | {kind:'kill_resolution';targetVotes:{target:number;votes:number}[];knifeVotes:{killer:number;votes:number}[];targetTie:boolean;knifeTie:boolean;target:number|null;killer:number|null};
 export function createState(seed:string,maxDays=8,deck:Role[]=defaultRoles):State {
  if(!Number.isInteger(maxDays)||maxDays<1||maxDays>32) throw new Error('Invalid day cap');
  return {seed,day:1,daysCompleted:0,maxDays,seats:assignRoles(seed,deck).map((role,slot)=>({slot,role,faction:factionOf(role),alive:true})),randomCounters:{},result:null};
@@ -89,23 +90,27 @@ export function resolveNight(s:State,rows:NightRow[]):RuleEvent[]{
   if(target!==null&&!blocked.has(guard.slot))protectedSlots.add(target);
   outcome('protect',guard.slot,target,target===null?'passed':blocked.has(guard.slot)?'blocked':'applied');
  }
- const nominations=new Map<string,{target:number;killer:number;votes:number}>();
+ // Two collective pack votes: who dies, and which Wolf performs the kill.
+ const targetVotes=new Map<number,number>(),knifeVotes=new Map<number,number>();
  for(const wolf of alive.filter(p=>p.faction==='wolf')){
   const action=rows.find(r=>r.slot===wolf.slot)?.actions.find(a=>a.ability==='kill');
-  if(action?.target!==null&&action?.target!==undefined){
-   const killer=action.killer??wolf.slot,key=`${action.target}:${killer}`;
-   nominations.set(key,{target:action.target,killer,votes:(nominations.get(key)?.votes??0)+1});
-  }
+  if(!action)continue;
+  if(action.target!==null)targetVotes.set(action.target,(targetVotes.get(action.target)??0)+1);
+  const knife=action.killer??(action.target!==null?wolf.slot:undefined);
+  if(knife!==undefined)knifeVotes.set(knife,(knifeVotes.get(knife)??0)+1);
  }
- let target:number|null=null,killer:number|null=null;
- if(nominations.size){
-  const most=Math.max(...[...nominations.values()].map(n=>n.votes));
-  const tied=[...nominations.values()].filter(n=>n.votes===most).sort((a,b)=>a.target-b.target||a.killer-b.killer);
-  const label=`kill_tie_day_${s.day}`;
+ const elect=(votes:Map<number,number>,label:string)=>{
+  if(!votes.size)return {winner:null,tie:false};
+  const most=Math.max(...votes.values()),tied=[...votes].filter(([,n])=>n===most).map(([slot])=>slot).sort((a,b)=>a-b);
   const d=draw(s.seed,label,s.randomCounters[label]??0,tied.length);
   if(tied.length>1)s.randomCounters[label]=d.nextCounter;
-  const selected=tied[d.value]!;target=selected.target;killer=selected.killer;
- }
+  return {winner:tied[d.value]!,tie:tied.length>1};
+ };
+ const tally=(votes:Map<number,number>)=>[...votes].sort(([a],[b])=>a-b);
+ const chosenTarget=elect(targetVotes,`kill_tie_day_${s.day}`);
+ const chosenKnife=chosenTarget.winner===null?{winner:null,tie:false}:elect(knifeVotes,`knife_tie_day_${s.day}`);
+ const target=chosenTarget.winner,killer=chosenKnife.winner;
+ events.push({kind:'kill_resolution',targetVotes:tally(targetVotes).map(([target,votes])=>({target,votes})),knifeVotes:tally(knifeVotes).map(([killer,votes])=>({killer,votes})),targetTie:chosenTarget.tie,knifeTie:chosenKnife.tie,target,killer});
  const eliminated:number[]=[];
  if(target===null)outcome('kill',null,null,'passed');
  else if(blocked.has(killer!))outcome('kill',killer,target,'blocked');
@@ -156,6 +161,6 @@ export function finishIfNeeded(s:State,afterNight:boolean):Results|null {
  else if(wolves>=town){outcome='wolf_win';reason='wolf_parity';winner='wolf';}
  else if(afterNight&&s.daysCompleted>=s.maxDays){outcome='draw';reason='day_cap';winner=null;}
  else return null;
- s.result=Results.parse({schema:'wcw.results/1',rulesVersion:'wcw.rules/2',outcome,reason,daysCompleted:s.daysCompleted,scores:s.seats.map(p=>outcome==='jester_win'?Number(p.slot===s.jesterWinner):p.faction===winner?1:0)});
+ s.result=Results.parse({schema:'wcw.results/1',rulesVersion:'wcw.rules/3',outcome,reason,daysCompleted:s.daysCompleted,scores:s.seats.map(p=>outcome==='jester_win'?Number(p.slot===s.jesterWinner):p.faction===winner?1:0)});
  return s.result;
 }

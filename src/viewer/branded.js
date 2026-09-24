@@ -56,6 +56,7 @@ try {
      confessional        SealedBeat "Confessionals" / "Why they voted"
      wolf_chat           SealedBeat "Wolf channel"
      night_choices       SealedBeat "Night actions" (+ "Nothing to do")
+     kill_resolution     SealedBeat "How the pack decided"
      night_outcome       SealedBeat "How the night resolved"
      private_result      SealedBeat "Private result"
      failure             SealedBeat "Fallback"
@@ -415,6 +416,13 @@ function revealParts(e) {
         }).join('')}</ul>`,
         note: 'Server-only while the episode ran. The recorded rules version determines action order. '
             + 'An actor killed before resolution is sent nothing at all, so this row is the only record that the action happened.' };
+
+    case 'kill_resolution': {
+      const tally = (rows, key) => rows.length ? rows.map(r => `${esc(nameOf(r[key]))} (${r.votes})`).join(', ') : 'none';
+      return { title: 'How the pack decided',
+        inner: `<ul>${plainLine(`<strong>Target votes</strong> &middot; ${tally(p.targetVotes, 'target')}${p.targetTie ? ' &middot; <em>tie broken by seed</em>' : ''}`)}${plainLine(`<strong>Knife votes</strong> &middot; ${tally(p.knifeVotes, 'killer')}${p.knifeTie ? ' &middot; <em>tie broken by seed</em>' : ''}`)}${plainLine(p.target === null ? 'No target: the pack did not kill.' : `<strong>${esc(nameOf(p.killer))}</strong> takes the knife to <strong>${esc(nameOf(p.target))}</strong>.`)}</ul>`,
+        note: 'Server-only while the episode ran. Every living Wolf casts one target vote and one knife vote; each is decided by plurality with a seeded tie-break.' };
+    }
 
     case 'private_result':
       return { title: 'Private result',

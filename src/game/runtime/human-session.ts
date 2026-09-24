@@ -84,7 +84,7 @@ export class HumanSession extends Session {
     if(this.period==='discussion'&&host?.slot===slot)request={kind:'bid',window:this.window,maxCharacters:480,host:{reason:host.reason,replyTo:host.replyTo,...(choice?{prompt:choice.prompt}:{} )}};
     else if(team&&(this.period==='coordination'||teamActors.has(slot)))request={kind:team,turn:this.window,maxCharacters:480};
     else continue;
-   }else request=this.period==='vote'?{kind:'vote',targets:this.living(),allowPass:true}:{kind:'night',choices:legalNightChoices(this.state,slot)};
+   }else request=this.period==='vote'?{kind:'vote',targets:this.living(),allowPass:true,...(seat.faction==='town'?{suspicion:true as const}:{})}:{kind:'night',choices:legalNightChoices(this.state,slot)};
    const index=++this.counters[slot]!;
    this.pending.set(slot,openRequest({slot,episodeId:this.episodeId,requestId:`r_${slot}_${index}`,observationId:`o_${slot}_${index}`,deadline:this.isHuman(slot)?this.deadline:Math.min(this.deadline,now+15000),request,visibleSpeechIds:publicSpeech}));
   }

@@ -1,3 +1,4 @@
+import { validSuspicion } from '../domain/scoring.js';
 import { newD3Decks,NewD3Setup } from '../../shared/roles.js';
 import { draw } from '../domain/random.js';
 import { randomBytes } from 'node:crypto';
@@ -77,7 +78,7 @@ export class Session {
    let request:Request;
    switch(this.stage){
     case 'bid':request={kind:'bid',window:this.window,maxCharacters:480};break;
-    case 'vote':request={kind:'vote',targets:this.living(),allowPass:true};break;
+    case 'vote':request={kind:'vote',targets:this.living(),allowPass:true,...(this.state.seats[slot]!.faction==='town'?{suspicion:true as const}:{})};break;
     case 'day_chat':case 'wolf_chat':request={kind:this.state.seats[slot]!.role==='noble'?'noble_chat':'wolf_chat',turn:this.window,maxCharacters:480};break;
     case 'night':request={kind:'night',choices:legalNightChoices(this.state,slot)};break;
    }
@@ -103,6 +104,10 @@ export class Session {
   for(const {slot,request,outcome} of rows){
    for(const failure of outcome.failures)this.emit({kind:'failure',slot,requestKind:request.kind,...failure});
    if('summary' in outcome.body&&outcome.body.summary)this.emit({kind:'confessional',slot,requestKind:request.kind,text:outcome.body.summary});
+   if(request.kind==='vote'&&request.suspicion&&outcome.body.kind==='vote'){
+    const reports=validSuspicion(outcome.body.suspicion,this.living().filter(s=>s!==slot));
+    if(reports)this.emit({kind:'suspicion',slot,reports},{kind:'server'});
+   }
   }
   if(this.stage==='bid'){
    const bids=rows.map(r=>({slot:r.slot,bid:r.outcome.body as Bid}));

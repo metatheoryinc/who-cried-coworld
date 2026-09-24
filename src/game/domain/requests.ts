@@ -4,7 +4,7 @@ import { validNight, type Choice, type State } from './rules.js';
 export type Request=
  | {kind:'bid';window:number;maxCharacters:480;host?:{reason:'human_reply'|'open_discussion';replyTo:string|null;prompt?:string}}
  | {kind:'wolf_chat'|'noble_chat';turn:number;maxCharacters:480}
- | {kind:'vote';targets:number[];allowPass:true}
+ | {kind:'vote';targets:number[];allowPass:true;suspicion?:true}
  | {kind:'night';choices:Choice[]};
 export type Code='timeout'|'disconnected'|'malformed'|'illegal'|'refused'|'provider_error'|'throttled'|'version';
 export type Failure={code:Code;source:'game'|'policy_report';disposition:'retry'|'fallback';attempt:0|1|2};

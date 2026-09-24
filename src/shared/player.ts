@@ -19,7 +19,7 @@ export const Request=z.discriminatedUnion('kind',[
  z.object({kind:z.literal('bid'),window:z.number().int().min(0).max(17),maxCharacters:z.literal(480),host:z.object({reason:z.enum(['human_reply','open_discussion']),replyTo:Id.nullable(),prompt:z.string().max(240).optional()}).strict().optional()}).strict(),
  z.object({kind:z.literal('wolf_chat'),turn:z.number().int().min(0).max(17),maxCharacters:z.literal(480)}).strict(),
  z.object({kind:z.literal('noble_chat'),turn:z.number().int().min(0).max(17),maxCharacters:z.literal(480)}).strict(),
- z.object({kind:z.literal('vote'),targets:z.array(Slot).max(9),allowPass:z.literal(true)}).strict(),
+ z.object({kind:z.literal('vote'),targets:z.array(Slot).max(9),allowPass:z.literal(true),suspicion:z.literal(true).optional()}).strict(),
  z.object({kind:z.literal('night'),choices:z.array(Choice).max(2)}).strict(),
 ]);
 export type Request=z.infer<typeof Request>;

@@ -12,7 +12,9 @@ export const ActionBody=z.discriminatedUnion('kind',[
  Bid,
  z.object({kind:z.literal('wolf_chat'),text:GameText(480),summary:GameText(240)}).strict(),
  z.object({kind:z.literal('noble_chat'),text:GameText(480),summary:GameText(240)}).strict(),
- z.object({kind:z.literal('vote'),target:Slot.nullable(),summary:GameText(240)}).strict(),
+ // Optional private wolf probabilities (Town votes). Loosely typed so a bad report can never make the vote malformed;
+ // the game validates and drops invalid reports at vote close.
+ z.object({kind:z.literal('vote'),target:Slot.nullable(),summary:GameText(240),suspicion:z.array(z.object({slot:z.number().int(),wolf:z.number()}).strict()).max(9).optional()}).strict(),
  z.object({kind:z.literal('night'),actions:z.array(NightChoice).max(2).refine(rows=>new Set(rows.map(r=>r.ability)).size===rows.length),summary:GameText(240)}).strict(),
 ]);
 export type ActionBody=z.infer<typeof ActionBody>;

@@ -66,3 +66,11 @@ function hiddenOn(day:number,wolf:number,input:ScoringInput){
  const a=asked[0]!,chance=a.livingWolves/(a.living.length-1);
  return Math.max(0,(chance-mean(seen))/chance);
 }
+
+/** A report must give exactly one probability in [0, 1] to each other living player; anything else is treated as no report. */
+export function validSuspicion(raw:{slot:number;wolf:number}[]|undefined,others:number[]){
+ if(!raw||raw.length!==others.length)return null;
+ const seen=new Set<number>();
+ for(const r of raw){if(!others.includes(r.slot)||seen.has(r.slot)||!Number.isFinite(r.wolf)||r.wolf<0||r.wolf>1)return null;seen.add(r.slot);}
+ return [...raw].sort((a,b)=>a.slot-b.slot).map(({slot,wolf})=>({slot,wolf}));
+}

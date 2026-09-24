@@ -5,6 +5,7 @@ import {condensedMafiaKnowledge} from './mafia-knowledge.js';
 const roles:Record<string,string>={wolf:'Mafia Goon',alchemist:'Mafia Roleblocker',seer:'Town Cop',guard:'Town Doctor',sheep:'Vanilla Townie',chef:'Town Jailkeeper',track_reader:'Mafia Rolecop',dairy_maid:'Town Friendly Neighbor',priest:'Town Tracker',noble:'Town Mason',jester:'Trickster'};
 
 export function playerSystemPrompt(o:Observation,personality=contestants[o.self.slot]?.personalityPrompt??''){
+ const fellow=o.self.role==='noble'?o.teammates.filter(t=>t.slot!==o.self.slot).map(t=>o.roster[t.slot]!.name):[],nobles=fellow.join(' and ');
  const prefix=[
   `You are ${o.roster[o.self.slot]!.name}, a contestant in a tense reality competition Mafia game.`,
   personality?`Personality: ${personality}`:'',
@@ -13,9 +14,10 @@ export function playerSystemPrompt(o:Observation,personality=contestants[o.self.
   `Ability: Your authoritative role is ${o.self.role}. Legal abilities and targets are exactly those offered in each request.`,
   `Win condition: ${o.self.role==='jester'?'Win by being eliminated in a day vote.':o.self.faction==='wolf'?'Win when living wolves reach parity with town.':'Win when all wolves are eliminated.'}`,
   o.self.faction==='wolf'?`Your mafia team: ${o.teammates.map(t=>o.roster[t.slot]!.name).join(', ')}.`:'',
-  o.request.kind==='wolf_chat'?'You are writing in a private mafia-only chat. Address your living teammates directly; this is not public discussion.':'',
-  o.request.kind==='noble_chat'?'You are writing in private Noble chat with your confirmed town teammates.':'',
-  "You only know your own role and ability. Other players' roles and alignments are unknown unless the approved transcript explicitly reveals them.",
+  fellow.length?`Your fellow Noble${fellow.length>1?'s':''}: ${fellow.join(', ')}. ${nobles} ${fellow.length>1?'are':'is'} confirmed town: the game told you privately, so trust them completely and coordinate with them in Noble chat.`:'',
+  o.request.kind==='wolf_chat'?'You are writing in a private mafia-only chat. Address your living teammates directly; this is not public discussion. Transcript messages with kind "wolf_chat" are this private channel; kind "speech" is public discussion.':'',
+  o.request.kind==='noble_chat'?`You are writing in the private Noble channel. Only ${nobles} can read it; nobody else sees these messages. Do not address, accuse, or banter with anyone else here. Transcript messages with kind "noble_chat" are this private channel; kind "speech" is public discussion. Read the latest "noble_chat" messages and reply to ${nobles} directly: answer their questions, share your reads, agree on whom to trust and vote for, and decide whether and when to reveal as Nobles in public. If ${nobles} has not written yet, open the conversation.`:'',
+  o.self.faction==='wolf'?"Besides your mafia team, other players' roles and alignments are unknown unless the approved transcript explicitly reveals them.":fellow.length?`Besides ${nobles}, other players' roles and alignments are unknown unless the approved transcript explicitly reveals them.`:"You only know your own role and ability. Other players' roles and alignments are unknown unless the approved transcript explicitly reveals them.",
   'Basic Mafia strategy knowledge:',condensedMafiaKnowledge,
   'Speak like a contestant, not an assistant. Be concise, specific, suspicious, and emotionally readable.',
  ].join('\n');

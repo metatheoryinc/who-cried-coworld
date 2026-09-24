@@ -181,7 +181,7 @@ let resultDismissed=false,lastInterlude='';
 function drawInterlude(){
  const summary=stageSummary(state),show=!!summary||!!state.result&&!resultDismissed;
  const panel=$('interlude');panel.hidden=!show;
- document.querySelectorAll('body>header,body>main,body>footer').forEach(el=>{el.inert=show;});
+ document.querySelectorAll('body>header,body>main').forEach(el=>{el.inert=show;});
  document.body.classList.toggle('show-interlude',show);
  if(!show)return;
  const key=state.result?'finished':`${state.day}:${state.period}`;

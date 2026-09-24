@@ -62,9 +62,10 @@ function drawPlayers(){
   const tag=!p.alive&&deathReveal(state?.events??[],p.slot)?`${deathReveal(state.events,p.slot)} · ${status}`:status;
   const m=seatMarks(p.slot),target=targets.includes(p.slot),pick=!active&&m.own.length>0,open=phone.matches&&!!state?.self;
   const speaking=state?.period==='discussion'&&state.floor?.slot===p.slot;
-  return `<button class="player ${p.alive?'':'dead'} ${seat==='open'?'open-seat':''} ${target?'eligible':''} ${active&&!target?'dim':''} ${speaking?'speaking':''}" data-slot="${p.slot}" title="${esc(p.policyName?`Policy: ${p.policyName}`:p.name)}" ${target||pick||open?'':'disabled'} aria-label="Seat ${p.slot+1}, ${esc(p.name)}, ${esc(tag)}${speaking?', speaking':''}${m.described?`, ${esc(m.described)}`:''}${target?`, place ${stampLabels[active]}`:pick?', pick up your stamp':open?', show player card':''}"><img src="${asset('base_playercard_shadow')}" alt=""><img class="${known?'known-role':'sheep'}" src="${asset(known?art[known]:'Player_sheep_base')}" alt=""><span class="seat-no seat-c${p.slot}">${p.slot+1}</span>${m.html?`<span class="card-stamps">${m.html}</span>`:''}${!p.alive?deathMark(cause):''}<span class="card-foot"><span class="name">${esc(p.name)}</span>${tag?`<small>${esc(tag)}</small>`:''}</span></button>`;
+  return `<button class="player ${p.alive?'':'dead'} ${seat==='open'?'open-seat':''} ${target?'eligible':''} ${active&&!target?'dim':''} ${speaking?'speaking':''}" data-slot="${p.slot}" title="${esc(p.policyName?`Policy: ${p.policyName}`:p.name)}" ${target||pick||open?'':'disabled'} aria-label="Seat ${p.slot+1}, ${esc(p.name)}, ${esc(tag)}${speaking?', speaking':''}${m.described?`, ${esc(m.described)}`:''}${target?`, place ${stampLabels[active]}`:pick?', pick up your stamp':open?', show player card':''}"><img src="${asset('base_playercard_shadow')}" alt=""><img class="${known?'known-role':'sheep'}" src="${asset(known?art[known]:'Player_sheep_base')}" alt=""><span class="seat-no seat-c${p.slot}">${p.slot+1}</span>${m.html?`<span class="card-stamps">${m.html}</span>`:''}${target?`<span class="stamp-ghost" aria-hidden="true">${stampIcon(active,asset)}</span>`:''}${!p.alive?deathMark(cause):''}<span class="card-foot"><span class="name">${esc(p.name)}</span>${tag?`<small>${esc(tag)}</small>`:''}</span></button>`;
  }).join('');
  $('players').querySelectorAll('.player:not(:disabled)').forEach(b=>b.onclick=()=>onCard(Number(b.dataset.slot)));
+ $('players').querySelectorAll('.player.eligible').forEach(b=>{const aim=on=>document.querySelector(`#action [data-stamp="${activeStamp()}"]`)?.classList.toggle('aiming',on);b.onmouseenter=()=>aim(true);b.onmouseleave=()=>aim(false);});
  revealBallots();updateCursor();
  const filled=state?.lobby?.seats.filter(s=>s!=='open').length;
  $('alive').textContent=` · ${inLobby()?(filled===undefined?'9 seats':`${filled} of 9 seats filled`):`${roster.filter(p=>p.alive).length} alive`}`;
@@ -82,10 +83,11 @@ function drawAction(){
 function majority(){return Math.floor(state.roster.filter(p=>p.alive).length/2)+1;}
 function stampRequest(){const r=state?.observation?.request;return !state?.result&&state?.self?.alive&&(r?.kind==='vote'||r?.kind==='night')?r:null;}
 /** Adopt the server's draft for a new request, or when no local change is waiting to be saved. */
+/** Load the draft only when a decision opens or the page loads; afterwards the page's own placements are the source of truth
+    (the server cannot tell a cleared vote from a skipped one, since both send no target). */
 function syncStamps(){
  const r=stampRequest(),key=r?state.observation.requestId:null;
  if(key!==draftKey){draftKey=key;held=null;dirty=false;clearTimeout(sendTimer);placements=r?placementsFrom(r,state.accepted):{};saveState=state.accepted?'saved':'idle';}
- else if(r&&!dirty)placements=placementsFrom(r,state.accepted);
 }
 function drawTray(){
  const r=stampRequest(),slots=traySlots(r);

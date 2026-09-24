@@ -161,6 +161,8 @@ export function finishIfNeeded(s:State,afterNight:boolean):Results|null {
  else if(wolves>=town){outcome='wolf_win';reason='wolf_parity';winner='wolf';}
  else if(afterNight&&s.daysCompleted>=s.maxDays){outcome='draw';reason='day_cap';winner=null;}
  else return null;
- s.result=Results.parse({schema:'wcw.results/1',rulesVersion:'wcw.rules/3',outcome,reason,daysCompleted:s.daysCompleted,scores:s.seats.map(p=>outcome==='jester_win'?Number(p.slot===s.jesterWinner):p.faction===winner?1:0)});
+ // Win-only here; the runtime adds bonuses and metric columns from the journal (scoring.ts).
+ const wins=s.seats.map(p=>outcome==='jester_win'?Number(p.slot===s.jesterWinner):p.faction===winner?1:0) as (0|1)[];
+ s.result=Results.parse({schema:'wcw.results/2',rulesVersion:'wcw.rules/3',outcome,reason,daysCompleted:s.daysCompleted,scores:wins,metrics:wins.map(win=>({win}))});
  return s.result;
 }

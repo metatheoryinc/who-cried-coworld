@@ -95,14 +95,14 @@ body.lobby .action-panel p{margin:4px 0}
 .player.dim{opacity:.45;filter:grayscale(.4)}
 .player:not(:disabled){cursor:pointer}
 .card-stamps{position:absolute;z-index:4;top:6%;left:10%;right:10%;display:flex;flex-wrap:wrap;justify-content:center;gap:2px;pointer-events:none}
-.stamp-mark{position:relative;display:grid;place-items:center;width:clamp(26px,34%,58px);aspect-ratio:1;border-radius:50%;background:#fff6e3e6;border:2px solid #8e392b;color:#7b3322;transform:rotate(-12deg);box-shadow:0 2px 0 #5d2a1a40;animation:thunk .18s ease-out}
-.stamp-mark>img,.stamp-mark>svg{width:74%;height:74%;object-fit:contain}
-.stamp-mark.pack{border-color:#4c3a78;color:#4c3a78;width:clamp(20px,26%,44px);transform:rotate(10deg);animation:none}
-.stamp-mark.pack>b{position:absolute;right:-5px;bottom:-5px;min-width:16px;height:16px;border-radius:8px;background:#4c3a78;color:#fff;font:700 10px/16px system-ui;text-align:center}
-@keyframes thunk{from{transform:scale(1.6) rotate(-20deg);opacity:0}to{transform:rotate(-12deg);opacity:1}}
+
+
+
+
+
 .system-line{margin:10px 0;text-align:center;font:600 11.5px/1.4 system-ui;color:#d9c29a;letter-spacing:.2px}
 .system-line::before,.system-line::after{content:'—';margin:0 8px;color:#7a6149}
-@media(prefers-reduced-motion:reduce){.stamp-mark{animation:none}}
+
 .guide-sub{font:13px system-ui;color:#6d5840;margin-top:0}
 /* Seat identity: numbers and per-seat accents shared by cards, strip, sheets and chat. */
 .seat-c0{--seat:#b5452f}.seat-c1{--seat:#c07a1c}.seat-c2{--seat:#8a8f1f}.seat-c3{--seat:#3f8a4a}.seat-c4{--seat:#2d8a86}.seat-c5{--seat:#3a6fae}.seat-c6{--seat:#6a55b0}.seat-c7{--seat:#a2479a}.seat-c8{--seat:#7d5b3c}
@@ -144,7 +144,7 @@ body.lobby .action-panel p{margin:4px 0}
  .player .card-foot,.player small{display:none}
  .player>.seat-no{top:auto;bottom:0;left:50%;transform:translateX(-50%);min-width:16px;height:16px;font-size:10px}
  .card-stamps{top:0;left:0;right:0;gap:0}
- .stamp-mark,.stamp-mark.pack{width:15px;border-width:1.5px}
+ .stamp-mark,.stamp-mark.pack{width:17px;border-width:1.5px;box-shadow:none}
  .stamp-mark.pack>b{display:none}
  .player img.death-mark.claw{left:10%;top:10%;width:80%;height:60%}
  .player.eligible{filter:drop-shadow(0 0 4px #ffd36b) drop-shadow(0 0 1px #b8741a)}
@@ -253,3 +253,19 @@ body.lobby .action-panel p{margin:4px 0}
  .chat-panel.private .chat-heading{display:block;padding:7px 12px 0}
  .chat-panel.private .chat-heading h2{display:none}
 }
+/* Stamps look like ink impressions: no disc, ink-colored icon in a worn double ring, multiplied into the card art. */
+.stamp-mark{--ink:#a3301f;position:relative;display:grid;place-items:center;width:clamp(28px,40%,66px);aspect-ratio:1;border-radius:50%;color:var(--ink);border:2.5px solid var(--ink);box-shadow:inset 0 0 0 2px #fff0,inset 0 0 0 3.5px var(--ink);background:radial-gradient(circle,#fff5 0 55%,#fff0 70%);opacity:.9;mix-blend-mode:multiply;transform:rotate(-14deg)}
+.stamp-mark>img,.stamp-mark>svg{width:66%;height:66%;object-fit:contain}
+.stamp-mark>img{filter:saturate(1.2) contrast(1.1)}
+.stamp-mark.pack{--ink:#4f3d8c;width:clamp(22px,30%,50px);transform:rotate(11deg);opacity:.85}
+.stamp-mark.pack>b{position:absolute;bottom:-3px;right:-2px;color:var(--ink);font:800 11px/1 Georgia;text-shadow:0 0 2px #fff,0 0 2px #fff}
+.stamp-mark.fresh{animation:thunk .2s ease-out}
+@keyframes thunk{from{transform:scale(1.7) rotate(-24deg);opacity:0}to{transform:rotate(-14deg);opacity:.9}}
+@media(prefers-reduced-motion:reduce){.stamp-mark.fresh{animation:none}}
+/* Only the active tab opens into the panel; inactive tabs sit on the channel line. */
+#channels{align-items:flex-end}
+#channels .chan{margin-bottom:0}
+#channels .chan.active{margin-bottom:-2px;padding-bottom:11px}
+/* Center the day text itself; the light sun/moon hangs to its left so the title reads as centered. */
+@media(min-width:761px){#day{display:inline-block;position:relative}#day-icon{position:absolute;right:100%;top:50%;transform:translateY(-50%);margin-right:10px}}
+@media(min-width:761px){.night .table-heading>*{background:#2b2018d0;color:#fff4df}}

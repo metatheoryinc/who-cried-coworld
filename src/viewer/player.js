@@ -14,7 +14,8 @@ const descriptions={wolf:'Hide among the sheep. Coordinate with your pack and ch
 const sunIcon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>',moonIcon='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>';
 const labels={discussion:'Discuss & deduce',vote:'Cast your vote',coordination:'Night whispers',actions:'Make your move',dusk:'The Night Begins…',dawn:'The Day Begins…'};
 // Stamp drafts: placements are local until the server confirms them; they count when the timer ends.
-let placements={},held=null,draftKey=null,dirty=false,saveState='idle',changeSeq=0,sentSeq=0,sendTimer;
+// freshStamp animates a stamp once, on the redraw right after it is placed.
+let freshStamp=null,placements={},held=null,draftKey=null,dirty=false,saveState='idle',changeSeq=0,sentSeq=0,sendTimer;
 let state=null,ws,channel='town',lastRender='',actionKey='',remainingUntil=0,joined=false,connecting=false,ended=false,pendingChat=null;
 const params=new URLSearchParams(location.search);
 let slot=params.get('slot'),connection;
@@ -30,7 +31,7 @@ let sheetOpen=true,sheetKey=null;
 function activeStamp(){const r=stampRequest();if(!r)return null;const slots=traySlots(r);return held??(slots.length===1?slots[0].id:null);}
 function seatMarks(target){
  const r=stampRequest(),own=r?stampsOn(placements,target):[],pack=(state?.packDrafts?packStamps(state.packDrafts):[]).filter(x=>x.slot===target);
- return {own,html:[...own.map(id=>`<span class="stamp-mark own" title="Your ${stampLabels[id]}">${stampIcon(id,asset)}</span>`),...pack.map(x=>`<span class="stamp-mark pack" title="${esc(name(x.by))}: ${stampLabels[x.id]}">${stampIcon(x.id,asset)}<b>${x.by+1}</b></span>`)].join(''),
+ return {own,html:[...own.map(id=>`<span class="stamp-mark own${freshStamp===`${id}:${target}`?' fresh':''}" title="Your ${stampLabels[id]}">${stampIcon(id,asset)}</span>`),...pack.map(x=>`<span class="stamp-mark pack" title="${esc(name(x.by))}: ${stampLabels[x.id]}">${stampIcon(x.id,asset)}<b aria-hidden="true">${x.by+1}</b></span>`)].join(''),
   described:[...own.map(id=>`your ${stampLabels[id]}`),...pack.map(x=>`${name(x.by)}'s ${stampLabels[x.id]}`)].join(', ')};
 }
 function drawPlayers(){
@@ -84,7 +85,7 @@ function sheetSeats(r){
  return state.roster.map(p=>{const m=seatMarks(p.slot),target=targets.includes(p.slot),pick=!active&&m.own.length>0;
   return `<button type="button" class="sheet-seat ${p.alive?'':'dead'} ${target?'eligible':''} ${active&&!target?'dim':''}" data-slot="${p.slot}" ${target||pick?'':'disabled'} aria-label="Seat ${p.slot+1}, ${esc(p.name)}${m.described?`, ${esc(m.described)}`:''}"><span class="seat-no seat-c${p.slot}">${p.slot+1}</span><span class="sheet-name">${esc(p.name)}${p.slot===state.self.slot?' (you)':''}</span>${m.html?`<span class="sheet-marks">${m.html}</span>`:''}</button>`;}).join('');
 }
-function refreshStamps(){drawPlayers();drawTray();updateSheet();}
+function refreshStamps(){drawPlayers();drawTray();updateSheet();freshStamp=null;}
 /** Phone decision sheet: open for a new request, collapsible to a pill that shows the clock. */
 function updateSheet(){
  const r=stampRequest(),key=r?state.observation.requestId:null;
@@ -113,7 +114,7 @@ function drawChip(){
 function onCard(target){
  const r=stampRequest();
  const active=activeStamp();
- if(r&&active&&traySlots(r).find(x=>x.id===active)?.targets.includes(target)){placements=place(placements,r,active,target,state.self.slot);held=null;scheduleSend();sheetOpen=true;}
+ if(r&&active&&traySlots(r).find(x=>x.id===active)?.targets.includes(target)){placements=place(placements,r,active,target,state.self.slot);if(placements[active]===target)freshStamp=`${active}:${target}`;held=null;scheduleSend();sheetOpen=true;}
  else if(r&&stampsOn(placements,target).length)held=stampsOn(placements,target)[0];
  else if(phone.matches&&state?.self){openCard(target);return;}
  else return;

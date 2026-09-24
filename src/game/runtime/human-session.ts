@@ -94,6 +94,7 @@ export class HumanSession extends Session {
   if(this.period==='vote'||this.period==='actions'){super.close();return;}
   for(const [slot,p] of [...this.pending].sort(([a],[b])=>a-b)){
    const outcome=closeRequest(p),b=outcome.body;
+   this.tally(slot,p.request,outcome);
    for(const failure of outcome.failures)this.emit({kind:'failure',slot,requestKind:p.request.kind,...failure});
    if('summary' in b&&b.summary)this.emit({kind:'confessional',slot,requestKind:p.request.kind,text:b.summary});
    if(b.kind==='bid'){

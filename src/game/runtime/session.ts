@@ -1,4 +1,5 @@
-import { validSuspicion } from '../domain/scoring.js';
+import { Results } from '../../shared/results.js';
+import { validSuspicion,scoreEpisode,type ScoringInput } from '../domain/scoring.js';
 import { newD3Decks,NewD3Setup } from '../../shared/roles.js';
 import { draw } from '../domain/random.js';
 import { randomBytes } from 'node:crypto';
@@ -32,6 +33,10 @@ export class Session {
  protected dayBidWindow=0;
  protected nobleSchedule:(number|null)[]=[];
  protected counters=Array(9).fill(0) as number[];
+ /** Requests with a real decision (not an empty night), and how many of those fell back; feeds `valid_actions`. */
+ protected decisions=Array(9).fill(0) as number[];
+ protected fallbacks=Array(9).fill(0) as number[];
+ protected tally(slot:number,request:Request,outcome:{fallback:boolean}){if(request.kind==='night'&&!request.choices.length)return;this.decisions[slot]!++;if(outcome.fallback)this.fallbacks[slot]!++;}
  protected counts:Record<number,number>={};
  protected recent:Record<number,string[]>={};
  protected schedule:(number|null)[]=[];
@@ -102,6 +107,7 @@ export class Session {
  protected close(){
   const rows=[...this.pending].sort(([a],[b])=>a-b).map(([slot,p])=>({slot,request:p.request,outcome:closeRequest(p)}));
   for(const {slot,request,outcome} of rows){
+   this.tally(slot,request,outcome);
    for(const failure of outcome.failures)this.emit({kind:'failure',slot,requestKind:request.kind,...failure});
    if('summary' in outcome.body&&outcome.body.summary)this.emit({kind:'confessional',slot,requestKind:request.kind,text:outcome.body.summary});
    if(request.kind==='vote'&&request.suspicion&&outcome.body.kind==='vote'){
@@ -133,8 +139,22 @@ export class Session {
   }
  }
  protected finish(afterNight:boolean){
-  const result=finishIfNeeded(this.state,afterNight);
-  if(result){this.phase='finished';this.emit({kind:'finished',result});this.pending.clear();}
+  const base=finishIfNeeded(this.state,afterNight);
+  if(base){const result=this.score(base);this.state.result=result;this.phase='finished';this.emit({kind:'finished',result});this.pending.clear();}
+ }
+ /** Adds bonuses and metric columns to the rules' win-only result, from the journal and request tallies. */
+ private score(base:Results):Results{
+  if(base.schema!=='wcw.results/2')return base;
+  const factions=this.state.seats.map(p=>p.faction),wolf=(slot:number)=>factions[slot]==='wolf';
+  const votes:ScoringInput['votes']=[],asked:ScoringInput['asked']=[],reports:ScoringInput['reports']=[],deathDay:(number|null)[]=Array(9).fill(null);
+  for(const e of this.journal){const p=e.payload;
+   if(p.kind==='ballots'){const living=p.ballots.map(b=>b.slot),livingWolves=living.filter(wolf).length;
+    for(const b of p.ballots){votes.push({day:e.day,slot:b.slot,target:b.target,living,livingWolves});if(factions[b.slot]==='town')asked.push({day:e.day,slot:b.slot,living,livingWolves});}}
+   if(p.kind==='suspicion')reports.push({day:e.day,slot:p.slot,probs:Object.fromEntries(p.reports.map(r=>[r.slot,r.wolf]))});
+   if(p.kind==='elimination')deathDay[p.slot]=e.day;
+  }
+  const {scores,metrics}=scoreEpisode({factions,winners:base.metrics.flatMap((m,slot)=>m.win?[slot]:[]),daysCompleted:base.daysCompleted,deathDay,votes,asked,reports,requests:this.decisions,fallbacks:this.fallbacks});
+  return Results.parse({...base,scores,metrics});
  }
  protected next(boundary:number){
   if(this.stage==='day_chat'){

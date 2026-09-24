@@ -19,7 +19,7 @@ export class Session {
  readonly pending=new Map<number,Pending>();
  private readonly displayNames=new Map<number,string>();
  registerName(slot:number,name:string){
-  if(this.phase!=='waiting'||!Number.isInteger(slot)||slot<0||slot>8||this.config.mode==='human'&&slot===this.config.humanSlot)return;
+  if(this.phase!=='waiting'||!Number.isInteger(slot)||slot<0||slot>8||this.config.mode==='human'&&(this.config.humanSlots??[this.config.humanSlot]).includes(slot))return;
   const parsed=DisplayName.safeParse(name);
   if(parsed.success&&!this.displayNames.has(slot))this.displayNames.set(slot,parsed.data);
  }

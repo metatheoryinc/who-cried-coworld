@@ -20,6 +20,7 @@ export async function startServer(config:GameConfig,options:{port:number;host:st
  let resolveCompleted!:(r:Replay)=>void,rejectCompleted!:(e:unknown)=>void;
  const completion=new Promise<Replay>((yes,no)=>{resolveCompleted=yes;rejectCompleted=no;});
  const readyAt=performance.now();
+ let firstHumanAt:number|undefined;
  const nameDeadlines=new Map<number,number>();
  const authenticate=(url:URL)=>{
   const raw=url.searchParams.get('slot');if(raw===null||! /^[0-8]$/.test(raw))return null;
@@ -31,7 +32,7 @@ export async function startServer(config:GameConfig,options:{port:number;host:st
   const url=new URL(req.url??'/','http://localhost');
   if(url.pathname==='/replay.json'){if(!completed||!session.state.result){res.writeHead(409);res.end('Game is still in progress');return;}res.setHeader('Content-Type','application/json');res.end(JSON.stringify(exportReplay(session.episodeId,config.maxDays,session.journal,session.state.result)));return;}
   if(url.pathname==='/healthz'){res.setHeader('Content-Type','application/json');res.end('{"ok":true}');return;}
-  if(url.pathname==='/client/player'&&(authenticate(url)===null||(config.mode==='human'&&authenticate(url)!==config.humanSlot))){res.writeHead(401);res.end('Unauthorized');return;}
+  if(url.pathname==='/client/player'&&authenticate(url)===null){res.writeHead(401);res.end('Unauthorized');return;}
   const asset=url.pathname.replace(/^\/client\//,'/');
   const assetFile=/^\/assets\/[a-zA-Z0-9_/-]+\.(png|webp|jpg|svg)$/.test(asset)&&!asset.includes('..')?asset.slice(1):null;
   const file=assetFile??(url.pathname==='/client/player'&&config.mode==='human'?'player.html':['/player.js','/client/player.js'].includes(url.pathname)?'player.js':['/player.css','/client/player.css'].includes(url.pathname)?'player.css':['/client/player','/client/global','/client/replay','/'].includes(url.pathname)?'index.html':['/viewer.js','/client/viewer.js'].includes(url.pathname)?'viewer.js':['/style.css','/client/style.css'].includes(url.pathname)?'style.css':null);
@@ -48,7 +49,7 @@ export async function startServer(config:GameConfig,options:{port:number;host:st
   }
   for(const [slot,ws] of policies){
    const p=session.pending.get(slot);
-   if(session instanceof HumanSession&&slot===config.humanSlot){
+   if(session instanceof HumanSession&&session.isHuman(slot!)){
     const now=performance.now(),key=`${session.journal.length}:${p?.requestId}:${p?.attempt}:${!!p?.accepted}:${Math.floor(now/1000)}`;
     if(sent.get(ws)!==key){send(ws,session.snapshot(slot,now));sent.set(ws,key);}continue;
    }
@@ -62,7 +63,9 @@ export async function startServer(config:GameConfig,options:{port:number;host:st
    if(completed)return;
    const now=performance.now();
    const namesReady=[...nameDeadlines.values()].every(deadline=>now>=deadline);
-   if(session.phase==='waiting'&&(!(session instanceof HumanSession)||config.mode==='bots'||policies.has(config.humanSlot))&&namesReady&&(policies.size===9||now-readyAt>=config.player_connect_timeout_seconds*1000))session.start(now);
+   const humanReady=config.mode!=='human'||(firstHumanAt!==undefined&&(
+    (session instanceof HumanSession&&[...session.humanSlots].every(slot=>policies.has(slot)))||now-firstHumanAt>=config.player_connect_timeout_seconds*1000));
+   if(session.phase==='waiting'&&humanReady&&namesReady&&(policies.size===9||now-(firstHumanAt??readyAt)>=config.player_connect_timeout_seconds*1000))session.start(now);
    session.advance(now);flush();
    if(session.state.result){
     completed=true;if(timer)clearInterval(timer);
@@ -76,24 +79,34 @@ export async function startServer(config:GameConfig,options:{port:number;host:st
   const url=new URL(req.url??'/','http://localhost');
   const slot=authenticate(url);
   if(!['/player','/human','/global','/inspect'].includes(url.pathname)||url.pathname!=='/global'&&slot===null){socket.write('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n');socket.destroy();return;}
-  if((url.pathname==='/human'&&(!(session instanceof HumanSession)||slot!==config.humanSlot))||(['/human','/player'].includes(url.pathname)&&(policies.has(slot!)||(completed&&!(session instanceof HumanSession&&slot===config.humanSlot))))){socket.write('HTTP/1.1 409 Conflict\r\nConnection: close\r\n\r\n');socket.destroy();return;}
+  if((url.pathname==='/human'&&(!(session instanceof HumanSession)||config.mode!=='human'))||(['/human','/player'].includes(url.pathname)&&(policies.has(slot!)||(completed&&!(session instanceof HumanSession&&session.isHuman(slot!)))))){socket.write('HTTP/1.1 409 Conflict\r\nConnection: close\r\n\r\n');socket.destroy();return;}
   wss.handleUpgrade(req,socket,head,ws=>{
    ws.on('error',()=>{});
    if(url.pathname==='/player'||url.pathname==='/human'){
+    if(url.pathname==='/human'&&session instanceof HumanSession)session.registerHuman(slot!);
     policies.set(slot!,ws);
-    const naming=url.searchParams.get('registerName')==='1'&&!(config.mode==='human'&&slot===config.humanSlot);
+    if(session instanceof HumanSession&&session.isHuman(slot!))firstHumanAt??=performance.now();
+    // Let authenticated browser identification arrive before starting a full table.
+    if(config.mode==='human'&&session.phase==='waiting')nameDeadlines.set(slot!,performance.now()+1000);
+    const naming=url.searchParams.get('registerName')==='1'&&!(session instanceof HumanSession&&session.isHuman(slot!));
     if(naming&&session.phase==='waiting')nameDeadlines.set(slot!,performance.now()+2000);
     send(ws,{protocol:'wcw.player/1',type:'ready',episodeId:session.episodeId,slot,...(naming?{canRegisterName:session.phase==='waiting'}:{})});
     ws.on('message',(bytes,isBinary)=>{
+     if(session instanceof HumanSession&&config.mode==='human'&&!isBinary){
+      let raw;try{raw=JSON.parse(bytes.toString());}catch{}
+      if(raw?.protocol==='wcw.human/1'&&raw.type==='join'){
+       session.registerHuman(slot!);firstHumanAt??=performance.now();nameDeadlines.delete(slot!);sent.delete(ws);tick();flush();return;
+      }
+     }
      if(naming&&!isBinary){
       let raw;try{raw=JSON.parse(bytes.toString());}catch{}
       if(raw?.type==='register'){
        const registration=Registration.safeParse(raw);
-       if(registration.success){session.registerName(slot!,registration.data.displayName);nameDeadlines.delete(slot!);}
+       if(registration.success&&!(session instanceof HumanSession&&session.isHuman(slot!))){session.registerName(slot!,registration.data.displayName);nameDeadlines.delete(slot!);}
        return;
       }
      }
-     if(session instanceof HumanSession&&slot===config.humanSlot&&!isBinary){
+     if(session instanceof HumanSession&&session.isHuman(slot!)&&!isBinary){
       let raw;try{raw=JSON.parse(bytes.toString());}catch{}
       if(raw?.type==='chat'){const receipt=session.chat(slot!,bytes.toString(),performance.now());send(ws,{protocol:'wcw.human/1',type:'chat_receipt',id:raw.id,...receipt});if(receipt.status==='rejected'){const n=(invalid.get(ws)?.count??0)+1;invalid.set(ws,{request:'chat',count:n});if(n>=64)ws.close(1008,'Invalid traffic');}flush();return;}
      }

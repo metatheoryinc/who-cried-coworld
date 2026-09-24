@@ -36,3 +36,9 @@ body.night .player small{color:#fff1d8}
 /* The card carries the hoof stamp; its ownership label needs no second icon. */
 .vote-badge.own-vote{top:3%;right:6%;width:auto;height:auto;background:#fff0c5;border:1px solid #a77b3c;border-radius:4px;padding:4px 8px;box-shadow:0 2px 0 #77501d40}
 .vote-badge.own-vote>span{position:static;display:block;font:bold clamp(11px,1.1vw,15px)/1.2 Georgia;white-space:nowrap}
+
+/* Stack plaque + status so a wrapped status pushes the plaque up instead of overlapping it. */
+.player .card-foot{position:absolute;left:5%;right:5%;bottom:0;z-index:5;display:flex;flex-direction:column;align-items:stretch;gap:3px;pointer-events:none}
+.player .card-foot .name,.player .card-foot small{position:static;inset:auto;margin:0}
+.player .card-foot .name{margin:0 3%}
+.player .card-foot small{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;text-wrap:balance}

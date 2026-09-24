@@ -83,3 +83,22 @@ it('registers names through real clients in reverse connection order and freezes
   expect(started.payload.kind==='started'&&started.payload.roster.map(p=>p.name)).toEqual(expected);
  }finally{for(const client of clients)client.stop();await server.close();}
 },10000);
+
+it('identifies two hosted browsers on arbitrary seats and reconnects with isolated private state',async()=>{
+ const config=GameConfig.parse({...c(),mode:'human',humanSlots:[],setup:'A2',player_connect_timeout_seconds:1});
+ const server=await startServer(config,{port:0,host:'127.0.0.1'}),clients:WebSocket[]=[];
+ const connectHuman=(slot:number)=>new Promise<{ws:WebSocket;snapshot:any}>((resolve,reject)=>{
+  const ws=new WebSocket(`ws://127.0.0.1:${server.port}/player?slot=${slot}&token=t${slot}`);clients.push(ws);ws.on('error',reject);
+  ws.on('message',b=>{const p=JSON.parse(b.toString());if(p.type==='ready')ws.send(JSON.stringify({protocol:'wcw.human/1',type:'join'}));if(p.type==='snapshot'&&p.self)resolve({ws,snapshot:p});});
+ });
+ try{
+  expect((await fetch(`http://127.0.0.1:${server.port}/client/player?slot=5&token=wrong`)).status).toBe(401);
+  const [a,b]=await Promise.all([connectHuman(1),connectHuman(5)]);
+  expect(a.snapshot.self.slot).toBe(1);expect(b.snapshot.self.slot).toBe(5);
+  expect(a.snapshot.teammates.map((p:any)=>p.slot)).toEqual([1,5]);
+  expect(JSON.stringify(a.snapshot)).not.toMatch(/"tokens"|"seed"|"kind":"roles"/);
+  expect([...server.session.pending.keys()]).not.toContain(1);expect([...server.session.pending.keys()]).not.toContain(5);
+  a.ws.close();await new Promise(r=>setTimeout(r,40));
+  const rejoined=await connectHuman(1);expect(rejoined.snapshot.self).toEqual(a.snapshot.self);
+ }finally{for(const ws of clients)ws.terminate();await server.close();}
+},5000);

@@ -6,7 +6,7 @@ it('uses a moderator selection and prompt with only public context',async()=>{
  const s=make();let captured:any;
  s.moderator=async input=>{captured=input;return {slot:4,prompt:'P4, what claim needs an answer?'};};
  s.start(0);await vi.waitFor(()=>expect(s.pending.get(4)?.request).toMatchObject({kind:'bid',host:{prompt:'P4, what claim needs an answer?'}}));
- expect(Object.keys(captured).sort()).toEqual(['eligibleSlots','counts','day','humanMessage','humanSlot','recent','roster','transcript'].sort());
+ expect(Object.keys(captured).sort()).toEqual(['eligibleSlots','counts','day','humanMessage','humanSlot','humanSlots','recent','roster','transcript'].sort());
  expect(captured.roster.every((p:any)=>Object.keys(p).sort().join(',')==='alive,name,slot')).toBe(true);
  expect(s.deadline).toBe(13000);expect(s.phaseDeadline).toBe(150000);
 });

@@ -44,7 +44,7 @@ The layout and image assets are adapted from the original Discord `mafia-client`
 
 ## Protocol and verification
 
-`mode: human` reserves `humanSlot` for authenticated `/human?slot=N&token=T`; policies use `/player`. `/client/player` serves the playable page only for the reserved seat. `wcw.human/1` snapshots contain permitted state; chat carries episode ID, phase key and an idempotency ID. Actions retain the existing `wcw.player/1` binding and legal validation. Chat is limited to 480 characters, one message per two seconds, 30 messages per phase/channel.
+`mode: human` accepts authenticated human browsers at any seat. After `ready`, the browser sends `{protocol:"wcw.human/1",type:"join"}` on the supplied `/player` WebSocket. The authenticated connection determines its seat; the packet cannot choose another seat. `/human?slot=N&token=T` remains a local alias. `humanSlots` optionally reserves seats for local games; the legacy `humanSlot` is used only when that list is omitted. Hosted Play variants use an empty list and identify humans on connection. `wcw.human/1` snapshots contain permitted state; chat carries episode ID, phase key and an idempotency ID. Actions retain the existing `wcw.player/1` binding and legal validation. Chat is limited to 480 characters, one message per two seconds, 30 messages per phase/channel.
 
 Restart the launcher to use scheduler changes; an already-running game keeps its existing code.
 
@@ -222,8 +222,7 @@ authentication, chat, duplicate controllers and reconnects.
 This is proxy compatibility evidence, not a completed Softmax human episode.
 The updated game image must be published before production testing. The actual
 Softmax invitation/participation flow and proxy authorization still need end-to-end
-validation with one human plus eight policies. Do not launch the human variant as
-nine policies: seat 0 is reserved for the browser player.
+validation with multiple humans. Play variants wait for at least one human browser; use Watch variants for nine policies.
 
 ### Spectator proxy and replay lifecycle
 
@@ -246,9 +245,8 @@ server. No server keepalive or lifecycle change is needed.
 
 ## Hosted league lobby: choose the host
 
-In the next Coworld package, select `human` for **Human play · Classic host**
-or `human-llm` for **Human play · LLM host**. Both reserve seat 0 for one
-human and the remaining eight seats for policies. The host choice does not
+In the next Coworld package, select `human` for **Play · Classic host**
+or `human-llm` for **Play · LLM host**. Both support one to nine humans with policies in the remaining seats. The host choice does not
 select the opponents' models. Existing uploaded versions do not acquire these
 changes until a new package is built, certified, and uploaded.
 
@@ -262,10 +260,35 @@ uv run --project /Users/jt/projects/coworld-latest coworld lobby create \
 
 Use `--variant human` for the classic host. No moderator override is needed.
 Open the returned lobby URL and start with `coworld lobby start lby_...`.
-The host occupies seat 0 by default. Open the player view promptly: the current
-game still waits for the human to connect before starting.
+The lobby creator occupies seat 0 by default. Before starting, mark additional seats as `human_open`, share the lobby link, and have friends claim them. Leave the other seats assigned to policies. Each human opens their own player view. The game waits for the first human browser, then starts when all nine connections are present or the connection grace period expires. Late humans may join their own seats; timers continue through disconnects.
 
 The LLM variant needs the hosted model endpoint or local runtime credentials;
 failed, invalid, or timed-out moderator calls use deterministic scheduling.
 The completed replay intentionally includes postgame role and private-chat
 reveals. Human league-lobby play still needs an end-to-end hosted test.
+
+
+## Multiple humans (unpublished update)
+
+For two humans and seven AI players on this computer:
+
+```sh
+WCW_HUMAN_SLOTS=0,1 npm run play:human -- --llm
+```
+
+Open each printed seat URL in a separate browser tab/profile. The launcher saves
+all private links in `artifacts/human-*/join-urls.txt` (owner-only permissions).
+These localhost links work on the hosting computer; use a Softmax league lobby
+for friends on other computers. To test without model calls, omit `-- --llm`.
+Use `WCW_HUMAN_SLOTS=0,1,2,3,4,5,6,7,8` for an all-human table.
+
+Every human gets their own role card, known teammates, private results, chat,
+vote, and night actions. Humans may chat freely during the permitted phases;
+the moderator selects only AI speakers. Public questions from humans are queued
+for replies. Chat IDs and rate limits are scoped to each seat. A disconnect does
+not end another player's turn or extend the phase; unanswered actions use the
+existing legal fallback at the deadline. Rejoining restores the same seat.
+
+The browser identification handshake and multi-seat privacy are tested locally
+through authenticated `/player` sockets. This update has not been uploaded or
+verified in a hosted multi-human lobby yet.

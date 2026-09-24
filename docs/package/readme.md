@@ -50,22 +50,26 @@ observations list the legal abilities and targets; those choices are authoritati
 
 ## Variants and pacing
 
-- **standard — NewD3 · Nine policy players:** random setup, fresh randomness,
-  13-second speaking turns, 150-second discussion, 45-second vote, 30-second private
-  night coordination, and 45-second night-action phase. Transitions take five seconds.
-- **fast-llm — NewD3 · Fast LLM play:** random setup, fresh randomness, and fixed
-  ten-second action windows. Uses bid-ranked speakers rather than the paced moderator.
-  Choose the nine LLM policies separately when requesting an episode.
-- **human — Human play · Classic host:** the same pacing, with seat 0 reserved
-  for the browser player, eight policies, and a deterministic moderator.
-- **human-llm — Human play · LLM host:** the same seats and pacing, with an LLM
-  moderator selecting speakers. Failed, invalid, or late calls use deterministic
-  fallback. Requires hosted inference or runtime credentials.
+- **human-llm — Play · LLM host:** one to nine humans, with AI in the remaining seats.
+  An LLM selects speakers, with deterministic fallback for failed, invalid, or
+  late calls. Requires hosted inference or runtime credentials.
+- **human — Play · Classic host:** the same seats and timing,
+  with deterministic speaker selection and no model calls from the host.
+- **standard — Watch · 9 AI · Human-paced:** spectator play with nine AI seats.
+  Random NewD3 setup, 13-second speaking turns, 150-second discussion, 45-second
+  vote, 30-second private night coordination, and 45-second night actions.
+  Transitions take five seconds. Both human variants use these same timers.
+  Host selection follows runtime configuration unless overridden.
+- **fast-llm — Watch · 9 AI · Fast-paced:** spectator play with nine AI seats,
+  random NewD3 setup, fixed ten-second action windows, and bid-ranked speakers.
+- **reproducible — Test · 9 AI · Fixed setup A2:** developer fixture with human-paced
+  turns, fixed setup and seed. Model responses remain nondeterministic.
+- **smoke — Test · Scripted verification:** fast, seeded protocol and completion
+  checks with scripted policies; not an LLM timing benchmark.
 
-- **reproducible — NewD3 A2 · Reproducible fixture:** paced policy game with fixed
-  setup and seed for comparisons. Randomness is reproducible; LLM responses are not.
-- **smoke — Scripted protocol check:** fast, seeded game for package verification,
-  not an LLM performance benchmark.
+Choose AI opponent policies separately from the variant. The human LLM-host
+variant is listed first for interfaces that use manifest order as their default.
+Existing leagues with an explicit default retain that setting.
 
 Use a league lobby for hosted human play. Select either human variant directly;
 no moderator override is needed. Opponent policies are selected separately from
@@ -115,7 +119,7 @@ variant (`human`, `standard`, or `reproducible`):
 An explicit config value overrides `WCW_MODERATOR`. If omitted, the existing
 runtime setting is preserved (`auto` when that setting is absent). The same game
 image supports both choices; separate variants are not required. This setting
-changes the host only, not the models used by the eight or nine player policies.
+changes the host only, not the models used by the AI player policies.
 
 Credentials stay in the game process's runtime environment. For OpenRouter, supply
 `WCW_MODERATOR_API_KEY` (or `OPENROUTER_API_KEY`) and optionally

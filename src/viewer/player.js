@@ -10,13 +10,16 @@ const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,
 const assets=createAssetCache(),asset=assets.url;
 const art={wolf:'Role_Wolf_outline',alchemist:'Role_Alchemist_outline',track_reader:'Role_Track_reader_outline',seer:'Role_Seer_outline',guard:'Role_Guard_outline',chef:'Role_Chef_outline',dairy_maid:'Role_Dairymaid_outline',priest:'Role_Priest_outline',noble:'Role_Noble_01_outline',sheep:'Role_Villager_outline',jester:'Role_Villager_outline'};
 const descriptions={wolf:'Hide among the sheep. Coordinate with your pack and choose a killer each night.',alchemist:'A wolf with a potion: block one player and nominate your pack’s kill each night.',track_reader:'A wolf who learns roles. Sheep and ordinary Wolves both appear as vanilla.',seer:'Each night, inspect one player to learn whether they are a wolf.',guard:'Protect one other player from the wolves each night.',chef:'Jail one player each night: block their action and protect them from the kill.',dairy_maid:'Visit someone at night. They learn that you are town.',priest:'Track one player each night to see whom they actually visited.',noble:'You know your fellow Nobles are town. Coordinate in your private channel.',sheep:'Your voice and your vote are your powers. Find the wolves before they outnumber you.',jester:'Convince the village to vote you out. Dying at night does not count.'};
+const sunIcon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>',moonIcon='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>';
 const labels={discussion:'Discuss & deduce',vote:'Cast your vote',coordination:'Night whispers',actions:'Make your move',dusk:'The Night Begins…',dawn:'The Day Begins…'};
 // Stamp drafts: placements are local until the server confirms them; they count when the timer ends.
 let placements={},held=null,draftKey=null,dirty=false,saveState='idle',changeSeq=0,sentSeq=0,sendTimer;
 let state=null,ws,channel='town',lastRender='',actionKey='',remainingUntil=0,joined=false,connecting=false,ended=false,pendingChat=null;
 const params=new URLSearchParams(location.search);
 let slot=params.get('slot'),connection;
-try{connection=playerConnection(location.href);}catch{$('connection').textContent='Invalid seat link. Open your game invitation again.';$('join').disabled=true;}
+/** Connection is a status light by the clock; the full message is its label, and errors are also shown as text. */
+function setConnection(kind,label){const c=$('connection');c.hidden=kind==='idle';c.dataset.state=kind;c.title=label;c.setAttribute('aria-label',label);if(kind==='error')$('feedback').textContent=label;}
+try{connection=playerConnection(location.href);}catch{setConnection('error','Invalid seat link. Open your game invitation again.');$('join').disabled=true;}
 const storageKey=`wcw-joined:${connection?.socket??location.href}`;
 function name(slot){return state?.roster[slot]?.name??`Seat ${slot+1}`;}
 function feedback(t){$('feedback').textContent=t;}
@@ -196,7 +199,7 @@ function drawInterlude(){
   panel.className=`interlude end-screen ${wolf?'wolf-ending':'town-ending'}`;
   panel.style.backgroundImage=`url("${asset(wolf?'bg_gameover_night':'bg_gameover_day')}")`;
   panel.innerHTML=`<div class="end-content"><h2 id="interlude-title" tabindex="-1">${esc(headline)}</h2>${winners.length?`<h3>Winners</h3><div class="end-cards winners">${winners.map(card).join('')}</div>`:''}<div class="end-bottom"><section><h3>${winners.length?'The rest of the village':'The village'}</h3><div class="end-cards">${others.map(card).join('')}</div></section><div class="end-actions"><h2>The End</h2><p>${esc(connection.replayNotice)}</p><a class="primary" href="${esc(connection.replayPage)}" target="_blank" rel="noopener noreferrer">${esc(connection.replayLabel)}</a><button id="review-village">Review village</button></div></div></div>`;
-  $('review-village').onclick=()=>{resultDismissed=true;lastInterlude='';drawInterlude();$('phase').setAttribute('tabindex','-1');$('phase').focus();};
+  $('review-village').onclick=()=>{resultDismissed=true;lastInterlude='';drawInterlude();$('day').focus();};
  }
  $('interlude-title')?.focus({preventScroll:true});
 }
@@ -204,17 +207,17 @@ function render(s){state=s;if(s.self)slot=s.self.slot;syncStamps();
 ended=!!s.result;document.body.classList.toggle('lobby',s.phase==='waiting');
  remainingUntil=performance.now()+(s.phase==='waiting'?s.lobby?.startsInMs??0:s.remainingMs);
  const key=JSON.stringify([s.lobby,s.packDrafts,s.events.length,s.phase,s.period,s.observation?.requestId,s.observation?.attempt,s.accepted,s.self?.alive,s.floor?.turn]);
- if(key!==lastRender){lastRender=key;document.body.classList.toggle('night',s.phase==='night');$('day').textContent=s.phase==='waiting'?'GATHERING THE VILLAGE':`DAY ${s.day} · ${s.phase==='night'?'AFTER DARK':'THE VILLAGE'}`;$('phase').textContent=s.result?'Game over':s.phase==='waiting'?'Take your seat':labels[s.period];drawPlayers();drawRole();drawAction();drawChat();drawInterlude();drawChip();updateSheet();}
+ if(key!==lastRender){lastRender=key;document.body.classList.toggle('night',s.phase==='night');const playing=!s.result&&s.phase!=='waiting';$('day-text').textContent=s.result?'Game over':playing?`${s.phase==='night'?'Night':'Day'} ${s.day}`:'Take your seat';$('day-icon').innerHTML=playing?(s.phase==='night'?moonIcon:sunIcon):'';$('phase').textContent=s.result?'The story ends':playing?labels[s.period]:'Nine seats. Humans and AI welcome.';drawPlayers();drawRole();drawAction();drawChat();drawInterlude();drawChip();updateSheet();}
  updateClock();
 }
 function inLobby(){return !state||state.phase==='waiting';}
 function updateClock(){const n=Math.max(0,Math.ceil((remainingUntil-performance.now())/1000)),waiting=inLobby()&&state?.lobby?.startsInMs==null;$('timer').textContent=state&&!ended&&!waiting?`${Math.floor(n/60)}:${String(n%60).padStart(2,'0')}`:'—:—';$('timer').classList.toggle('urgent',!!state&&!waiting&&n<=10&&!ended);$('timer-label').textContent=ended?'Complete':inLobby()?(waiting?(joined?'Waiting for players':'Lobby open'):'Auto-start in'):state?state.period==='discussion'?'Until voting':state.period==='coordination'?'Until actions':'Time remaining':'Not started';if(!$('sheet-pill').hidden)$('sheet-pill').textContent=`${state?.observation?.request?.kind==='vote'?'Vote':'Night actions'} · ${Math.floor(n/60)}:${String(n%60).padStart(2,'0')}`;if($('transition-countdown'))$('transition-countdown').textContent=n>0?`The next phase starts in ${n}s`:'Waiting for the next phase…';}
 async function connect(){if(!connection||connecting||ws?.readyState===WebSocket.OPEN)return;connecting=true;
- $('join').disabled=true;$('chat-join').disabled=true;$('connection').textContent='Preparing village artwork…';
+ $('join').disabled=true;$('chat-join').disabled=true;setConnection('busy','Preparing village artwork…');
  try{await assets.preload([...Object.values(art),'base_rolecard_blue','base_rolecard_red','bg_gameover_day','bg_gameover_night','dead_icon_claw','dead_icon_meat']);}
- catch{connecting=false;$('join').disabled=false;$('chat-join').disabled=false;$('connection').textContent='Could not load artwork. Click Join to retry.';return;}
- joined=true;document.body.classList.add('joined');sessionStorage.setItem(storageKey,'1');$('connection').textContent='Connecting…';ws=new WebSocket(connection.socket);
- ws.onopen=()=>{connecting=false;if(dirty)setTimeout(sendDraft,300);$('connection').textContent='Connected · your seat is private';if(state)drawChat();};
+ catch{connecting=false;$('join').disabled=false;$('chat-join').disabled=false;setConnection('error','Could not load artwork. Click Join to retry.');return;}
+ joined=true;document.body.classList.add('joined');sessionStorage.setItem(storageKey,'1');setConnection('busy','Connecting…');ws=new WebSocket(connection.socket);
+ ws.onopen=()=>{connecting=false;if(dirty)setTimeout(sendDraft,300);setConnection('ok','Connected · your seat is private');if(state)drawChat();};
  ws.onmessage=e=>{let p;try{p=JSON.parse(e.data);}catch{return;}
   if(p.type==='ready'){slot=p.slot;ws.send(JSON.stringify({protocol:'wcw.human/1',type:'join'}));drawPlayers();}
   if(p.type==='snapshot')render(p);
@@ -222,8 +225,8 @@ async function connect(){if(!connection||connecting||ws?.readyState===WebSocket.
   else if(p.type==='receipt')feedback(['accepted','duplicate'].includes(p.status)?'Choice recorded.':p.status==='expired'?'The action window has closed.':`Choice rejected${p.retry?' — please try again':''}.`);
   if(p.type==='chat_receipt'&&p.id===pendingChat){pendingChat=null;if(['accepted','duplicate'].includes(p.status))$('message').value='';else feedback(p.message??'Message was not sent.');drawChat();}
  };
- ws.onclose=()=>{connecting=false;pendingChat=null;$('connection').textContent=ended?'Game complete':'Disconnected · reconnecting…';if(state)drawChat();if(joined&&!ended)setTimeout(connect,1500);};
- ws.onerror=()=>{$('connection').textContent='Connection unavailable. Check your seat link.';};
+ ws.onclose=()=>{connecting=false;pendingChat=null;setConnection(ended?'ok':'warn',ended?'Game complete':'Disconnected · reconnecting…');if(state)drawChat();if(joined&&!ended)setTimeout(connect,1500);};
+ ws.onerror=()=>setConnection('error','Connection unavailable. Check your seat link.');
 }
 $('join').onclick=connect;$('chat-join').onclick=connect;
 $('chat-form').onsubmit=e=>{e.preventDefault();const text=$('message').value.trim();if(!text||!state||ws?.readyState!==WebSocket.OPEN||pendingChat)return;pendingChat=`chat_${crypto.randomUUID().replaceAll('-','')}`;ws.send(JSON.stringify({protocol:'wcw.human/1',type:'chat',episodeId:state.episodeId,id:pendingChat,phaseKey:state.phaseKey,channel,text}));$('send').disabled=true;};

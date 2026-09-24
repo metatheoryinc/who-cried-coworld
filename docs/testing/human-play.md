@@ -290,5 +290,6 @@ not end another player's turn or extend the phase; unanswered actions use the
 existing legal fallback at the deadline. Rejoining restores the same seat.
 
 The browser identification handshake and multi-seat privacy are tested locally
-through authenticated `/player` sockets. This update has not been uploaded or
+through authenticated `/player` sockets, and a manual local multi-human game
+completed successfully on 2026-09-24. This update has not been uploaded or
 verified in a hosted multi-human lobby yet.

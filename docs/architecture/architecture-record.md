@@ -29,6 +29,8 @@ the hosted lobby workflow.
 | Seer resolution and death | Killed before inspection: server-only actor_dead evidence; living blocked Seer: bare private no_result | Accepted Manager revision | Supersedes earlier killed-Seer private no_result instruction |
 | Seat identity | Trusted config assigns public character or neutral presentation independently of occupying policy and secret role | Accepted Manager decision | Replaces name-based persona/provenance inference |
 | Protocol | Strict `wcw.player/1`, `wcw.events/1`, `wcw.replay/1` | Proposed technical design | No backward compatibility obligation to source protocols |
+| Human seats | Per-seat token authenticates any number of human browsers; `humanSlots` set drives scheduling | Accepted (2026-09-24) | Supersedes single `humanSlot`; v1 contract deferred mixed seats |
+| Floor host | Deterministic host by default; optional LLM host over public information with deterministic fallback | Accepted (2026-09-22) | Supersedes “deterministic narration for v1” in Policy/runtime |
 
 Exact design: [Who Cried Wolf Coworld system and protocol](../plans/2026-09-15-who-cried-wolf-coworld-design.md).
 Historical context: [port assessment](../plans/2026-09-14-who-cried-wolf-coworld-assessment.md). Its effort estimate and proposals are historical evidence, not an additional governing design.
@@ -45,7 +47,7 @@ Historical context: [port assessment](../plans/2026-09-14-who-cried-wolf-coworld
 
 **Context:** The benchmark owns all model calls centrally; Coworld's improvement loop substitutes policies per seat.
 
-**Decision:** The game validates typed requests/responses and arbitrates the floor; each policy owns its provider, prompts, personality, retries, and local memory. The baseline is replaceable through the same protocol. No model can mutate game state, interpret an invalid action into legality, or control phase progression. Use deterministic narration for v1; an optional model host would add cost without an accepted need.
+**Decision:** The game validates typed requests/responses and arbitrates the floor; each policy owns its provider, prompts, personality, retries, and local memory. The baseline is replaceable through the same protocol. No model can mutate game state, interpret an invalid action into legality, or control phase progression. Use deterministic narration for v1; an optional model host would add cost without an accepted need. *(Superseded for human-paced play by [Human seats and floor host](#human-seats-and-floor-host).)*
 
 **Tradeoff:** A slightly larger protocol buys independent policy authorship and attribution. No game import of provider packages, source workspace dependencies, or submitted policy images. Coworld owns pod scheduling and infrastructure failures, which game fallbacks cannot repair.
 
@@ -84,6 +86,16 @@ Resolve Alchemist blocks first; remove blocked actors' kill nominations before t
 **Reasoning and consequences:** A character is public role-play copy assigned to a seat/variant, independent of secret role assignment. It says nothing about the occupying policy package, model, or provider; external policies can occupy character seats unchanged. Neither a display-name match nor self-report establishes identity/provenance. Character IDs may select bundled visual assets; no dynamic URLs or name-keyed persona catalogue is needed. Neutral presentation is the default, not a claim that a policy was externally submitted. The show policy may use the configured persona as context; game rules and policy replaceability remain unchanged.
 
 Exact variant validation and bounds live in the system design's player primitive and config sections. This explicitly replaces the prototype's earlier bundled/submitted axis and name-based persona lookup.
+
+## Human seats and floor host
+
+**Context:** The v1 contract deferred mixed human and AI seats and assumed deterministic narration. Human-paced play shipped first with one reserved `humanSlot`, then an optional LLM moderator, then multiple humans.
+
+**Decision (2026-09-24):** In `mode: human`, a seat becomes human when its authenticated browser connects to `/human` or sends `wcw.human/1` `join`. The per-seat token is the only identity proof; the packet cannot name another seat. `HumanSession.humanSlots` is the single runtime source of which seats are human. Optional `humanSlots` config reserves seats for local games; hosted variants pass an empty list and discover humans on connection. The game starts when every known human is connected, or after `player_connect_timeout_seconds` from the first human connection. A human who arrives late takes over the seat's pending action window; any pending bot speech request is dropped.
+
+The floor host never selects a human seat. The LLM host (`moderator: llm`) receives only public roster, counts, and transcript, and its choice is validated against eligibility, the name-prefix rule, and the no-third-repeat rule. Any invalid, late, or failed call falls back to the deterministic host. The host never touches rules or results.
+
+**Compatibility:** The legacy `humanSlot` config field and moderator-input field remain because the Coworld manifest publishes the field and the certified LLM moderator sees its input as JSON. Removing it is a versioned change: regenerate the manifest and re-certify the moderator.
 
 ## Open reconciliation
 

@@ -66,7 +66,14 @@ v1 is complete only when:
 ## Deferred
 
 - Full Tofu role parity
-- Mixed human and AI seats
+- ~~Mixed human and AI seats~~ — delivered after v1; see [Post-v1 additions](#post-v1-additions)
 - Public hosted live theater or producer controls
 - Richer competitive scoring
 - Unverified Tofu asset-tree reuse
+
+## Post-v1 additions
+
+These extend the accepted v1 scope. They do not change the v1 acceptance criteria above.
+
+- **Mixed human and AI seats (2026-09-24).** `mode: human` accepts one to nine authenticated human browsers; policies fill the remaining seats. Each seat's token determines its identity. Humans receive the same projected observations and legal actions as policies. Verified locally; hosted multi-human lobby play is not yet verified.
+- **Optional LLM floor moderator (2026-09-22).** Human-paced variants offer a classic deterministic host (`human`) or an LLM host (`human-llm`). The LLM host sees only public information, chooses only eligible non-human speakers, and falls back to the deterministic host on any failure. It never affects rules, legality, or results.

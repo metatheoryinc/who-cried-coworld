@@ -43,7 +43,7 @@ body.night .player small{color:#fff1d8}
 .player .card-foot .name{margin:0 3%}
 .player .card-foot small{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;text-wrap:balance}
 /* Frame fit: the gold frame in bg_day/bg_night ends at ~78% of the viewport height; keep the board and chat inside it. */
-@media(min-width:761px){:root{--head:140px}main{height:calc(77.5dvh - var(--head) - 6px);min-height:300px}}
+@media(min-width:761px){:root{--head:140px}main{height:calc(100dvh - var(--head) - var(--frame-bottom) - 12px);min-height:300px}}
 @media(min-width:761px) and (max-height:760px){:root{--head:88px}body{padding-top:14px}header{height:64px;margin-bottom:10px}.logo{width:98px;height:64px}h1{font-size:23px;margin:1px 0 2px}.eyebrow{font-size:9px}.clock{min-width:104px;padding:8px 10px 6px}.clock>span{font-size:22px}.clock small{margin-top:2px}.chat-heading{padding:12px 16px 8px}#channels{padding-bottom:9px}.empty{padding:18px 5px}}
 /* Mid widths: two rows of compact seats so the action panel stays in view. */
 @media(min-width:761px) and (max-width:1100px){.players{grid-template-columns:repeat(5,minmax(0,1fr));min-height:0;gap:4px}.player{height:clamp(84px,16dvh,150px);max-height:none;width:auto;aspect-ratio:1/1.07;justify-self:center;max-width:100%}.player .name{font-size:11px;padding:2px}}
@@ -71,7 +71,7 @@ body.lobby .action-panel p{margin:4px 0}
  @media(max-width:1100px){body{padding:calc(15px + env(safe-area-inset-top)) max(3vw,env(safe-area-inset-right)) calc(15px + env(safe-area-inset-bottom)) max(3vw,env(safe-area-inset-left))}}
  @media(max-width:760px){body{padding:calc(12px + env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}}
  @media(min-width:761px) and (max-height:760px){body{padding-top:calc(14px + env(safe-area-inset-top))}}
- @media(min-width:761px){main{height:calc(77.5dvh - var(--head) - 6px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}}
+ @media(min-width:761px){main{height:calc(100dvh - var(--head) - var(--frame-bottom) - 12px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}}
  .interlude{padding:calc(12px + env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
  .interlude.end-screen{padding:calc(24px + env(safe-area-inset-top)) max(5vw,env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(5vw,env(safe-area-inset-left))}
  @media(max-width:760px){.interlude.end-screen{padding:calc(22px + env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) calc(22px + env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left))}}
@@ -294,3 +294,12 @@ body.holding{cursor:var(--stamp-cursor,default)}
 .chat-panel.private #message{border-color:var(--chan);box-shadow:0 0 0 1px var(--chan);background:#fff1ea}
 .chat-panel.private .compose-footer button{background:var(--chan);border-color:var(--chan);color:#fff}
 .chat-panel.private .compose-footer button:disabled{background:#4d3c2d;border-color:#6b5540;color:#a8957c}
+/* Expandable frame: the painting is 9-sliced so corners keep their ornaments, edges stretch, and the scene fills.
+   Slices are image pixels (1920x1160 crop); --u scales them to the window. The wood table is a thin band below. */
+:root{--u:clamp(.36px,calc(100vw / 1920),.8px);--wood:clamp(34px,5.5dvh,64px);--frame-bottom:calc(var(--wood) + 43 * var(--u))}
+.frame{display:none}
+@media(min-width:761px){
+ body,body.night{position:relative;z-index:0;background:#ecdcc0 url('assets/play/table.png') center bottom/100% var(--wood) no-repeat fixed}
+ .frame{display:block;position:fixed;inset:0 0 var(--wood) 0;z-index:-1;border-style:solid;border-color:transparent;border-width:calc(160 * var(--u)) calc(175 * var(--u)) calc(150 * var(--u));border-image:url('assets/play/frame_day.png') 160 175 150 fill / calc(160 * var(--u)) calc(175 * var(--u)) calc(150 * var(--u)) stretch}
+ .night .frame{border-image-source:url('assets/play/frame_night.png')}
+}

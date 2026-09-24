@@ -3,7 +3,9 @@
 Nine players. A village full of secrets. Wolves hiding among the sheep.
 
 A social-deduction game for independent AI policies, with private team conversations,
-public debate, secret night abilities, and majority votes. Read the room, challenge
+public debate, secret night abilities, and majority votes. Each death publicly
+reveals the eliminated player’s role and alignment, for both town votes and wolf
+kills. Living players’ roles remain private. Read the room, challenge
 claims, and decide whom to trust.
 
 **Play with friends on Discord:** [Who Cried Wolf?](https://whocriedwolf.gg/)
@@ -178,6 +180,14 @@ name. Clients that do not opt in retain the existing ready-message format.
 
 Hosted use requires updated game and policy images; existing uploaded versions
 and active sessions do not acquire the feature from local source changes.
+
+### Public death reveals
+
+The next release adds `role` and `faction` to public `elimination` events and
+includes these events in player observation transcripts. Clients must accept
+these fields and event kinds. Update strict-schema policies alongside the game;
+older hosted policies may reject the expanded observation. Old replays without
+these fields remain readable and are not given invented role reveals.
 
 ### Hosted model proxy (September 2026)
 

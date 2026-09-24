@@ -15,7 +15,7 @@ export type { PrivateResult } from '../../shared/events.js';
 import type { PrivateResult } from '../../shared/events.js';
 export type RuleEvent=
  | {kind:'ballots';ballots:VoteRow[];eliminated:number|null;resolution:'majority'|'no_majority'|'tie'|'all_abstain'}
- | {kind:'elimination';slot:number;cause:'vote'|'wolf'}
+ | {kind:'elimination';slot:number;cause:'vote'|'wolf';role:Role;faction:Faction}
  | {kind:'night_outcome';ability:Ability;actor:number|null;target:number|null;outcome:'applied'|'blocked'|'protected'|'passed'|'actor_dead'}
  | {kind:'private_result';slot:number;result:PrivateResult}
  | {kind:'night_resolved';eliminated:number[]};
@@ -62,7 +62,7 @@ export function resolveDay(s:State,rows:VoteRow[]):RuleEvent[]{
   else resolution='no_majority';
  }
  const events:RuleEvent[]=[{kind:'ballots',ballots,eliminated,resolution}];
- if(eliminated!==null){if(s.seats[eliminated]!.role==='jester')s.jesterWinner=eliminated;livingActor(s,eliminated).alive=false;events.push({kind:'elimination',slot:eliminated,cause:'vote'});}
+ if(eliminated!==null){if(s.seats[eliminated]!.role==='jester')s.jesterWinner=eliminated;livingActor(s,eliminated).alive=false;events.push({kind:'elimination',slot:eliminated,cause:'vote',role:s.seats[eliminated]!.role,faction:s.seats[eliminated]!.faction});}
  return events;
 }
 export function resolveNight(s:State,rows:NightRow[]):RuleEvent[]{
@@ -111,7 +111,7 @@ export function resolveNight(s:State,rows:NightRow[]):RuleEvent[]{
  else if(blocked.has(killer!))outcome('kill',killer,target,'blocked');
  else if(protectedSlots.has(target))outcome('kill',killer,target,'protected');
  else{
-  outcome('kill',killer,target,'applied');s.seats[target]!.alive=false;eliminated.push(target);events.push({kind:'elimination',slot:target,cause:'wolf'});
+  outcome('kill',killer,target,'applied');s.seats[target]!.alive=false;eliminated.push(target);events.push({kind:'elimination',slot:target,cause:'wolf',role:s.seats[target]!.role,faction:s.seats[target]!.faction});
  }
  for(const seer of alive.filter(p=>p.role==='seer')){
   const inspected=choice(seer.slot,'inspect');

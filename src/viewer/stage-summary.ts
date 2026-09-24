@@ -1,11 +1,16 @@
+import {roleNames} from '../shared/roles.js';
 import type { Payload } from '../shared/events.js';
 type VisibleEvent={day:number;payload:Payload};
 export function deathCause(events:VisibleEvent[],slot:number){
  const event=events.find(e=>e.payload.kind==='elimination'&&e.payload.slot===slot)?.payload;
  return event?.kind==='elimination'?event.cause:null;
 }
+export function deathReveal(events:VisibleEvent[],slot:number){
+ const p=events.find(e=>e.payload.kind==='elimination'&&e.payload.slot===slot)?.payload;
+ return p?.kind==='elimination'&&p.role&&p.faction?`${roleNames[p.role]} · ${p.faction==='wolf'?'Wolves':p.faction==='town'?'Town':'Independent'}`:null;
+}
 export function stageSummary(s:{period:string;day:number;events:VisibleEvent[];roster:{name:string}[]}){
- const name=(slot:number)=>s.roster[slot]?.name??`Seat ${slot+1}`;
+ const name=(slot:number)=>{const n=s.roster[slot]?.name??`Seat ${slot+1}`,reveal=deathReveal(s.events,slot);return reveal?`${n} (${reveal})`:n;};
  if(s.period==='dusk'){
   const p=s.events.filter(e=>e.day===s.day&&e.payload.kind==='ballots').at(-1)?.payload;
   const target=p?.kind==='ballots'?p.eliminated:null;

@@ -50,3 +50,10 @@ it('retains direct replay links for local games and avoids lookalike domains',()
  expect(c.replayLabel).toBe('Watch replay');
  expect(playerConnection('https://softmax.com.example/client/player?slot=0&token=test').replayLabel).toBe('Watch replay');
 });
+it('recognizes the Observatory research proxy at game end',()=>{
+ const c=playerConnection('https://api.observatory.softmax-research.net/v2/coworlds/jobs/job/proxy/client/player?slot=0&token=private');
+ expect(c.replayLabel).toBe('Open Softmax');
+ expect(c.replayPage).toBe('https://softmax.com/observatory/v2');
+ expect(c.replayNotice).not.toContain('local host');
+ expect(playerConnection('https://softmax-research.net.example/client/player').replayLabel).toBe('Watch replay');
+});

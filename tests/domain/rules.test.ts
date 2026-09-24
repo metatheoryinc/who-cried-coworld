@@ -22,10 +22,10 @@ describe('role menus',()=>{
  });
 });
 describe('majority vote',()=>{
- it('eliminates only at strict majority and keeps public death role-free',()=>{
+ it('eliminates only at strict majority and publicly reveals the eliminated role',()=>{
   const s=setup(); const ev=resolveDay(s,s.seats.map((p,i)=>({slot:p.slot,target:i<5?4:null})));
   expect(s.seats[4]!.alive).toBe(false);
-  expect(ev).toContainEqual({kind:'elimination',slot:4,cause:'vote'});
+  expect(ev).toContainEqual({kind:'elimination',slot:4,cause:'vote',role:s.seats[4]!.role,faction:s.seats[4]!.faction});
   expect(ev[0]).toMatchObject({kind:'ballots',resolution:'majority',eliminated:4});
  });
  it.each([[[4,4,4,4,5,5,5,null,null],'no_majority'],[[4,4,4,4,5,5,5,5,null],'tie'],[Array(9).fill(null),'all_abstain']] as const)('classifies non-eliminating votes', (targets,resolution)=>{

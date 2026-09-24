@@ -1,10 +1,11 @@
+import {createAssetCache} from './asset-cache.js';
 import { playerConnection } from './connection.js';
 import { knownRole } from './known-role.js';
-import { deathCause,stageSummary } from './stage-summary.js';
+import { deathCause,deathReveal,stageSummary } from './stage-summary.js';
 import { voteMarks } from './vote-marks.js';
 import { roleNames,newD3Decks } from '../shared/roles.js';
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const asset=name=>`assets/play/${name}.png`;
+const assets=createAssetCache(),asset=assets.url;
 const art={wolf:'Role_Wolf_outline',alchemist:'Role_Alchemist_outline',track_reader:'Role_Track_reader_outline',seer:'Role_Seer_outline',guard:'Role_Guard_outline',chef:'Role_Chef_outline',dairy_maid:'Role_Dairymaid_outline',priest:'Role_Priest_outline',noble:'Role_Noble_01_outline',sheep:'Role_Villager_outline',jester:'Role_Villager_outline'};
 const descriptions={wolf:'Hide among the sheep. Coordinate with your pack and choose a killer each night.',alchemist:'A wolf with a potion: block one player and nominate your pack’s kill each night.',track_reader:'A wolf who learns roles. Sheep and ordinary Wolves both appear as vanilla.',seer:'Each night, inspect one player to learn whether they are a wolf.',guard:'Protect one other player from the wolves each night.',chef:'Jail one player each night: block their action and protect them from the kill.',dairy_maid:'Visit someone at night. They learn that you are town.',priest:'Track one player each night to see whom they actually visited.',noble:'You know your fellow Nobles are town. Coordinate in your private channel.',sheep:'Your voice and your vote are your powers. Find the wolves before they outnumber you.',jester:'Convince the village to vote you out. Dying at night does not count.'};
 const labels={discussion:'Discuss & deduce',vote:'Cast your vote',coordination:'Night whispers',actions:'Make your move',dusk:'The Night Begins…',dawn:'The Day Begins…'};
@@ -21,7 +22,8 @@ function drawPlayers(){
  $('players').innerHTML=roster.map(p=>{
   const known=knownRole(state,p.slot),you=state?.self?.slot===p.slot;
   const cause=deathCause(state?.events??[],p.slot);
-  const tag=!p.alive?(cause==='wolf'?'Killed by wolves':cause==='vote'?'Eliminated by town':'Eliminated'):you?`${roleNames[state.self.role]} · You`:known?roleNames[known]:'Role unknown';
+  const status=!p.alive?(cause==='wolf'?'Killed by wolves':cause==='vote'?'Eliminated by town':'Eliminated'):you?`${roleNames[state.self.role]} · You`:known?roleNames[known]:'Role unknown';
+  const tag=!p.alive&&deathReveal(state?.events??[],p.slot)?`${deathReveal(state.events,p.slot)} · ${status}`:status;
   const votes=voteMarks(state,p.slot);
   const positions=[[34,32,-24],[53,43,23],[29,52,-8],[51,23,38],[43,60,-32],[20,34,12],[62,56,18],[22,63,-20],[63,27,30]];
   const stamps=positions.slice(0,p.alive?votes.count:0).map(([x,y,angle])=>`<img class="vote-stamp" src="${asset('vote_banner_town_hoof')}" alt="" style="--x:${x}%;--y:${y}%;--angle:${angle}deg">`).join('');
@@ -74,8 +76,8 @@ function drawRole(){
  bindSetup();
  const notes=state.events.flatMap(e=>{const p=e.payload;
   if(p.kind==='private_result'){const r=p.result,result=Array.isArray(r.result)?(r.result.length?r.result.map(name).join(', '):'no visits'):r.result==='no_result'?'No result (your action was blocked)':r.result==='not_wolf'?'Not a wolf':roleNames[r.result]??r.result;return [`Night ${r.day} · ${name(r.target)}: ${result}`];}
-  if(p.kind==='ballots')return [`Day ${e.day} vote · ${p.eliminated===null?'No elimination':`${name(p.eliminated)} eliminated`}. ${p.ballots.map(v=>`${name(v.slot)} → ${v.target===null?'Pass':name(v.target)}`).join('; ')}`];
-  if(p.kind==='night_resolved')return [`Night ${e.day} · ${p.eliminated.length?p.eliminated.map(name).join(', ')+' died.':'Everyone survived.'}`];return [];
+  if(p.kind==='ballots')return [`Day ${e.day} vote · ${p.eliminated===null?'No elimination':`${name(p.eliminated)} eliminated${deathReveal(state.events,p.eliminated)?` (${deathReveal(state.events,p.eliminated)})`:''}`}. ${p.ballots.map(v=>`${name(v.slot)} → ${v.target===null?'Pass':name(v.target)}`).join('; ')}`];
+  if(p.kind==='night_resolved')return [`Night ${e.day} · ${p.eliminated.length?p.eliminated.map(slot=>`${name(slot)}${deathReveal(state.events,slot)?` (${deathReveal(state.events,slot)})`:''}`).join(', ')+' died.':'Everyone survived.'}`];return [];
  });
  $('journal').innerHTML=notes.length?notes.map(n=>`<p>${esc(n)}</p>`).join(''):'<p>Your private discoveries and voting history will appear here.</p>';
 }
@@ -105,7 +107,7 @@ function drawInterlude(){
  const key=state.result?'finished':`${state.day}:${state.period}`;
  if(key===lastInterlude)return;lastInterlude=key;
  if(summary){
-  panel.className='interlude';
+  panel.className='interlude';panel.style.backgroundImage='';
   panel.innerHTML=`<div class="transition-card"><div class="transition-art"><img src="${asset('tscreen_base')}" alt=""><img src="${asset(summary.art)}" alt=""><img src="${asset('tscreen_frame')}" alt=""></div><div class="transition-copy"><h2 id="interlude-title" tabindex="-1">${esc(summary.title)}</h2><p>${esc(summary.description)}</p><small id="transition-countdown"></small></div></div>`;
  }else{
   const result=state.result,wolf=result.outcome==='wolf_win';
@@ -115,6 +117,7 @@ function drawInterlude(){
   };
   const winners=state.roster.filter(p=>result.scores[p.slot]===1),others=state.roster.filter(p=>result.scores[p.slot]!==1);
   panel.className=`interlude end-screen ${wolf?'wolf-ending':'town-ending'}`;
+  panel.style.backgroundImage=`url("${asset(wolf?'bg_gameover_night':'bg_gameover_day')}")`;
   panel.innerHTML=`<div class="end-content"><h2 id="interlude-title" tabindex="-1">${esc(headline)}</h2>${winners.length?`<h3>Winners</h3><div class="end-cards winners">${winners.map(card).join('')}</div>`:''}<div class="end-bottom"><section><h3>${winners.length?'The rest of the village':'The village'}</h3><div class="end-cards">${others.map(card).join('')}</div></section><div class="end-actions"><h2>The End</h2><p>${esc(connection.replayNotice)}</p><a class="primary" href="${esc(connection.replayPage)}" target="_blank" rel="noopener noreferrer">${esc(connection.replayLabel)}</a><button id="review-village">Review village</button></div></div></div>`;
   $('review-village').onclick=()=>{resultDismissed=true;lastInterlude='';drawInterlude();$('phase').setAttribute('tabindex','-1');$('phase').focus();};
  }
@@ -126,7 +129,11 @@ remainingUntil=performance.now()+s.remainingMs;ended=!!s.result;const key=JSON.s
  updateClock();
 }
 function updateClock(){const n=Math.max(0,Math.ceil((remainingUntil-performance.now())/1000));$('timer').textContent=state&&!ended?`${Math.floor(n/60)}:${String(n%60).padStart(2,'0')}`:'—:—';$('timer').classList.toggle('urgent',!!state&&n<=10&&!ended);$('timer-label').textContent=ended?'Complete':state?state.period==='discussion'?'Until voting':state.period==='coordination'?'Until actions':'Time remaining':'Not started';if($('transition-countdown'))$('transition-countdown').textContent=n>0?`The next phase starts in ${n}s`:'Waiting for the next phase…';}
-function connect(){if(!connection||connecting||ws?.readyState===WebSocket.OPEN)return;connecting=true;joined=true;sessionStorage.setItem(storageKey,'1');$('connection').textContent='Connecting…';ws=new WebSocket(connection.socket);
+async function connect(){if(!connection||connecting||ws?.readyState===WebSocket.OPEN)return;connecting=true;
+ $('join').disabled=true;$('connection').textContent='Preparing village artwork…';
+ try{await assets.preload([...Object.values(art),'base_rolecard_blue','base_rolecard_red','bg_gameover_day','bg_gameover_night','dead_icon_claw','dead_icon_meat']);}
+ catch{connecting=false;$('join').disabled=false;$('connection').textContent='Could not load artwork. Click Join to retry.';return;}
+ joined=true;sessionStorage.setItem(storageKey,'1');$('connection').textContent='Connecting…';ws=new WebSocket(connection.socket);
  ws.onopen=()=>{connecting=false;$('connection').textContent='Connected · your seat is private';if(state)drawChat();};
  ws.onmessage=e=>{let p;try{p=JSON.parse(e.data);}catch{return;}
   if(p.type==='ready'){slot=p.slot;drawPlayers();}

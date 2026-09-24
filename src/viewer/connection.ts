@@ -22,7 +22,7 @@ export function playerConnection(href:string){
  const root=new URL(page.href);root.pathname=root.pathname.replace(/\/client\/player\/?$/,'/');root.search='';root.hash='';
  const replay=new URL('replay.json',root).href;
  const replayPage=new URL('client/replay',root);replayPage.searchParams.set('replay',replay);
- const hosted=[page,new URL(socket)].some(url=>url.hostname==='softmax.com'||url.hostname.endsWith('.softmax.com'));
+ const hosted=[page,new URL(socket)].some(url=>['softmax.com','softmax-research.net'].some(host=>url.hostname===host||url.hostname.endsWith('.'+host)));
  return {socket,replay,replayPage:hosted?'https://softmax.com/observatory/v2':replayPage.href,
   replayLabel:hosted?'Open Softmax':'Watch replay',
   replayNotice:hosted?'Your replay will be available on Softmax after the episode finishes processing. Open your completed game in the Observatory and select its replay.':'The completed replay is saved by the local host.'};

@@ -37,7 +37,7 @@ export const Payload=z.discriminatedUnion('kind',[
  z.object({kind:z.literal('night_choices'),slot:Slot,actions:z.array(NightChoice).max(2)}).strict(),
  z.object({kind:z.literal('night_outcome'),ability:Ability,actor:Slot.nullable(),target:Slot.nullable(),outcome:z.enum(['applied','blocked','protected','passed','actor_dead'])}).strict().refine(p=>p.ability==='kill'||p.actor!==null),
  z.object({kind:z.literal('private_result'),slot:Slot,result:PrivateResult}).strict(),
- z.object({kind:z.literal('elimination'),slot:Slot,cause:z.enum(['vote','wolf'])}).strict(),
+ z.object({kind:z.literal('elimination'),slot:Slot,cause:z.enum(['vote','wolf']),role:Role.optional(),faction:Faction.optional()}).strict().refine(p=>(p.role===undefined&&p.faction===undefined)||(p.role!==undefined&&p.faction===factionOf(p.role)),'Invalid death reveal'),
  z.object({kind:z.literal('night_resolved'),eliminated:z.array(Slot).max(9).refine(sortedSlots)}).strict(),
  z.object({kind:z.literal('failure'),slot:Slot,requestKind:RequestKind,code:Code,source:z.enum(['game','policy_report']),disposition:z.enum(['retry','fallback']),attempt:z.number().int().min(0).max(2)}).strict(),
  z.object({kind:z.literal('finished'),result:Results}).strict(),

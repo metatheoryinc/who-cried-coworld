@@ -4,6 +4,7 @@ import { foldPhaseBanners } from './phase-banners.js';
 import { Replay } from '../shared/replay.js';
 import { ViewerPacket } from '../shared/events.js';
 import { decodeText } from '../shared/decode.js';
+import {deathReveal} from './stage-summary.js';
 import { roleNames } from '../shared/roles.js';
 const params = new URLSearchParams(location.search);
 const isSeatInspector=/\/client\/player\/?$/.test(location.pathname);
@@ -120,7 +121,12 @@ function rolesKnown(evs) {
   if (state.source === 'replay' && state.reveal === 'omniscient') return true;
   return evs.some(e => e.payload.kind === 'finished');
 }
+function publicRole(n) {
+  return shown().find(e=>e.payload.kind==='elimination'&&e.payload.slot===n&&e.payload.role)?.payload??null;
+}
+function revealedName(n) {const role=deathReveal(shown(),n);return nameOf(n)+(role?` (${role})`:'');}
 function roleOf(n) {
+  if(publicRole(n))return publicRole(n);
   const ev = findKind('roles');
   const row = ev && ev.payload.roles.find(r => r.slot === n);
   return row || null;
@@ -181,7 +187,7 @@ function renderSeats(m) {
     else st = 'In the fold';   /* the rail carries no presentation class at all */
 
     const tail = [];
-    if (m.roles) tail.push(roleBadge(n));
+    if (m.roles || publicRole(n)) tail.push(roleBadge(n));
     else if (m.accused[n] > 0) tail.push(`<span class="badge" data-tone="quiet">${m.accused[n]}&times; named</span>`);
 
     const pres = presentationOf(n);
@@ -189,7 +195,7 @@ function renderSeats(m) {
       ? `<p class="persona">${esc(pres.persona)}</p>
          <p class="caveat">A character the game assigned to this seat. Not a claim about which policy plays it.</p>`
       : `<p>No character is configured for this seat. It is known by its display name and seat number, and nothing else.</p>`;
-    const r = m.roles ? roleOf(n) : null;
+    const r = m.roles || publicRole(n) ? roleOf(n) : null;
 
     return `<li><details class="seat" data-slot="${n}" ${openSeats.has(String(n)) ? 'open' : ''} data-alive="${!gone}" data-speaking="${m.speaking === n && !gone}">
       <summary>
@@ -229,7 +235,7 @@ function transitionBeat(e, all) {
     file = voteDeath ? 'tscreen_day_death.png' : 'tscreen_day_nodeath.png';
     title = 'The Night Begins...';
     copy = voteDeath
-      ? `${nameOf(voteDeath.payload.slot)} was voted out of the fold.`
+      ? `${revealedName(voteDeath.payload.slot)} was voted out of the fold.`
       : 'No one reached a majority. The village turns in for the night.';
   } else if (p.day === 1) {
     file = 'tscreen_first_day.png';
@@ -242,7 +248,7 @@ function transitionBeat(e, all) {
     file = lost.length ? 'tscreen_night_death.png' : 'tscreen_night_nodeath.png';
     title = 'The Day Begins...';
     copy = lost.length
-      ? `${lost.map(nameOf).join(' and ')} did not survive the night.`
+      ? `${lost.map(revealedName).join(' and ')} did not survive the night.`
       : 'Morning reaches the village. Everyone is still in the fold.';
   }
 
@@ -311,13 +317,13 @@ function tallyBeat(e) {
 
 function knell(slots, cause, rolesShown) {
   if (!slots.length) return '<article class="beat knell" data-cause="night"><span class="txt">Everyone made it through the night. No one was lost.</span></article>';
-  const who = slots.map(nameOf).map(esc).map(n => `<b>${n}</b>`).join(' and ');
+  const who = slots.map(revealedName).map(esc).map(n => `<b>${n}</b>`).join(' and ');
   const txt = cause === 'wolf'
     ? `At first light, ${who} ${slots.length === 1 ? 'was' : 'were'} gone.`
     : `${who} was voted out of the fold.`;
   return `<article class="beat knell" data-cause="${cause === 'wolf' ? 'night' : 'vote'}">
     <span class="glyph" aria-hidden="true">${cause === 'wolf' ? '&#9790;' : '&#10005;'}</span>
-    <span class="txt">${txt}${rolesShown ? '' : ' <span style="color:var(--text-faint)">Their role stays secret until the episode ends.</span>'}</span>
+    <span class="txt">${txt}</span>
   </article>`;
 }
 

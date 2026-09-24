@@ -6,6 +6,8 @@ export function knownRole(s:{self:{slot:number;role:Role}|null;teammates:{slot:n
  if(s.self?.slot===slot)return s.self.role;
  const teammate=s.teammates.find(t=>t.slot===slot);if(teammate)return teammate.role;
  if(s.result){const revealed=s.revealedRoles?.find(t=>t.slot===slot);if(revealed)return revealed.role;}
+ const death=s.events.find(e=>e.payload.kind==='elimination'&&e.payload.slot===slot)?.payload;
+ if(death?.kind==='elimination'&&death.role)return death.role;
  for(const e of s.events){
   if(e.payload.kind!=='private_result'||e.payload.slot!==s.self?.slot)continue;
   const r=e.payload.result;if(r.target!==slot)continue;

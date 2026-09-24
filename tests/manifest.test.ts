@@ -19,3 +19,9 @@ it('publishes fast LLM play with fresh randomness and ten-second windows',()=>{
  expect(config).toMatchObject({mode:'fast',setup:'random',maxDays:8,windowMs:10000});
  expect(config).not.toHaveProperty('seed');
 });
+
+it('gives human lobbies a five-minute wait inside a sixty-minute episode',()=>{
+ expect(manifest.episode_timeout_minutes).toBe(60);
+ for(const id of ['human','human-llm']){const config=manifest.variants.find(v=>v.id===id)!.game_config;
+  expect(config).toMatchObject({mode:'human',player_connect_timeout_seconds:300});expect(config).not.toHaveProperty('humanSlots');}
+});

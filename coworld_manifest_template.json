@@ -1,5 +1,5 @@
 {
-  "episode_timeout_minutes": 40,
+  "episode_timeout_minutes": 60,
   "tags": [
     "mafia",
     "social-deduction",
@@ -42,21 +42,6 @@
                 "default",
                 "auto"
               ]
-            },
-            "humanSlot": {
-              "default": 0,
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 8
-            },
-            "humanSlots": {
-              "maxItems": 9,
-              "type": "array",
-              "items": {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 8
-              }
             },
             "humanTimers": {
               "default": {
@@ -277,7 +262,7 @@
               "minimum": 1,
               "maximum": 180,
               "title": "Connection wait (seconds)",
-              "description": "Connection grace period. Play waits for the first human, then begins when all seats connect or this wait expires. Late humans can reconnect to their own seats."
+              "description": "Connection grace period. Human play waits for the first human to join, then begins when all nine seats connect or this many seconds pass. Late humans can join or reconnect to their own seats."
             },
             "windowMs": {
               "default": 3500,
@@ -310,20 +295,6 @@
                 "llm",
                 "auto"
               ]
-            },
-            "humanSlot": {
-              "default": -1,
-              "type": "number",
-              "const": -1
-            },
-            "humanSlots": {
-              "maxItems": 9,
-              "type": "array",
-              "items": {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 8
-              }
             },
             "humanTimers": {
               "default": {
@@ -544,7 +515,7 @@
               "minimum": 1,
               "maximum": 180,
               "title": "Connection wait (seconds)",
-              "description": "Connection grace period. Play waits for the first human, then begins when all seats connect or this wait expires. Late humans can reconnect to their own seats."
+              "description": "Connection grace period. Human play waits for the first human to join, then begins when all nine seats connect or this many seconds pass. Late humans can join or reconnect to their own seats."
             },
             "windowMs": {
               "default": 3500,
@@ -579,21 +550,6 @@
                 "auto"
               ]
             },
-            "humanSlot": {
-              "default": 0,
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 8
-            },
-            "humanSlots": {
-              "maxItems": 9,
-              "type": "array",
-              "items": {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 8
-              }
-            },
             "humanTimers": {
               "default": {
                 "transitionMs": 5000,
@@ -808,12 +764,12 @@
               "description": "The game ends in a draw after this many completed nights if neither side has won. Longer games must fit the episode time limit."
             },
             "player_connect_timeout_seconds": {
-              "default": 30,
+              "default": 300,
               "type": "integer",
               "minimum": 1,
-              "maximum": 180,
+              "maximum": 300,
               "title": "Connection wait (seconds)",
-              "description": "Connection grace period. Play waits for the first human, then begins when all seats connect or this wait expires. Late humans can reconnect to their own seats."
+              "description": "Connection grace period. Human play waits for the first human to join, then begins when all nine seats connect or this many seconds pass. Late humans can join or reconnect to their own seats."
             },
             "windowMs": {
               "default": 3500,
@@ -990,11 +946,10 @@
     {
       "id": "human-llm",
       "name": "Play · LLM host",
-      "description": "For one to nine humans, with AI filling the other seats. Claim human seats in the lobby before starting. An LLM host selects speakers; failed or late calls use deterministic fallback. Random NewD3 setup and human-paced turns. Choose opponent policies separately. Requires hosted inference or runtime credentials.",
+      "description": "For one to nine humans, with AI filling the other seats. Play starts when every seat is filled, or five minutes after the first human joins. An LLM host selects speakers; failed or late calls use deterministic fallback. Random NewD3 setup and human-paced turns. Choose opponent policies separately. Requires hosted inference or runtime credentials.",
       "game_config": {
         "mode": "human",
         "moderator": "llm",
-        "humanSlots": [],
         "players": [
           {
             "name": "Player 1"
@@ -1026,17 +981,16 @@
         ],
         "setup": "random",
         "maxDays": 8,
-        "player_connect_timeout_seconds": 30
+        "player_connect_timeout_seconds": 300
       }
     },
     {
       "id": "human",
       "name": "Play · Classic host",
-      "description": "For one to nine humans, with AI filling the other seats. Claim human seats in the lobby before starting. The classic host selects speakers deterministically without model calls. Random NewD3 setup and human-paced turns. Choose opponent policies separately.",
+      "description": "For one to nine humans, with AI filling the other seats. Play starts when every seat is filled, or five minutes after the first human joins. The classic host selects speakers deterministically without model calls. Random NewD3 setup and human-paced turns. Choose opponent policies separately.",
       "game_config": {
         "mode": "human",
         "moderator": "default",
-        "humanSlots": [],
         "players": [
           {
             "name": "Player 1"
@@ -1068,7 +1022,7 @@
         ],
         "setup": "random",
         "maxDays": 8,
-        "player_connect_timeout_seconds": 30
+        "player_connect_timeout_seconds": 300
       }
     },
     {

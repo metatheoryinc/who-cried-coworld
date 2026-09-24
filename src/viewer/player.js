@@ -205,12 +205,30 @@ function drawRole(){
  if(teamLabel)$('role').querySelector('div').insertAdjacentHTML('beforeend',`<p class="teammates">${teamLabel}: ${team.map(t=>`${esc(name(t.slot))} · ${esc(roleNames[t.role])}${state.roster.find(p=>p.slot===t.slot)?.alive?'':' (eliminated)'}`).join('; ')}</p>`);
  $('role').querySelector('div').insertAdjacentHTML('beforeend',`<button id="setup-open" ${state.gameSetup?'':'disabled'}>How to play</button>`);
  bindSetup();
- const notes=state.events.flatMap(e=>{const p=e.payload;
-  if(p.kind==='private_result'){const r=p.result,result=Array.isArray(r.result)?(r.result.length?r.result.map(name).join(', '):'no visits'):r.result==='no_result'?'No result (your action was blocked)':r.result==='not_wolf'?'Not a wolf':roleNames[r.result]??r.result;return [`Night ${r.day} · ${name(r.target)}: ${result}`];}
-  if(p.kind==='ballots')return [`Day ${e.day} vote · ${p.eliminated===null?'No elimination':`${name(p.eliminated)} eliminated${deathReveal(state.events,p.eliminated)?` (${deathReveal(state.events,p.eliminated)})`:''}`}. ${p.ballots.map(v=>`${name(v.slot)} → ${v.target===null?'Pass':name(v.target)}`).join('; ')}`];
-  if(p.kind==='night_resolved')return [`Night ${e.day} · ${p.eliminated.length?p.eliminated.map(slot=>`${name(slot)}${deathReveal(state.events,slot)?` (${deathReveal(state.events,slot)})`:''}`).join(', ')+' died.':'Everyone survived.'}`];return [];
+ const teamLine=teamLabel?`<p class="teammates"><b>${teamLabel}:</b> ${team.map(t=>`${chip(t.slot)}${esc(name(t.slot))}${state.roster.find(p=>p.slot===t.slot)?.alive?'':' (eliminated)'}`).join(' ')}</p>`:'';
+ $('side-role').hidden=false;
+ $('side-role').innerHTML=`<img src="${asset(art[self.role])}" alt=""><div><span class="eyebrow">YOUR SECRET ROLE · ${esc(self.faction==='wolf'?'Wolves':self.faction==='town'?'Town':'Independent')}</span><h2>${esc(roleNames[self.role])}</h2><p>${esc(descriptions[self.role])}</p>${teamLine}</div>`;
+ $('journal').innerHTML=journalEntries();
+}
+function chip(slot){return `<b class="seat-no seat-c${slot}" title="${esc(name(slot))}">${slot+1}</b>`;}
+/** Journal: newest first; each entry leads with the outcome, then the details, so it can be scanned quickly. */
+function journalEntries(){
+ const reveal=slot=>{const r=deathReveal(state.events,slot);return r?` <span class="j-reveal">${esc(r)}</span>`:'';};
+ const abilityNames={inspect:'Inspect',check:'Role check',track:'Track',inform:'Visit'};
+ const entries=state.events.flatMap(e=>{const p=e.payload;
+  if(p.kind==='private_result'){const r=p.result;
+   const result=Array.isArray(r.result)?(r.result.length?`visited ${r.result.map(s=>`${chip(s)}${esc(name(s))}`).join(', ')}`:'visited no one'):r.result==='no_result'?'no result (you were blocked)':r.result==='not_wolf'?'<b>not a wolf</b>':r.result==='wolf'?'<b class="j-wolf">WOLF</b>':r.result==='town'?'<b>is town</b> (they visited you)':`<b>${esc(roleNames[r.result]??r.result)}</b>`;
+   const ability=r.ability==='inform'?'inform':r.ability;
+   return [`<div class="j-entry private"><span class="j-icon">${stampIcon(ability,asset)}</span><div><div class="j-head">Night ${r.day} · ${esc(abilityNames[r.ability]??r.ability)} <span class="j-lock">private</span></div><div>${chip(r.target)}${esc(name(r.target))}: ${result}</div></div></div>`];}
+  if(p.kind==='ballots'){
+   const counts=new Map();for(const v of p.ballots){const k=v.target===null?'pass':v.target;counts.set(k,(counts.get(k)??0)+1);}
+   const tally=[...counts].sort((a,b)=>b[1]-a[1]).map(([k,n])=>k==='pass'?`pass ×${n}`:`${esc(name(k))} ×${n}`).join(' · ');
+   const ballots=p.ballots.map(v=>`<span class="j-ballot${v.slot===state.self?.slot?' mine':''}">${chip(v.slot)}→${v.target===null?'<i>pass</i>':chip(v.target)}</span>`).join('');
+   return [`<div class="j-entry vote"><span class="j-icon">${stampIcon('vote',asset)}</span><div><div class="j-head">Day ${e.day} vote · ${p.eliminated===null?'nobody eliminated':`${esc(name(p.eliminated))} eliminated${reveal(p.eliminated)}`}</div><div class="j-tally">${tally}</div><div class="j-ballots">${ballots}</div></div></div>`];}
+  if(p.kind==='night_resolved')return [`<div class="j-entry night"><span class="j-icon">${stampIcon('kill',asset)}</span><div><div class="j-head">Night ${e.day} · ${p.eliminated.length?p.eliminated.map(s=>`${esc(name(s))} died${reveal(s)}`).join(', '):'everyone survived'}</div></div></div>`];
+  return [];
  });
- $('journal').innerHTML=notes.length?notes.map(n=>`<p>${esc(n)}</p>`).join(''):'<p>Your private discoveries and voting history will appear here.</p>';
+ return entries.length?entries.reverse().join(''):'<p class="j-empty">Votes and your private discoveries will appear here.</p>';
 }
 const chatIcon=d=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const channelInfo={

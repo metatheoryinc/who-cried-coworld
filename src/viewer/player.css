@@ -309,3 +309,41 @@ body.holding{cursor:var(--stamp-cursor,default)}
 .stamp-ghost{display:none;position:absolute;z-index:4;left:28%;top:18%;width:44%;aspect-ratio:1;opacity:.45;transform:rotate(-14deg);pointer-events:none}
 .stamp-ghost>img{width:100%;height:100%;object-fit:contain}
 @media(hover:hover){.player.eligible:hover .stamp-ghost{display:block}}
+/* Right column: compact role card above the chat. How to play is a ? by the connection light. */
+.side{display:flex;flex-direction:column;gap:10px;min-height:0;min-width:0}
+.side .chat-panel{flex:1;min-height:0}
+.side-role[hidden]{display:none}
+.side-role{display:flex;gap:12px;align-items:center;background:#fff6e8f0;border:1px solid #b79567;border-radius:12px;padding:8px 14px;box-shadow:0 3px 0 #67472617}
+.side-role img{width:46px;height:60px;object-fit:contain;flex:none}
+.side-role h2{font-size:18px;line-height:1.1}
+.side-role .eyebrow{font-size:9px;letter-spacing:1px}
+.side-role p{margin:2px 0 0;font-size:12px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.side-role .teammates{-webkit-line-clamp:unset;display:block;font:12px system-ui}
+.side-role .teammates .seat-no{margin:0 3px 0 4px}
+.icon-btn{display:inline-grid;place-items:center;flex:none;width:30px;height:30px;padding:0;border-radius:50%;font:700 15px/1 Georgia;background:#fff1d8e8;border-color:#ae894e}
+@media(min-width:761px){
+ .personal,body.lobby .personal{display:flex;flex:1 0 170px;min-height:170px;max-height:none}
+ body.lobby .personal{display:none}
+ .personal>.role,#you-close{display:none}
+ .journal{flex:1;max-height:none;min-height:0;overflow:auto}
+}
+@media(max-width:760px){.side{display:contents}.side-role{display:none!important}}
+/* Journal entries: outcome first, then tally and ballots as seat chips; private results stand out. */
+.journal .j-entry{display:grid;grid-template-columns:26px 1fr;gap:8px;align-items:start;padding:8px 0;border-top:1px solid #d9c3a0}
+.journal .j-entry:first-of-type{border-top:0}
+.j-icon{width:26px;height:26px;display:grid;place-items:center}
+.j-icon img{width:24px;height:24px;object-fit:contain}
+.j-head{font:600 13px/1.35 Georgia}
+.j-reveal{font:12px system-ui;color:#6d5840}
+.j-tally{font:12px/1.4 system-ui;color:#5c4531;margin-top:2px}
+.j-ballots{display:flex;flex-wrap:wrap;gap:4px 8px;margin-top:5px}
+.j-ballot{display:inline-flex;align-items:center;gap:3px;font:11px system-ui;color:#6d5840}
+.j-ballot .seat-no{min-width:17px;height:17px;font-size:10px}
+.j-ballot.mine{background:#f6dfa9;border-radius:9px;padding:1px 5px}
+.j-ballot i{font-style:italic}
+.journal .j-entry.private{background:#fbeccd;border:1px solid #d9b56a;border-radius:8px;padding:8px}
+.j-lock{font:600 10px system-ui;letter-spacing:.5px;text-transform:uppercase;color:#8e392b;margin-left:4px}
+.j-wolf{color:#a32b20}
+.journal .j-entry .seat-no{margin-right:3px}
+.j-empty{font-size:12px}
+@media(min-width:761px){.action-panel{min-height:0}}

@@ -347,3 +347,10 @@ body.holding{cursor:var(--stamp-cursor,default)}
 .journal .j-entry .seat-no{margin-right:3px}
 .j-empty{font-size:12px}
 @media(min-width:761px){.action-panel{min-height:0}}
+/* Journal on parchment: the painted paper card is 9-sliced so its ruled border fits any size. */
+.journal{border:16px solid transparent;border-image:url('assets/play/journal_paper.png') 32 fill / 16px stretch;background:none;border-radius:0;padding:4px 8px;box-shadow:none;color:#3b2a1c}
+.journal>h2{font:italic 700 17px Georgia;margin:0 0 2px;color:#5a3a1e}
+.journal .j-entry{border-top-color:#c9ab80}
+.journal .j-entry.private{background:#f6e2bd99;border-color:#c79a52}
+.journal .j-entry.mine-actions .j-head{color:#5a3a1e}
+.journal .j-entry.mine-actions>div>div:not(.j-head){font:12.5px/1.45 Georgia}

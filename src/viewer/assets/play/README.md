@@ -30,6 +30,7 @@ ffmpeg so the desktop frame can be 9-sliced and expand with the window:
 | `frame_day.png` | `bg_day.png` | 0, 0, 1920, 1160 (frame and scene, above the table) |
 | `frame_night.png` | `bg_night.png` | 0, 0, 1920, 1160 |
 | `table.png` | `bg_day.png` | 0, 1202, 1920, 238 (wood table band) |
+| `journal_paper.png` | `../wcw/backgrounds/Text_paper.png` | 18, 105, 477, 315 (the paper card, 9-sliced at 32 px) |
 
 Frame bars: top y 29–47, bottom y 1117–1135, left x 40–57, right x 1854–1872;
 corner ornaments stay within 175×160 (top) and 175×150 (bottom) slices.

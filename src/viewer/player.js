@@ -220,6 +220,10 @@ function journalEntries(){
    const result=Array.isArray(r.result)?(r.result.length?`visited ${r.result.map(s=>`${chip(s)}${esc(name(s))}`).join(', ')}`:'visited no one'):r.result==='no_result'?'no result (you were blocked)':r.result==='not_wolf'?'<b>not a wolf</b>':r.result==='wolf'?'<b class="j-wolf">WOLF</b>':r.result==='town'?'<b>is town</b> (they visited you)':`<b>${esc(roleNames[r.result]??r.result)}</b>`;
    const ability=r.ability==='inform'?'inform':r.ability;
    return [`<div class="j-entry private"><span class="j-icon">${stampIcon(ability,asset)}</span><div><div class="j-head">Night ${r.day} · ${esc(abilityNames[r.ability]??r.ability)} <span class="j-lock">private</span></div><div>${chip(r.target)}${esc(name(r.target))}: ${result}</div></div></div>`];}
+  if(p.kind==='night_choices'&&p.slot===state.self?.slot&&p.actions.length){
+   const lines=p.actions.map(a=>`<div>${esc(stampLabels[a.ability]??a.ability)} ${a.target===null?'<i>passed</i>':`→ ${chip(a.target)}${esc(name(a.target))}`}${a.ability==='kill'&&a.killer!==undefined?` · knife: ${chip(a.killer)}${esc(a.killer===state.self.slot?'you':name(a.killer))}`:''}</div>`).join('');
+   const used=p.actions.find(a=>a.target!==null)?.ability??p.actions[0].ability;
+   return [`<div class="j-entry mine-actions"><span class="j-icon">${stampIcon(used,asset)}</span><div><div class="j-head">Night ${e.day} · Your actions</div>${lines}</div></div>`];}
   if(p.kind==='ballots'){
    const counts=new Map();for(const v of p.ballots){const k=v.target===null?'pass':v.target;counts.set(k,(counts.get(k)??0)+1);}
    const tally=[...counts].sort((a,b)=>b[1]-a[1]).map(([k,n])=>k==='pass'?`pass ×${n}`:`${esc(name(k))} ×${n}`).join(' · ');

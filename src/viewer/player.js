@@ -3,7 +3,7 @@ import { playerConnection } from './connection.js';
 import { knownRole } from './known-role.js';
 import { deathCause,deathReveal,stageSummary } from './stage-summary.js';
 import { traySlots,placementsFrom,place,clear,bodyFor,packStamps,stampsOn,skipVote } from './stamps.js';
-import { stampIcon,stampLabels,stampArt,scatter,knifeSvg } from './stamp-icons.js';
+import { stampIcon,stampLabels,stampArt,scatter } from './stamp-icons.js';
 import { systemLines } from './system-lines.js';
 import { unread } from './unread.js';
 import { roleNames,newD3Decks } from '../shared/roles.js';
@@ -176,7 +176,7 @@ function updateCursor(){
  if(cursorCache.has(id))return set(cursorCache.get(id));
  const artName=stampArt(id),img=new Image();
  img.onload=()=>{const c=document.createElement('canvas');c.width=c.height=40;const k=Math.min(40/img.width,40/img.height),w=img.width*k,h=img.height*k;c.getContext('2d').drawImage(img,(40-w)/2,(40-h)/2,w,h);try{const url=c.toDataURL('image/png');cursorCache.set(id,url);set(url);}catch{}};
- img.src=artName?asset(artName):`data:image/svg+xml;utf8,${encodeURIComponent(knifeSvg.replace('viewBox','width="40" height="40" style="color:#8e1f14" viewBox'))}`;
+ img.src=asset(artName);
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&held){held=null;refreshStamps();}});
 phone.addEventListener('change',()=>{document.body.classList.remove('you-open');if(state){lastRender='';render(state);}else drawPlayers();});
@@ -287,7 +287,7 @@ function inLobby(){return !state||state.phase==='waiting';}
 function updateClock(){const n=Math.max(0,Math.ceil((remainingUntil-performance.now())/1000)),waiting=inLobby()&&state?.lobby?.startsInMs==null;$('timer').textContent=state&&!ended&&!waiting?`${Math.floor(n/60)}:${String(n%60).padStart(2,'0')}`:'—:—';$('timer').classList.toggle('urgent',!!state&&!waiting&&n<=10&&!ended);$('timer-label').textContent=ended?'Complete':inLobby()?(waiting?(joined?'Waiting for players':'Lobby open'):'Auto-start in'):state?state.period==='discussion'?'Until voting':state.period==='coordination'?'Until actions':'Time remaining':'Not started';if(!$('sheet-pill').hidden)$('sheet-pill').textContent=`${state?.observation?.request?.kind==='vote'?'Vote':'Night actions'} · ${Math.floor(n/60)}:${String(n%60).padStart(2,'0')}`;if($('transition-countdown'))$('transition-countdown').textContent=n>0?`The next phase starts in ${n}s`:'Waiting for the next phase…';}
 async function connect(){if(!connection||connecting||ws?.readyState===WebSocket.OPEN)return;connecting=true;
  $('join').disabled=true;$('chat-join').disabled=true;setConnection('busy','Preparing village artwork…');
- try{await assets.preload([...Object.values(art),'vote_banner_town_hoof','vote_banner_wolfs_claw','abstain_town','guard_icon','potion_icon','seer_icon','chef_icon','milk_icon','priest_icon','track_icon','base_rolecard_blue','base_rolecard_red','bg_gameover_day','bg_gameover_night','dead_icon_claw','dead_icon_meat']);}
+ try{await assets.preload([...Object.values(art),'vote_banner_town_hoof','vote_banner_wolfs_claw','abstain_town','knife_icon','guard_icon','potion_icon','seer_icon','chef_icon','milk_icon','priest_icon','track_icon','base_rolecard_blue','base_rolecard_red','bg_gameover_day','bg_gameover_night','dead_icon_claw','dead_icon_meat']);}
  catch{connecting=false;$('join').disabled=false;$('chat-join').disabled=false;setConnection('error','Could not load artwork. Click Join to retry.');return;}
  joined=true;document.body.classList.add('joined');sessionStorage.setItem(storageKey,'1');setConnection('busy','Connecting…');ws=new WebSocket(connection.socket);
  ws.onopen=()=>{connecting=false;if(dirty)setTimeout(sendDraft,300);setConnection('ok','Connected · your seat is private');if(state)drawChat();};

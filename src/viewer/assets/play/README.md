@@ -20,6 +20,7 @@ Stamp and ability art added 2026-09-24 (source filenames preserved):
 | `milk_icon.png` | `player-card/` | Dairy Maid inform |
 | `priest_icon.png` | `player-card/` | Priest track |
 | `track_icon.png` | `player-card/` | Track Reader check |
+| `knife_icon.png` | drawn for this project (`docs/design/art/knife_icon.svg`, rasterized with `sips`) | Wolf knife (who performs the kill) |
 
 Derived layout images (2026-09-24), cut from `bg_day.png` / `bg_night.png` with
 ffmpeg so the desktop frame can be 9-sliced and expand with the window:

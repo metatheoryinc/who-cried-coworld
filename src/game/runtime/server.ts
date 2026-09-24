@@ -34,10 +34,10 @@ export async function startServer(config:GameConfig,options:{port:number;host:st
   if(url.pathname==='/healthz'){res.setHeader('Content-Type','application/json');res.end('{"ok":true}');return;}
   if(url.pathname==='/client/player'&&authenticate(url)===null){res.writeHead(401);res.end('Unauthorized');return;}
   const asset=url.pathname.replace(/^\/client\//,'/');
-  const assetFile=/^\/assets\/[a-zA-Z0-9_/-]+\.(png|webp|jpg|svg)$/.test(asset)&&!asset.includes('..')?asset.slice(1):null;
+  const assetFile=/^\/assets\/[a-zA-Z0-9_/-]+\.(png|webp|jpg|svg|ttf)$/.test(asset)&&!asset.includes('..')?asset.slice(1):null;
   const file=assetFile??(url.pathname==='/client/player'&&config.mode==='human'?'player.html':['/player.js','/client/player.js'].includes(url.pathname)?'player.js':['/player.css','/client/player.css'].includes(url.pathname)?'player.css':['/client/player','/client/global','/client/replay','/'].includes(url.pathname)?'index.html':['/viewer.js','/client/viewer.js'].includes(url.pathname)?'viewer.js':['/style.css','/client/style.css'].includes(url.pathname)?'style.css':null);
   if(!file){res.writeHead(404);res.end('Not found');return;}
-  try{const content=await readFile(resolve(options.viewerDir??'build/viewer',file));res.setHeader('Content-Type',file.endsWith('.png')?'image/png':file.endsWith('.webp')?'image/webp':file.endsWith('.jpg')?'image/jpeg':file.endsWith('.svg')?'image/svg+xml':file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':'text/html');res.end(content);}
+  try{const content=await readFile(resolve(options.viewerDir??'build/viewer',file));res.setHeader('Content-Type',file.endsWith('.png')?'image/png':file.endsWith('.webp')?'image/webp':file.endsWith('.jpg')?'image/jpeg':file.endsWith('.svg')?'image/svg+xml':file.endsWith('.ttf')?'font/ttf':file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':'text/html');res.end(content);}
   catch{res.writeHead(503);res.end('Viewer build unavailable');}
  });
  const wss=new WebSocketServer({noServer:true,maxPayload:8192,perMessageDeflate:false});

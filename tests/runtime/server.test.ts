@@ -128,3 +128,15 @@ it('sends joined humans lobby seat status and the auto-start countdown before pl
   await new Promise(r=>setTimeout(r,3300));expect(server.session.phase).not.toBe('waiting');
  }finally{for(const ws of clients)ws.terminate();await server.close();}
 },8000);
+
+it('serves bundled font files as fonts but not other asset types',async()=>{
+ const {mkdtemp,mkdir,writeFile}=await import('node:fs/promises');const {join}=await import('node:path');const {tmpdir}=await import('node:os');
+ const dir=await mkdtemp(join(tmpdir(),'wcw-viewer-'));await mkdir(join(dir,'assets/fonts'),{recursive:true});
+ await writeFile(join(dir,'assets/fonts/Book.ttf'),'font-bytes');await writeFile(join(dir,'assets/fonts/OFL.txt'),'license');
+ const server=await startServer(c(),{port:0,host:'127.0.0.1',viewerDir:dir});
+ try{
+  const font=await fetch(`http://127.0.0.1:${server.port}/client/assets/fonts/Book.ttf`);
+  expect(font.status).toBe(200);expect(font.headers.get('content-type')).toBe('font/ttf');
+  expect((await fetch(`http://127.0.0.1:${server.port}/client/assets/fonts/OFL.txt`)).status).not.toBe(200);
+ }finally{await server.close();}
+});

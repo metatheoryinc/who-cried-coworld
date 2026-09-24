@@ -31,9 +31,9 @@ const phone=matchMedia('(max-width:760px)');
 let sheetOpen=true,sheetKey=null;
 /** The stamp a click places: the one picked up, or the only stamp when a decision has just one. */
 function activeStamp(){const r=stampRequest();if(!r)return null;const slots=traySlots(r);return held??(slots.length===1?slots[0].id:null);}
-/** The closed vote of the current day stays stamped on the cards through dusk and night. */
+/** The closed vote is stamped on the cards only during the dusk reveal; the journal and chat keep the record. */
 function closedBallots(){
- if(!state||['discussion','vote'].includes(state.period)||state.phase==='waiting')return null;
+ if(!state||state.period!=='dusk')return null;
  const e=state.events.filter(e=>e.payload.kind==='ballots'&&e.day===state.day).at(-1);
  return e?{id:e.id,ballots:e.payload.ballots}:null;
 }

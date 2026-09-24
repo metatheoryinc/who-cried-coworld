@@ -2,7 +2,7 @@ import {expect,it,vi} from 'vitest';
 import {createRuntimeModerator} from '../../src/game/runtime/moderator.js';
 import {startServer} from '../../src/game/runtime/server.js';
 import {GameConfig} from '../../src/shared/config.js';
-const input={day:1,humanSlot:-1,roster:[{slot:0,name:'ChatGPT',alive:true}],counts:{},recent:[],eligibleSlots:[0],humanMessage:null,transcript:[]};
+const input={day:1,roster:[{slot:0,name:'ChatGPT',alive:true}],counts:{},recent:[],eligibleSlots:[0],humanMessage:null,transcript:[]};
 it('uses deterministic selection without credentials or when explicitly off',()=>{
  expect(createRuntimeModerator({})).toBeUndefined();
  expect(createRuntimeModerator({WCW_MODERATOR:'off',OPENROUTER_API_KEY:'secret'})).toBeUndefined();

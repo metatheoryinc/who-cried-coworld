@@ -1,15 +1,15 @@
 import {z} from 'zod';
-export type ModeratorInput={day:number;humanSlot:number;humanSlots?:number[];roster:{slot:number;name:string;alive:boolean}[];counts:Record<number,number>;eligibleSlots?:number[];recent:number[];humanMessage:{id:string;text:string}|null;transcript:{id:string;slot:number;text:string}[]};
+export type ModeratorInput={day:number;roster:{slot:number;name:string;alive:boolean}[];counts:Record<number,number>;eligibleSlots:number[];recent:number[];humanMessage:{id:string;text:string}|null;transcript:{id:string;slot:number;text:string}[]};
 export const ModeratorChoice=z.object({slot:z.number().int().min(0).max(8),prompt:z.string().trim().min(1).max(240)}).strict();
 export type ModeratorChoice=z.infer<typeof ModeratorChoice>;
 export type Moderator=(input:ModeratorInput,signal:AbortSignal)=>Promise<ModeratorChoice>;
 export function validateModeratorChoice(raw:unknown,input:ModeratorInput){
  const choice=ModeratorChoice.parse(raw);
- if(input.eligibleSlots&&!input.eligibleSlots.includes(choice.slot))throw Error('Host chose a speaker on cooldown');
+ if(!input.eligibleSlots.includes(choice.slot))throw Error('Host chose a speaker on cooldown');
  const name=input.roster.find(p=>p.slot===choice.slot)?.name;
  if(!name||!choice.prompt.startsWith(name+', '))throw Error('Host prompt must begin with the selected player name followed by a comma');
- if((input.humanSlots??[input.humanSlot]).includes(choice.slot)||!input.roster.some(p=>p.slot===choice.slot&&p.alive))throw Error('Host chose an ineligible speaker');
- if(input.recent.length>=2&&input.recent.slice(-2).every(s=>s===choice.slot)&&input.roster.filter(p=>p.alive&&!(input.humanSlots??[input.humanSlot]).includes(p.slot)).length>1)throw Error('Host repeated the same speaker three times');
+ if(!input.roster.some(p=>p.slot===choice.slot&&p.alive))throw Error('Host chose an ineligible speaker');
+ if(input.recent.length>=2&&input.recent.slice(-2).every(s=>s===choice.slot)&&input.eligibleSlots.length>1)throw Error('Host repeated the same speaker three times');
  return choice;
 }
 export const moderatorPrompt=`You are the neutral floor moderator for Who Cried Wolf. Your only job is to choose the next speaker and offer a brief, non-leading invitation to speak. You are not a player, investigator, strategist, or referee of anyone's truthfulness.

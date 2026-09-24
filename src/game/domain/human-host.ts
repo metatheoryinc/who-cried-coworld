@@ -1,6 +1,6 @@
-/** Public information only: the moderator must never select speakers using roles. */
-export function chooseSpeaker(input:{roster:{slot:number;name:string;alive:boolean}[];humanSlot:number;humanSlots?:number[];counts:Record<number,number>;recent:number[];humanMessage?:{id:string;text:string}}){
- const candidates=input.roster.filter(p=>p.alive&&!(input.humanSlots??[input.humanSlot]).includes(p.slot));
+/** Public information only: the moderator must never select speakers using roles. `roster` holds only seats eligible to speak. */
+export function chooseSpeaker(input:{roster:{slot:number;name:string;alive:boolean}[];counts:Record<number,number>;recent:number[];humanMessage?:{id:string;text:string}}){
+ const candidates=input.roster.filter(p=>p.alive);
  const repeated=input.recent.length>=2&&input.recent.at(-1)===input.recent.at(-2)?input.recent.at(-1):null;
  const eligible=candidates.filter(p=>p.slot!==repeated);
  const pool=eligible.length?eligible:candidates;

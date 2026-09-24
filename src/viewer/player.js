@@ -20,20 +20,27 @@ try{connection=playerConnection(location.href);}catch{$('connection').textConten
 const storageKey=`wcw-joined:${connection?.socket??location.href}`;
 function name(slot){return state?.roster[slot]?.name??`Seat ${slot+1}`;}
 function feedback(t){$('feedback').textContent=t;}
+const phone=matchMedia('(max-width:760px)');
+let sheetOpen=true,sheetKey=null;
+/** The stamp a click places: the one picked up, or the only stamp when a decision has just one. */
+function activeStamp(){const r=stampRequest();if(!r)return null;const slots=traySlots(r);return held??(slots.length===1?slots[0].id:null);}
+function seatMarks(target){
+ const r=stampRequest(),own=r?stampsOn(placements,target):[],pack=(state?.packDrafts?packStamps(state.packDrafts):[]).filter(x=>x.slot===target);
+ return {own,html:[...own.map(id=>`<span class="stamp-mark own" title="Your ${stampLabels[id]}">${stampIcon(id,asset)}</span>`),...pack.map(x=>`<span class="stamp-mark pack" title="${esc(name(x.by))}: ${stampLabels[x.id]}">${stampIcon(x.id,asset)}<b>${x.by+1}</b></span>`)].join(''),
+  described:[...own.map(id=>`your ${stampLabels[id]}`),...pack.map(x=>`${name(x.by)}'s ${stampLabels[x.id]}`)].join(', ')};
+}
 function drawPlayers(){
  const roster=state?.roster??Array.from({length:9},(_,i)=>({slot:i,name:slot!==null&&i===Number(slot)?'You':`Player ${i+1}`,alive:true}));
- const r=stampRequest(),slots=r?traySlots(r):[],heldTargets=held?slots.find(x=>x.id===held)?.targets??[]:[];
- const pack=state?.packDrafts?packStamps(state.packDrafts):[];
+ const r=stampRequest(),active=activeStamp(),targets=active?traySlots(r).find(x=>x.id===active)?.targets??[]:[];
  $('players').innerHTML=roster.map(p=>{
   const known=knownRole(state,p.slot),you=state?.self?.slot===p.slot;
   const cause=deathCause(state?.events??[],p.slot);
   const seat=state?.lobby?.seats[p.slot];
   const status=seat?(you||p.slot===state.self?.slot||p.slot===Number(slot)&&seat==='human'?'You':{human:'Joined',ai:'AI ready',open:'Open seat'}[seat]):!state&&!joined?'':!p.alive?(cause==='wolf'?'Killed by wolves':cause==='vote'?'Eliminated by town':'Eliminated'):you?`${roleNames[state.self.role]} · You`:known?roleNames[known]:'Role unknown';
   const tag=!p.alive&&deathReveal(state?.events??[],p.slot)?`${deathReveal(state.events,p.slot)} · ${status}`:status;
-  const own=r?stampsOn(placements,p.slot):[],target=heldTargets.includes(p.slot),pick=!held&&own.length>0;
-  const marks=[...own.map(id=>`<span class="stamp-mark own" title="Your ${stampLabels[id]}">${stampIcon(id,asset)}</span>`),...pack.filter(x=>x.slot===p.slot).map(x=>`<span class="stamp-mark pack" title="${esc(name(x.by))}: ${stampLabels[x.id]}">${stampIcon(x.id,asset)}<b>${x.by+1}</b></span>`)].join('');
-  const described=[...own.map(id=>`your ${stampLabels[id]}`),...pack.filter(x=>x.slot===p.slot).map(x=>`${name(x.by)}'s ${stampLabels[x.id]}`)].join(', ');
-  return `<button class="player ${p.alive?'':'dead'} ${seat==='open'?'open-seat':''} ${target?'eligible':''} ${held&&!target?'dim':''}" data-slot="${p.slot}" title="${esc(p.policyName?`Policy: ${p.policyName}`:p.name)}" ${target||pick?'':'disabled'} aria-label="${esc(p.name)}, ${esc(tag)}${described?`, ${esc(described)}`:''}${target?`, place ${stampLabels[held]}`:pick?', pick up your stamp':''}"><img src="${asset('base_playercard_shadow')}" alt=""><img class="${known?'known-role':'sheep'}" src="${asset(known?art[known]:'Player_sheep_base')}" alt="">${marks?`<span class="card-stamps">${marks}</span>`:''}${!p.alive?deathMark(cause):''}<span class="card-foot"><span class="name">${esc(p.name)}</span>${tag?`<small>${esc(tag)}</small>`:''}</span></button>`;
+  const m=seatMarks(p.slot),target=targets.includes(p.slot),pick=!active&&m.own.length>0,open=phone.matches&&!!state?.self;
+  const speaking=state?.period==='discussion'&&state.floor?.slot===p.slot;
+  return `<button class="player ${p.alive?'':'dead'} ${seat==='open'?'open-seat':''} ${target?'eligible':''} ${active&&!target?'dim':''} ${speaking?'speaking':''}" data-slot="${p.slot}" title="${esc(p.policyName?`Policy: ${p.policyName}`:p.name)}" ${target||pick||open?'':'disabled'} aria-label="Seat ${p.slot+1}, ${esc(p.name)}, ${esc(tag)}${speaking?', speaking':''}${m.described?`, ${esc(m.described)}`:''}${target?`, place ${stampLabels[active]}`:pick?', pick up your stamp':open?', show player card':''}"><img src="${asset('base_playercard_shadow')}" alt=""><img class="${known?'known-role':'sheep'}" src="${asset(known?art[known]:'Player_sheep_base')}" alt=""><span class="seat-no seat-c${p.slot}">${p.slot+1}</span>${m.html?`<span class="card-stamps">${m.html}</span>`:''}${!p.alive?deathMark(cause):''}<span class="card-foot"><span class="name">${esc(p.name)}</span>${tag?`<small>${esc(tag)}</small>`:''}</span></button>`;
  }).join('');
  $('players').querySelectorAll('.player:not(:disabled)').forEach(b=>b.onclick=()=>onCard(Number(b.dataset.slot)));
  const filled=state?.lobby?.seats.filter(s=>s!=='open').length;
@@ -62,16 +69,50 @@ function drawTray(){
  const focused=document.activeElement?.dataset?.stamp,any=slots.some(x=>placements[x.id]!=null);
  const status={idle:'Nothing stamped yet · you pass if the timer ends',saving:'Saving…',saved:any?'Saved · counts when the timer ends':'Saved · you pass when the timer ends',error:'Could not save that change · your last saved choice still counts'}[saveState];
  const target=(x)=>{const t=placements[x.id];return t==null?'pass':x.id==='knife'&&t===state.self.slot?'You':name(t);};
- $('action').innerHTML=`<h2>${r.kind==='vote'?'Who do you suspect?':'Your night actions'}</h2><p>${held?`Click a glowing player to place ${esc(stampLabels[held])}. Press Esc to cancel.`:`Pick up a stamp, then click a player.${r.kind==='vote'?' A strict majority eliminates someone.':''} You can change it until the timer ends.`}</p><div class="tray">${slots.map(x=>`<div class="stamp-slot"><button type="button" class="stamp${held===x.id?' held':''}" data-stamp="${x.id}" aria-pressed="${held===x.id}">${stampIcon(x.id,asset)}<span>${stampLabels[x.id]}</span><small>${esc(target(x))}</small></button>${placements[x.id]!=null?`<button type="button" class="stamp-clear" data-clear="${x.id}" aria-label="Clear ${stampLabels[x.id]}">×</button>`:''}</div>`).join('')}</div><p class="draft-status ${saveState}" role="status">${status}</p>`;
+ $('action').innerHTML=`<h2>${r.kind==='vote'?'Who do you suspect?':'Your night actions'}</h2><p>${held?`Tap a glowing player to place ${esc(stampLabels[held])}. Press Esc to cancel.`:slots.length===1?`Tap a player to ${r.kind==='vote'?'vote for them. A strict majority eliminates someone':`use ${esc(stampLabels[slots[0].id])}`}. You can change it until the timer ends.`:'Pick up a stamp, then tap a player. You can change it until the timer ends.'}</p><div class="tray">${slots.map(x=>`<div class="stamp-slot"><button type="button" class="stamp${held===x.id?' held':''}" data-stamp="${x.id}" aria-pressed="${held===x.id}">${stampIcon(x.id,asset)}<span>${stampLabels[x.id]}</span><small>${esc(target(x))}</small></button>${placements[x.id]!=null?`<button type="button" class="stamp-clear" data-clear="${x.id}" aria-label="Clear ${stampLabels[x.id]}">×</button>`:''}</div>`).join('')}</div><div class="sheet-seats phone-only">${sheetSeats(r)}</div><p class="draft-status ${saveState}" role="status">${status}</p>`;
+ $('action').querySelectorAll('.sheet-seat:not(:disabled)').forEach(b=>b.onclick=()=>onCard(Number(b.dataset.slot)));
  $('action').querySelectorAll('[data-stamp]').forEach(b=>b.onclick=()=>{held=held===b.dataset.stamp?null:b.dataset.stamp;refreshStamps();});
  $('action').querySelectorAll('[data-clear]').forEach(b=>b.onclick=()=>{placements=clear(placements,b.dataset.clear);held=null;scheduleSend();refreshStamps();});
  if(focused)$('action').querySelector(`[data-stamp="${focused}"]`)?.focus();
 }
-function refreshStamps(){drawPlayers();drawTray();}
+function sheetSeats(r){
+ const active=activeStamp(),targets=active?traySlots(r).find(x=>x.id===active)?.targets??[]:[];
+ return state.roster.map(p=>{const m=seatMarks(p.slot),target=targets.includes(p.slot),pick=!active&&m.own.length>0;
+  return `<button type="button" class="sheet-seat ${p.alive?'':'dead'} ${target?'eligible':''} ${active&&!target?'dim':''}" data-slot="${p.slot}" ${target||pick?'':'disabled'} aria-label="Seat ${p.slot+1}, ${esc(p.name)}${m.described?`, ${esc(m.described)}`:''}"><span class="seat-no seat-c${p.slot}">${p.slot+1}</span><span class="sheet-name">${esc(p.name)}${p.slot===state.self.slot?' (you)':''}</span>${m.html?`<span class="sheet-marks">${m.html}</span>`:''}</button>`;}).join('');
+}
+function refreshStamps(){drawPlayers();drawTray();updateSheet();}
+/** Phone decision sheet: open for a new request, collapsible to a pill that shows the clock. */
+function updateSheet(){
+ const r=stampRequest(),key=r?state.observation.requestId:null;
+ if(key!==sheetKey){sheetKey=key;sheetOpen=true;}
+ document.body.classList.toggle('stamping',!!r);
+ document.body.classList.toggle('sheet-collapsed',!!r&&!sheetOpen);
+ $('sheet-pill').hidden=!r||sheetOpen;
+}
+$('sheet-hide').onclick=()=>{sheetOpen=false;held=null;refreshStamps();};
+$('sheet-pill').onclick=()=>{sheetOpen=true;refreshStamps();};
+function openCard(target){
+ const p=state.roster[target],known=knownRole(state,target),cause=deathCause(state.events,target),reveal=deathReveal(state.events,target);
+ const votes=state.events.flatMap(e=>e.payload.kind==='ballots'?[{day:e.day,cast:e.payload.ballots.find(b=>b.slot===target),received:e.payload.ballots.filter(b=>b.target===target).length}]:[]);
+ $('card-content').innerHTML=`<div class="card-art"><img src="${asset('base_playercard_shadow')}" alt=""><img src="${asset(known?art[known]:'Player_sheep_base')}" alt=""></div><span class="eyebrow">SEAT ${target+1}</span><h2 id="card-title">${esc(p.name)}${target===state.self?.slot?' · you':''}</h2><p>${p.alive?'Alive':cause==='wolf'?'Killed by wolves':'Eliminated by town'}${reveal?` · ${esc(reveal)}`:known?` · ${esc(roleNames[known])}`:''}</p>${p.policyName?`<p class="hint">Policy: ${esc(p.policyName)}</p>`:''}${votes.length?`<h3>Votes</h3><ul>${votes.map(v=>`<li>Day ${v.day}: ${v.cast?v.cast.target===null?'passed':`voted ${esc(name(v.cast.target))}`:'did not vote'} · received ${v.received}</li>`).join('')}</ul>`:''}`;
+ $('card-sheet').showModal();
+}
+$('card-close').onclick=()=>$('card-sheet').close();
+$('card-sheet').onclick=e=>{if(e.target===$('card-sheet'))$('card-sheet').close();};
+$('role-chip').onclick=()=>document.body.classList.add('you-open');
+$('you-close').onclick=()=>document.body.classList.remove('you-open');
+$('help').onclick=()=>openGuide();
+function drawChip(){
+ const self=state?.self;$('role-chip').hidden=!self;$('help').disabled=!state?.gameSetup;
+ if(self)$('role-chip').innerHTML=`<img src="${asset(art[self.role])}" alt=""><span>${esc(roleNames[self.role])}</span>`;
+}
 function onCard(target){
- const r=stampRequest();if(!r)return;
- if(held){placements=place(placements,r,held,target,state.self.slot);held=null;scheduleSend();}
- else{const own=stampsOn(placements,target);if(own.length)held=own[0];}
+ const r=stampRequest();
+ const active=activeStamp();
+ if(r&&active&&traySlots(r).find(x=>x.id===active)?.targets.includes(target)){placements=place(placements,r,active,target,state.self.slot);held=null;scheduleSend();sheetOpen=true;}
+ else if(r&&stampsOn(placements,target).length)held=stampsOn(placements,target)[0];
+ else if(phone.matches&&state?.self){openCard(target);return;}
+ else return;
  refreshStamps();
 }
 function scheduleSend(){dirty=true;saveState='saving';changeSeq++;clearTimeout(sendTimer);sendTimer=setTimeout(sendDraft,250);}
@@ -86,9 +127,12 @@ function draftReceipt(p){
  if(stampRequest())refreshStamps();
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&held){held=null;refreshStamps();}});
+phone.addEventListener('change',()=>{document.body.classList.remove('you-open');if(state){lastRender='';render(state);}else drawPlayers();});
 function bindSetup(){
- $('setup-open').onclick=()=>{
-  const supplied=state.gameSetup;if(!supplied)return;
+ $('setup-open').onclick=()=>openGuide();
+}
+function openGuide(){
+  const supplied=state?.gameSetup;if(!supplied)return;
   const setup=/NewD3/.test(supplied.name)?{...supplied,name:'NewD3',decks:Object.entries(newD3Decks).map(([name,roles])=>({name,roles}))}:supplied;
   const roles=[...new Set(setup.decks.flatMap(d=>d.roles))];
   const deckText=deck=>[...new Set(deck)].map(r=>`${deck.filter(x=>x===r).length} × ${roleNames[r]}`).join(', ');
@@ -96,7 +140,6 @@ function bindSetup(){
   const stamping=roles.some(r=>['wolf','alchemist','track_reader'].includes(r));
   $('setup-content').innerHTML=`<p class="guide-sub">This game: ${setup.decks.length>1?`one of ${setup.decks.length} ${esc(setup.name)} role mixes, chosen secretly`:`${esc(setup.name)} setup`} · nine players · roles are secret.</p><h3>Roles in this game</h3><ul>${setup.decks.map(d=>`<li><strong>${esc(d.name)}</strong>: ${esc(deckText(d.roles))}</li>`).join('')}</ul><dl>${roles.map(r=>`<dt>${esc(roleNames[r])}${r==='noble'?' (Mason)':''}</dt><dd>${esc(descriptions[r])}</dd>`).join('')}</dl><h3>How to win</h3><p>Town wins when all wolves are eliminated. Wolves win at parity with town.${roles.includes('jester')?' The Trickster wins if eliminated by the town vote.':''} After ${setup.maxDays} completed nights without a winner, the game is a draw.</p><h3>Voting &amp; chat</h3><p>Votes and night abilities are <strong>stamps</strong>: pick one up, then click a player. You can move or remove a stamp until the timer ends; whatever is placed then counts, and no stamp means pass. A strict majority of living players eliminates someone; otherwise nobody is eliminated. Votes stay sealed until the vote closes.${stamping?' Wolves see each other’s night stamps. The pack casts two votes: every Wolf’s <strong>kill target</strong> stamp counts once, and every Wolf’s <strong>knife</strong> stamp chooses who performs the kill. Each is decided by the most votes, with ties broken at random, and your knife starts on you.':''}</p><p>Town chat is open during the day. Wolves and Nobles have private channels during discussion and night coordination. Eliminated players cannot act or chat.</p><h3>Timing</h3><p>Discussion ${setup.timers.dayMs/1000}s · Vote ${setup.timers.voteMs/1000}s · Night coordination ${setup.timers.coordinationMs/1000}s · Night actions ${setup.timers.nightMs/1000}s · Transitions ${setup.timers.transitionMs/1000}s. Phases never end early.</p><p>During discussion the host picks a speaker every 13 seconds and prioritizes human messages. The clock keeps running while this guide is open.</p>`;
   $('setup-guide').showModal();
- };
 }
 $('setup-close').onclick=()=>$('setup-guide').close();
 function drawRole(){
@@ -123,7 +166,7 @@ function drawChat(){
  const kind=channel==='town'?'speech':channel==='wolves'?'wolf_chat':'noble_chat';
  const items=state.events.flatMap(e=>e.payload.kind===kind?[e]:systemLines(e,state.roster,state.events).filter(l=>channel==='town'||l.scope==='all').map(l=>({line:l.text}))); 
  const el=$('messages'),atBottom=el.scrollTop+el.clientHeight>=el.scrollHeight-60;
- el.innerHTML=items.length?items.map(e=>{if(e.line)return `<p class="system-line">${esc(e.line)}</p>`;const p=e.payload,b=p.kind==='speech'?p.speech:p;return `<article class="message ${b.slot===state.self?.slot?'mine':''}"><small>Day ${e.day}</small><strong>${esc(name(b.slot))}${b.slot===state.self?.slot?' · you':''}</strong><p>${esc(b.text)}</p></article>`;}).join(''):'<p class="empty">No messages in this channel yet.</p>';
+ el.innerHTML=items.length?items.map(e=>{if(e.line)return `<p class="system-line">${esc(e.line)}</p>`;const p=e.payload,b=p.kind==='speech'?p.speech:p;return `<article class="message ${b.slot===state.self?.slot?'mine':''}"><small>Day ${e.day}</small><strong><b class="seat-no seat-c${b.slot}">${b.slot+1}</b>${esc(name(b.slot))}${b.slot===state.self?.slot?' · you':''}</strong><p>${esc(b.text)}</p></article>`;}).join(''):'<p class="empty">No messages in this channel yet.</p>';
  if(atBottom)el.scrollTop=el.scrollHeight;
  const allowed=state.chatEnabled&&(channel!=='town'||state.period==='discussion');
  $('message').disabled=!allowed||ws?.readyState!==WebSocket.OPEN;$('send').disabled=$('message').disabled||!!pendingChat;
@@ -161,11 +204,11 @@ function render(s){state=s;if(s.self)slot=s.self.slot;syncStamps();
 ended=!!s.result;document.body.classList.toggle('lobby',s.phase==='waiting');
  remainingUntil=performance.now()+(s.phase==='waiting'?s.lobby?.startsInMs??0:s.remainingMs);
  const key=JSON.stringify([s.lobby,s.packDrafts,s.events.length,s.phase,s.period,s.observation?.requestId,s.observation?.attempt,s.accepted,s.self?.alive,s.floor?.turn]);
- if(key!==lastRender){lastRender=key;document.body.classList.toggle('night',s.phase==='night');$('day').textContent=s.phase==='waiting'?'GATHERING THE VILLAGE':`DAY ${s.day} · ${s.phase==='night'?'AFTER DARK':'THE VILLAGE'}`;$('phase').textContent=s.result?'Game over':s.phase==='waiting'?'Take your seat':labels[s.period];drawPlayers();drawRole();drawAction();drawChat();drawInterlude();}
+ if(key!==lastRender){lastRender=key;document.body.classList.toggle('night',s.phase==='night');$('day').textContent=s.phase==='waiting'?'GATHERING THE VILLAGE':`DAY ${s.day} · ${s.phase==='night'?'AFTER DARK':'THE VILLAGE'}`;$('phase').textContent=s.result?'Game over':s.phase==='waiting'?'Take your seat':labels[s.period];drawPlayers();drawRole();drawAction();drawChat();drawInterlude();drawChip();updateSheet();}
  updateClock();
 }
 function inLobby(){return !state||state.phase==='waiting';}
-function updateClock(){const n=Math.max(0,Math.ceil((remainingUntil-performance.now())/1000)),waiting=inLobby()&&state?.lobby?.startsInMs==null;$('timer').textContent=state&&!ended&&!waiting?`${Math.floor(n/60)}:${String(n%60).padStart(2,'0')}`:'—:—';$('timer').classList.toggle('urgent',!!state&&!waiting&&n<=10&&!ended);$('timer-label').textContent=ended?'Complete':inLobby()?(waiting?(joined?'Waiting for players':'Lobby open'):'Auto-start in'):state?state.period==='discussion'?'Until voting':state.period==='coordination'?'Until actions':'Time remaining':'Not started';if($('transition-countdown'))$('transition-countdown').textContent=n>0?`The next phase starts in ${n}s`:'Waiting for the next phase…';}
+function updateClock(){const n=Math.max(0,Math.ceil((remainingUntil-performance.now())/1000)),waiting=inLobby()&&state?.lobby?.startsInMs==null;$('timer').textContent=state&&!ended&&!waiting?`${Math.floor(n/60)}:${String(n%60).padStart(2,'0')}`:'—:—';$('timer').classList.toggle('urgent',!!state&&!waiting&&n<=10&&!ended);$('timer-label').textContent=ended?'Complete':inLobby()?(waiting?(joined?'Waiting for players':'Lobby open'):'Auto-start in'):state?state.period==='discussion'?'Until voting':state.period==='coordination'?'Until actions':'Time remaining':'Not started';if(!$('sheet-pill').hidden)$('sheet-pill').textContent=`${state?.observation?.request?.kind==='vote'?'Vote':'Night actions'} · ${Math.floor(n/60)}:${String(n%60).padStart(2,'0')}`;if($('transition-countdown'))$('transition-countdown').textContent=n>0?`The next phase starts in ${n}s`:'Waiting for the next phase…';}
 async function connect(){if(!connection||connecting||ws?.readyState===WebSocket.OPEN)return;connecting=true;
  $('join').disabled=true;$('chat-join').disabled=true;$('connection').textContent='Preparing village artwork…';
  try{await assets.preload([...Object.values(art),'base_rolecard_blue','base_rolecard_red','bg_gameover_day','bg_gameover_night','dead_icon_claw','dead_icon_meat']);}

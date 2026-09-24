@@ -303,3 +303,4 @@ body.holding{cursor:var(--stamp-cursor,default)}
  .frame{display:block;position:fixed;inset:0 0 var(--wood) 0;z-index:-1;border-style:solid;border-color:transparent;border-width:calc(160 * var(--u)) calc(175 * var(--u)) calc(150 * var(--u));border-image:url('assets/play/frame_day.png') 160 175 150 fill / calc(160 * var(--u)) calc(175 * var(--u)) calc(150 * var(--u)) stretch}
  .night .frame{border-image-source:url('assets/play/frame_night.png')}
 }
+#alive{font:500 14px system-ui;letter-spacing:0;opacity:.85}

@@ -47,6 +47,12 @@ export function parseModelAction(content:string,o:Observation){
  const b=parsed.data;
  if(b.kind!==o.request.kind)throw new Error('Wrong action kind');
  if(b.kind==='vote'&&o.request.kind==='vote'&&b.target!==null&&!o.request.targets.includes(b.target))throw new Error('Illegal vote');
+ // Mirror the game's bid legality so a bad reply id or accusation gets a precise repair retry instead of a blind rejection.
+ if(b.kind==='bid'){
+  const ids=o.transcript.filter(e=>e.payload.kind==='speech').map(e=>e.id);
+  if(b.replyTo!==null&&!ids.includes(b.replyTo))throw new Error(`Illegal bid: replyTo must be null or one of: ${ids.join(', ')||'(no speech yet)'}; it is a speech id, not a player number`);
+  if(b.accusation!==null&&(b.accusation===o.self.slot||!o.roster.some(p=>p.slot===b.accusation&&p.alive)))throw new Error('Illegal bid: accusation must be null or a living player other than you');
+ }
  if(b.kind==='night'&&o.request.kind==='night'){
   const choices=o.request.choices;
   if(b.actions.length!==choices.length||b.actions.some(a=>!choices.some(c=>c.ability===a.ability)))throw new Error('Illegal night choice: include exactly these abilities: '+choices.map(c=>c.ability).join(', '));

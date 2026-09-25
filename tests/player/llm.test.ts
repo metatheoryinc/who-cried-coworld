@@ -41,3 +41,18 @@ it('rejects ambiguous wrappers, duplicate keys, unsafe integers, arrays, and ove
  for(const text of [json+'\n'+json,'```json\n'+json+'\n```\n```json\n'+json+'\n```','['+json+']','```json\n'+json.replace('"target":2','"target":2,"target":3')+'\n```', 'I choose:\n'+json.replace('"target":2','"target":9007199254740993'),'x'.repeat(8192)+'\n'+json])expect(()=>parseModelAction(text,o)).toThrow();
  expect(()=>parseModelAction('```json\n'+json.replace('"target":2','"target":0')+'\n```',o)).toThrow('Illegal night');
 });
+
+const speech=(id:string,slot:number)=>({schema:'wcw.events/1',id,cursor:1,day:1,phase:'day',reveal:'public',payload:{kind:'speech',speech:{slot,text:'hi',replyTo:null,accusation:null}}});
+const bidObs={episodeId:'e',requestId:'r',observationId:'o',self:{slot:7,role:'guard',faction:'town',alive:true},
+ roster:Array.from({length:9},(_,slot)=>({slot,name:`P${slot}`,alive:slot!==2})),transcript:[speech('public_3',3),speech('public_5',6)],
+ request:{kind:'bid',window:3,maxCharacters:480}} as unknown as Observation;
+const bid=(extra:Record<string,unknown>)=>JSON.stringify({kind:'bid',wantsToSpeak:true,urgency:1,text:'Hello',replyTo:null,accusation:null,reason:'',...extra});
+it('checks a bid reply against visible speech ids before sending, naming the valid ids',()=>{
+ expect(parseModelAction(bid({replyTo:'public_5'}),bidObs).body).toMatchObject({replyTo:'public_5'});
+ expect(()=>parseModelAction(bid({replyTo:'6'}),bidObs)).toThrow('replyTo must be null or one of: public_3, public_5');
+});
+it('checks a bid accusation names a living player other than yourself',()=>{
+ expect(parseModelAction(bid({accusation:4}),bidObs).body).toMatchObject({accusation:4});
+ expect(()=>parseModelAction(bid({accusation:7}),bidObs)).toThrow('accusation must be null or a living player other than you');
+ expect(()=>parseModelAction(bid({accusation:2}),bidObs)).toThrow('accusation must be null or a living player other than you');
+});

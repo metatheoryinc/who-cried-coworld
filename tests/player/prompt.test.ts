@@ -70,3 +70,7 @@ it('lists exactly which players a Town suspicion report must include',()=>{
  const prompt=playerSystemPrompt(townVote,'');
  expect(prompt).toContain('Include exactly these players, once each: 0 = Ann, 1 = Bo, 3 = Di, 4 = Eve, 5 = Fay, 6 = Gus, 7 = Hal, 8 = Ivy. Do not include yourself or eliminated players.');
 });
+it('explains that replyTo is a speech id string, not a player number',()=>{
+ const prompt=playerSystemPrompt(as(2,{kind:'bid',window:1,maxCharacters:480}),'');
+ expect(prompt).toContain('replyTo is the id string of a speech event in the transcript (such as "public_5"), never a player number');
+});

@@ -4,6 +4,8 @@ import {DecisionError} from './timed-llm.js';
 import {modelSettings} from './provider.js';
 export type BedrockInput={model:string;messages:{role:string;content:string}[];signal:AbortSignal;metadata:(data:Record<string,unknown>)=>void;endpoint?:string;region?:string;maxTokens?:number;schema?:Record<string,unknown>};
 export type BedrockSender=(command:InvokeModelCommand,options:{abortSignal:AbortSignal})=>Promise<InvokeModelCommandOutput>;
+/** Hosted models whose provider rejected the tuned settings; they get the plain request. */
+const plainModels=new Set<string>();
 export async function bedrockCompletion(input:BedrockInput,sender?:BedrockSender):Promise<string>{
  const messages:{role:'user'|'assistant';content:{type:'text';text:string}[]}[]=[],system:string[]=[];
  for(const message of input.messages){
@@ -20,9 +22,15 @@ export async function bedrockCompletion(input:BedrockInput,sender?:BedrockSender
   // Chat models get the same per-model reasoning, token and schema settings as direct OpenRouter calls.
   const url=`${input.endpoint.replace(/\/$/,'')}/v1/${claude?'messages':'chat/completions'}`;
   input.metadata({provider:'softmax',endpoint:url});
+  const plain=claude?{model:input.model,system:system.join('\n\n'),messages,max_tokens:input.maxTokens??1600,stream:false}:{model:input.model,messages:input.messages,max_tokens:input.maxTokens??1600,stream:false};
+  const tuned=claude||plainModels.has(input.model)?null:{model:input.model,messages:input.messages,...modelSettings(input.model),...(input.maxTokens?{max_tokens:input.maxTokens}:{}),temperature:.7,...(input.schema?{response_format:{type:'json_schema',json_schema:{name:'game_action',strict:true,schema:input.schema}}}:{}),provider:{sort:'throughput'},stream:false};
+  const send=(body:object)=>fetch(url,{method:'POST',redirect:'error',signal:input.signal,headers:{'Content-Type':'application/json',...(claude?{'x-api-key':'sidecar','anthropic-version':'2023-06-01'}:{Authorization:'Bearer sidecar'})},body:JSON.stringify(body)});
   let response:Response;
   try{
-   response=await fetch(url,{method:'POST',redirect:'error',signal:input.signal,headers:{'Content-Type':'application/json',...(claude?{'x-api-key':'sidecar','anthropic-version':'2023-06-01'}:{Authorization:'Bearer sidecar'})},body:JSON.stringify(claude?{model:input.model,system:system.join('\n\n'),messages,max_tokens:input.maxTokens??1600,stream:false}:{model:input.model,messages:input.messages,...modelSettings(input.model),...(input.maxTokens?{max_tokens:input.maxTokens}:{}),temperature:.7,...(input.schema?{response_format:{type:'json_schema',json_schema:{name:'game_action',strict:true,schema:input.schema}}}:{}),provider:{sort:'throughput'},stream:false})});
+   response=await send(tuned??plain);
+   // The proxy answers 404 when no provider supports every requested parameter (GPT-5.6: temperature; Mistral Medium: reasoning).
+   // Fall back to the plain request, and keep using it for this model.
+   if(tuned&&response.status===404){plainModels.add(input.model);input.metadata({settingsFallback:true});response=await send(plain);}
   }catch{
    throw new DecisionError(input.signal.aborted?'timeout':'transport_error','Hosted proxy request failed',!input.signal.aborted);
   }

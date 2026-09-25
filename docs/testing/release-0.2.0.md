@@ -236,3 +236,34 @@ two-day cap. It cost $0.31.
   speech.
 - **Suspicion reports:** 11 of 12 usable. The miss followed DeepSeek's vote timeout.
 - **Town `read` scores:** 0.16–0.48 for seven of the eight Town seats; the eighth had no usable report.
+
+### Full-length game (September 25, 2026)
+
+Hosted run `xreq_d91de08e-c665-4d9f-9a9a-47b17af99710` on 0.2.3 with the current roster and no
+day cap (episode `ereq_65a0b204-6bb8-4a30-85f5-56ec9b517f81`,
+`artifacts/hosted-0.2.3-roster-full/`). **Town won on day 5 after 23 minutes.** The game cost
+$0.80.
+
+Wolves: Haiku (Alchemist) and Mistral (Wolf). Seer: Llama. Guard: Luna Pro.
+
+| Day | Vote | Night |
+| --- | --- | --- |
+| 1 | GPT-OSS (Sheep) voted out | Wolves chose not to kill |
+| 2 | no majority | DeepSeek (Sheep) killed |
+| 3 | Haiku (Alchemist) voted out | Kimi (Sheep) killed |
+| 4 | Llama (Seer) voted out | Luna Pro (Guard) killed |
+| 5 | Mistral (Wolf) voted out: Town wins | |
+
+The Seer found Haiku on night 2, and Haiku was voted out the next day.
+
+- **Scores:** Town winners scored 0.75–0.85, led by Gemini (`read` 0.39) and GLM (0.26). The
+  Wolves scored 0.003 (Haiku) and 0.07 (Mistral, `hidden` 0.29).
+- **Every model answered.** Mistral answered 63 of 63 requests, Haiku 31 of 31, and Gemini
+  and GLM every request.
+- **GPT-5.6 Luna Pro:** 8 of its 16 requests timed out (5 bids, 2 votes, 1 night action),
+  with a median answer of 9 s. It is the slowest seat now.
+- **Other timeouts:** 1 each for GPT-OSS, Llama, DeepSeek and Kimi.
+- **Suspicion reports:** 18 of 24 usable. The 6 "missing" reports are exactly the vote
+  timeouts: the policy's own fallback vote carries no report.
+- **Strategy:** on night 1 both Wolves deliberately chose not to kill ("let town settle"). It
+  is legal but helps Town.

@@ -369,3 +369,5 @@ body.holding{cursor:var(--stamp-cursor,default)}
 /* Seat strip, 400–760px: stamps sit above the one-line name label, sized to the small card,
    so a vote on any seat, your own included, stays visible. */
 @media(min-width:400px) and (max-width:760px){.card-stamps{z-index:6}.card-stamps .stamp-mark,.card-stamps .stamp-mark.ballot{width:42%}.card-stamps .stamp-mark.pack{width:36%}}
+body.journal-only .personal>.role{display:none}
+#journal-open[hidden]{display:none}

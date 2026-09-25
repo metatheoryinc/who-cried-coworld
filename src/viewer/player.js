@@ -127,11 +127,13 @@ function openCard(target){
 }
 $('card-close').onclick=()=>$('card-sheet').close();
 $('card-sheet').onclick=e=>{if(e.target===$('card-sheet'))$('card-sheet').close();};
-$('role-chip').onclick=()=>document.body.classList.add('you-open');
-$('you-close').onclick=()=>document.body.classList.remove('you-open');
+$('role-chip').onclick=()=>{document.body.classList.remove('journal-only');document.body.classList.add('you-open');};
+// Phone shell: a one-tap journal check, without scrolling past the role card.
+$('journal-open').onclick=()=>document.body.classList.add('you-open','journal-only');
+$('you-close').onclick=()=>document.body.classList.remove('you-open','journal-only');
 $('help').onclick=()=>openGuide();
 function drawChip(){
- const self=state?.self;$('role-chip').hidden=!self;$('help').disabled=!state?.gameSetup;
+ const self=state?.self;$('role-chip').hidden=!self;$('journal-open').hidden=!self;$('help').disabled=!state?.gameSetup;
  if(self)$('role-chip').innerHTML=`<img src="${asset(art[self.role])}" alt=""><span>${esc(roleNames[self.role])}</span>`;
 }
 function onCard(target){
@@ -182,7 +184,7 @@ function updateCursor(){
  img.src=asset(artName);
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&held){held=null;refreshStamps();}});
-phone.addEventListener('change',()=>{document.body.classList.remove('you-open');if(state){lastRender='';render(state);}else drawPlayers();});
+phone.addEventListener('change',()=>{document.body.classList.remove('you-open','journal-only');if(state){lastRender='';render(state);}else drawPlayers();});
 function bindSetup(){
  $('setup-open').onclick=()=>openGuide();
 }

@@ -279,3 +279,28 @@ certification passed all 10 checks (`artifacts/release-0.2.4-certification/`).
 - **Suspicion diagnostics:** a vote whose policy reported its own failure (a timeout) is
   recorded once, as a failure, not also as a missing suspicion report. `valid_actions` and the
   report check share one rule for a failed decision.
+
+### Full-length game on 0.2.4: GPT-5.6 Luna and the Wolf kill guidance
+
+Player source `5fd1464`: the ChatGPT seat uses GPT-5.6 Luna, and Wolves are told in Wolf chat and
+at night that a skipped kill helps Town. Roster: `wcw-bedrock-haiku:v16`, `wcw-deepseek:v5`, and
+v7 of the other seven (`artifacts/release-v16/`).
+
+Hosted run `xreq_2416e0e8-bb60-4596-b27a-6701439be4ae` on 0.2.4 (episode
+`ereq_a815c8b0-2a3c-439d-b634-d64524829b31`, `artifacts/hosted-0.2.4-roster-full/`): **Town won
+on day 3 after 13½ minutes.** The game cost $0.60.
+
+Wolves: Haiku (Wolf) and Gemini (Alchemist). Seer: Kimi. Guard: Mistral.
+
+| Day | Vote | Night |
+| --- | --- | --- |
+| 1 | GPT-OSS (Sheep) voted out | DeepSeek (Sheep) killed: both Wolves on one target, Haiku as killer |
+| 2 | Gemini (Alchemist) voted out | Llama (Sheep) killed |
+| 3 | Haiku (Wolf) voted out: Town wins | |
+
+- **The Wolves killed on both nights** (the previous full game skipped night 1).
+- **GPT-5.6 Luna:** answered 7 of 7, with a median of 2.8 s (Luna Pro: 8 of 16, 9 s).
+- **Fallbacks:** only 3 of 107 requests, all Kimi bid timeouts. There were no invalid actions.
+- **Suspicion reports:** all 16 usable, with no double-counted drops.
+- **Scores:** Town winners scored 0.75–0.85, led by Mistral (`read` 0.41) and Kimi (0.40). The
+  Wolves scored 0.06 (Haiku, `hidden` 0.25) and 0.04 (Gemini).

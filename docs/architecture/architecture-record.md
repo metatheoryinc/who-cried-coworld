@@ -51,9 +51,9 @@ Historical context: [port assessment](../plans/2026-09-14-who-cried-wolf-coworld
 
 **Tradeoff:** A slightly larger protocol buys independent policy authorship and attribution. No game import of provider packages, source workspace dependencies, or submitted policy images. Coworld owns pod scheduling and infrastructure failures, which game fallbacks cannot repair.
 
-**Baseline LLM player (September 25, 2026):** each decision may use the whole remaining window. Hosted chat models get the same per-model reasoning, token and strict-schema settings as direct OpenRouter calls. The parser drops keys the action schema does not define, since some providers ignore the strict schema, but it still rejects malformed or ambiguous JSON and never changes a value.
+**Baseline LLM player (September 25, 2026):** each decision may use the whole remaining window. Hosted chat models get the same per-model reasoning, token and strict-schema settings as direct OpenRouter calls. The parser drops keys the action schema does not define, since some providers ignore the strict schema, but it still rejects malformed or ambiguous JSON and never changes a game-affecting value (only notes are shortened; see below).
 
-**Notes limit (0.2.2):** `summary` and `reason` accept up to 300 characters, raised from 240. Policies are asked to aim for about 240. The notes are private confessionals, and hosted Claude calls get no strict schema, so a slightly long note voided an otherwise valid vote. Speech stays at 480.
+**Notes limit (0.2.3):** `summary` and `reason` accept up to 512 characters, raised from 240 (300 in 0.2.2). Policies are asked to aim for about 240 and keep their own limit. The notes are private confessionals, and hosted Claude calls get no strict schema, so a wordy note (Haiku wrote up to 463 characters) voided an otherwise valid action. The baseline player shortens notes to 300 characters at a word boundary instead of rejecting them. Speech stays at 480 and is never shortened.
 
 ## Audience and reveal
 

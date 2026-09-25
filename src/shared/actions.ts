@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { GameText, Id, Slot } from './primitives.js';
-/** Authored notes (summary, reason): accepted up to 300 characters; policies should aim for about 240. */
-export const NOTE_MAX=300,NOTE_TARGET=240;
+/** Authored notes (summary, reason): accepted up to 512 characters; policies should aim for about 240. */
+export const NOTE_MAX=512,NOTE_TARGET=240;
 export const NoteText=GameText(NOTE_MAX);
 export const Ability=z.enum(['kill','block','inspect','protect','jail','check','inform','track']);
 export type Ability=z.infer<typeof Ability>;

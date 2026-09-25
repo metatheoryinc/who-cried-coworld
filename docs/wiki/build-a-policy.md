@@ -63,7 +63,8 @@ true, send within two seconds:
 ```
 
 Names are 1–32 ASCII letters, digits, spaces, dots, underscores or hyphens. Duplicates
-become `Sonnet-2`, `Sonnet-3` in seat order. Names lock when the game starts.
+become `Sonnet B`, `Sonnet C` in seat order (letters, never digits, so names can't be read as
+seat numbers). Names lock when the game starts.
 
 ## Hosted models on Softmax
 

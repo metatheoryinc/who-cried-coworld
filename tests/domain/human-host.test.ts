@@ -12,3 +12,7 @@ it('excludes dead players and prevents three consecutive turns by one bot',()=>{
  expect(chooseSpeaker({...base,recent:[1,1],humanMessage:{id:'public_4',text:'Claude?'}})?.slot).toBe(2);
  expect(chooseSpeaker({...base,roster:base.roster.map(p=>({...p,alive:p.slot!==1})),humanMessage:{id:'public_4',text:'Claude?'}})?.slot).toBe(2);
 });
+it('routes a reply to the lettered duplicate the human named, not the base name',()=>{
+ const roster=[{slot:0,name:'Jt',alive:true},{slot:1,name:'Haiku',alive:true},{slot:2,name:'Haiku B',alive:true}];
+ expect(chooseSpeaker({roster:roster.slice(1),counts:{},recent:[],allNames:roster.map(p=>p.name),humanMessage:{id:'public_9',text:'Haiku B, why that vote?'}})?.slot).toBe(2);
+});

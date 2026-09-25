@@ -69,7 +69,7 @@ export class HumanSession extends Session {
    });
    return;
   }
-  let host=this.period==='discussion'?chooseSpeaker({roster:publicRoster(this.state,this.config).filter(p=>eligibleSlots.includes(p.slot)),counts:this.hostTurns,recent:this.recentSpeakers,...(humanMessage?.payload.kind==='speech'?{humanMessage:{id:humanMessage.id,text:humanMessage.payload.speech.text}}:{})}):null;
+  let host=this.period==='discussion'?chooseSpeaker({roster:publicRoster(this.state,this.config).filter(p=>eligibleSlots.includes(p.slot)),allNames:publicRoster(this.state,this.config).map(p=>p.name),counts:this.hostTurns,recent:this.recentSpeakers,...(humanMessage?.payload.kind==='speech'?{humanMessage:{id:humanMessage.id,text:humanMessage.payload.speech.text}}:{})}):null;
   if(choice&&this.isHuman(choice.slot))choice=undefined;
   if(host&&choice)host={...host,slot:choice.slot};
   if(host){this.hostTurns[host.slot]=(this.hostTurns[host.slot]??0)+1;this.recentSpeakers=[...this.recentSpeakers,host.slot].slice(-2);}

@@ -77,7 +77,7 @@ it('registers names through real clients in reverse connection order and freezes
    clients.push(runPlayerClient(`ws://127.0.0.1:${server.port}/player?slot=${slot}&token=t${slot}`,async o=>{seen.push(o.roster.map(p=>p.name));return scriptedAction(o);},'Sonnet'));
   }
   const replay=await server.completed;
-  const expected=Array.from({length:9},(_,i)=>i===0?'Sonnet':`Sonnet-${i+1}`);
+  const expected=Array.from({length:9},(_,i)=>i===0?'Sonnet':`Sonnet ${String.fromCharCode(65+i)}`);
   expect(seen.length).toBeGreaterThan(0);for(const names of seen)expect(names).toEqual(expected);
   const started=replay.events.find(e=>e.payload.kind==='started')!;
   expect(started.payload.kind==='started'&&started.payload.roster.map(p=>p.name)).toEqual(expected);

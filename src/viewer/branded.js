@@ -161,9 +161,10 @@ function derive(evs) {
 
 /* ------------------------------------------------------------------ pieces */
 
+/* Seats are numbered from 1 for people, matching the game screen and journal; `n` is the 0-based slot. */
 function avatar(n, cls) {
   if (!isCharacter(n))
-    return `<span class="avatar ${cls || ''}" data-kind="neutral" aria-hidden="true">${esc(String(n))}</span>`;
+    return `<span class="avatar ${cls || ''}" data-kind="neutral" aria-hidden="true">${esc(String(n + 1))}</span>`;
   return `<span class="avatar ${cls || ''}" style="--av:hsl(${HUES[n]} 46% 66%)" aria-hidden="true">${esc(nameOf(n)[0])}</span>`;
 }
 
@@ -203,11 +204,11 @@ function renderSeats(m) {
     return `<li><details class="seat" data-slot="${n}" ${openSeats.has(String(n)) ? 'open' : ''} data-alive="${!gone}" data-speaking="${m.speaking === n && !gone}">
       <summary>
         ${face}
-        <span class="who"><span class="nm">${esc(s.name)}</span><span class="st">Seat ${n} &middot; ${esc(st)}</span></span>
+        <span class="who"><span class="nm">${esc(s.name)}</span><span class="st">Seat ${n + 1} &middot; ${esc(st)}</span></span>
         <span class="tail">${tail.join('')}</span>
       </summary>
       <div class="detail">${detail}
-        <dl><dt>Seat</dt><dd>${n}</dd>
+        <dl><dt>Seat</dt><dd>${n + 1}</dd>
           ${s.policyName ? `<dt>Policy</dt><dd>${esc(s.policyName)}</dd>` : ''}
           <dt>Spoke</dt><dd>${m.spoke[n]} time${m.spoke[n] === 1 ? '' : 's'}</dd>
           <dt>Status</dt><dd>${esc(st)}</dd>
@@ -281,7 +282,7 @@ function speechBeat(e, all) {
     <div>
       <div class="hdr">
         <span class="nm">${esc(nameOf(sp.slot))}</span>
-        <span class="seat-no">Seat ${sp.slot}</span>
+        <span class="seat-no">Seat ${sp.slot + 1}</span>
         ${src ? `<span class="reply">&#8618; replying to ${esc(nameOf(src.payload.speech.slot))}</span>` : ''}
       </div>
       <p class="body">${esc(sp.text)}</p>${meta}

@@ -178,7 +178,8 @@ environment to override it. Unknown models keep the platform name unless overrid
 Names must be 1–32 ASCII letters, digits, spaces, dots, underscores or hyphens,
 starting with a letter or digit. These are display labels, not verified model identity.
 
-The first matching seat is `Sonnet`, the next `Sonnet-2`, then `Sonnet-3`.
+The first matching seat is `Sonnet`, the next `Sonnet B`, then `Sonnet C`. Duplicates take
+letters, never digits, so a name cannot be mistaken for a seat number.
 Resolution is case-insensitive and follows seat order, not connection order.
 Human and unregistered names are reserved. Names lock when the game starts and
 remain unchanged on reconnect. Cards, votes, chats, agent observations and replays

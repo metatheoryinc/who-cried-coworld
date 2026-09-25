@@ -250,13 +250,13 @@ try{lastSeen=JSON.parse(sessionStorage.getItem(seenKey)??'{}')??{};}catch{}
 function drawChat(){
  if(!state.channels.includes(channel))channel='town';
  const selfSlot=state.self?.slot??-1,selfName=state.self?name(selfSlot):'',info=channelInfo[channel];
- const active=unread(state.events,channel,lastSeen[channel],selfSlot,selfName);
+ const active=unread(state.events,channel,lastSeen[channel],selfSlot,selfName,state.roster.map(p=>p.name));
  if(divider.channel!==channel)divider={channel,id:active.firstId};
  const kind=channel==='town'?'speech':channel==='wolves'?'wolf_chat':'noble_chat';
  const latest=state.events.filter(e=>e.payload.kind===kind).at(-1);
  if(latest&&lastSeen[channel]!==latest.id){lastSeen[channel]=latest.id;try{sessionStorage.setItem(seenKey,JSON.stringify(lastSeen));}catch{}}
  $('channels').innerHTML=state.channels.map(c=>{
-  const u=c===channel?{count:0}:unread(state.events,c,lastSeen[c],selfSlot,selfName),i=channelInfo[c];
+  const u=c===channel?{count:0}:unread(state.events,c,lastSeen[c],selfSlot,selfName,state.roster.map(p=>p.name)),i=channelInfo[c];
   const badge=u.count?`<span class="badge${u.mention?' mention':''}">${u.mention?'@':''}${u.count>9?'9+':u.count}</span>`:'';
   return `<button class="chan chan-${c}${c===channel?' active':''}" role="tab" data-channel="${c}" aria-selected="${c===channel}" aria-label="${i.name}${u.count?`, ${u.count} unread${u.mention?', mentions you':''}`:''}">${i.icon}<span>${i.name}</span>${badge}</button>`;
  }).join('');

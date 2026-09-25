@@ -85,3 +85,8 @@ it('explains that votes are secret and simultaneous, so a skip cannot draw out o
  expect(prompt).toContain('Votes are secret and simultaneous');
  expect(prompt).toContain('A skip is not a move');
 });
+it('maps each player id to the seat number people use, so "seat 3" and a lettered name are not confused',()=>{
+ const prompt=playerSystemPrompt(as(0,{kind:'vote',targets:[1,2],allowPass:true}),'');
+ expect(prompt).toContain('0 = "Ann" (seat 1); 1 = "Bo" (seat 2)');
+ expect(prompt).toContain('People count seats from 1');
+});

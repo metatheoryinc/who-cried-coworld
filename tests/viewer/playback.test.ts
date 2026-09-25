@@ -24,3 +24,10 @@ it('never scrolls the host page while stepping or playing a replay', async () =>
  const source = readFileSync(new URL('../../src/viewer/branded.js', import.meta.url), 'utf8');
  expect(source).not.toMatch(/\.scrollIntoView\(|window\.scroll(To|By)?\(|\bscrollTo\(/);
 });
+
+it('patches the floor instead of rebuilding it, so phase art does not flash on every step', async () => {
+ const { readFileSync } = await import('node:fs');
+ const source = readFileSync(new URL('../../src/viewer/branded.js', import.meta.url), 'utf8');
+ expect(source).not.toMatch(/getElementById\('floor'\)\.innerHTML\s*=/);
+ expect(source).toContain('patchFloor(');
+});

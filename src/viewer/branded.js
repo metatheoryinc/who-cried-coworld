@@ -198,9 +198,11 @@ function renderSeats(m) {
       : `<p>No character is configured for this seat. It is known by its display name and seat number, and nothing else.</p>`;
     const r = m.roles || publicRole(n) ? roleOf(n) : null;
 
+    // A known role (always after death, or everything in the Everything view) shows its art.
+    const face = r ? `<span class="avatar role-face" data-faction="${esc(r.faction)}" aria-hidden="true"><img src="${esc(ROLE_ART[r.role])}" alt=""></span>` : avatar(n);
     return `<li><details class="seat" data-slot="${n}" ${openSeats.has(String(n)) ? 'open' : ''} data-alive="${!gone}" data-speaking="${m.speaking === n && !gone}">
       <summary>
-        ${avatar(n)}
+        ${face}
         <span class="who"><span class="nm">${esc(s.name)}</span><span class="st">Seat ${n} &middot; ${esc(st)}</span></span>
         <span class="tail">${tail.join('')}</span>
       </summary>
@@ -534,7 +536,27 @@ function renderFloor(rawEvs, m) {
     i++;
   }
   if (!out.length) out.push('<div class="beat hold"><p class="big">The episode has not begun.</p></div>');
-  document.getElementById('floor').innerHTML = out.join('');
+  patchFloor(document.getElementById('floor'), out);
+}
+
+/* Keep unchanged beats in place and replace only from the first difference, so a
+   step does not reload images or replay entrance animations (the phase art used to
+   flash on every step). A beat that was already on screen never animates again. */
+let floorBeats = [];
+function patchFloor(floor, html) {
+  let k = 0;
+  while (k < html.length && k < floorBeats.length && floorBeats[k].html === html[k]) k++;
+  const seen = new Set(floorBeats.map(b => b.html));
+  for (const b of floorBeats.slice(k)) b.nodes.forEach(n => n.remove());
+  floorBeats = floorBeats.slice(0, k);
+  for (const h of html.slice(k)) {
+    const t = document.createElement('template');
+    t.innerHTML = h;
+    const nodes = [...t.content.childNodes];
+    if (seen.has(h)) nodes.forEach(n => n.classList?.add('seen'));
+    floor.append(...nodes);
+    floorBeats.push({ html: h, nodes });
+  }
 }
 
 /* --------------------------------------- what the browser is actually holding */
@@ -552,10 +574,23 @@ function renderChrome(m) {
     : m.finished ? 'Replay · complete' : 'Replay';
 
   document.querySelectorAll('.seg[data-kind="source"] button').forEach(b => b.setAttribute('aria-pressed', String(b.value === state.source)));
-  document.querySelectorAll('.seg[data-kind="reveal"] button').forEach(b => {
+  // Compact layout: short frames tuck the seats behind a button; chips open one detail pop-over at a time.
+const compact = typeof matchMedia === 'function' ? matchMedia('(max-width: 1000px)') : { matches: false };
+document.getElementById('seats-btn').addEventListener('click', ev => {
+  const open = document.body.classList.toggle('seats-open');
+  ev.currentTarget.setAttribute('aria-expanded', String(open));
+});
+document.getElementById('seats').addEventListener('toggle', ev => {
+  if (!compact.matches || !ev.target.open) return;
+  document.querySelectorAll('#seats .seat[open]').forEach(s => { if (s !== ev.target) s.open = false; });
+}, true);
+document.querySelectorAll('.seg[data-kind="reveal"] button').forEach(b => {
     b.setAttribute('aria-pressed', String(b.value === state.reveal));
     b.disabled = live;
   });
+  const alive = m.alive.filter(Boolean).length;
+  document.getElementById('phase-line').textContent = `${m.finished ? 'Game over' : m.phase === 'night' ? `Night ${m.day}` : m.phase === 'vote' ? `Day ${m.day} · vote` : `Day ${m.day}`} · ${alive}/${ROSTER().length} alive`;
+  document.querySelector('.brand').title = document.getElementById('ep-sub').textContent;
   document.getElementById('reveal-hint').textContent = live
     ? 'Public view · roles stay secret until the episode ends.'
     : 'Everything includes roles and private conversations. Spoilers ahead.';
@@ -566,6 +601,7 @@ function renderChrome(m) {
 
   const scrub = document.getElementById('scrub');
   scrub.max = maxCursor(); scrub.value = Math.min(state.cursor, maxCursor());
+  document.querySelector('.seg[data-kind="reveal"]').title = document.getElementById('reveal-hint').textContent;
   document.getElementById('tlabel').textContent =
     m.finished ? 'End of episode' : m.phase === 'night' ? `Night ${m.day}` : m.phase === 'vote' ? `Day ${m.day} · vote` : `Day ${m.day}`;
   const play = document.getElementById('play');

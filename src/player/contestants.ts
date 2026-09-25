@@ -2,11 +2,12 @@
 // Cost tiering (2026-09-24): Claude, Gemini and Mistral use cheaper siblings (Haiku 4.5, Gemini 3.8 Flash,
 // Mistral Medium 3.1) instead of Opus 5, Gemini 3.1 Pro and Mistral Medium 3.5.
 // 2026-09-25: DeepSeek V4.1 Flash replaces V4 Pro, which was too slow for hosted chat turns (Xiaomi MiMo v2.6
-// Pro and Flash never answered through the hosted proxy); GPT-5.6 Luna Pro replaces Terra Pro at a tenth of the price.
+// Pro and Flash never answered through the hosted proxy); GPT-5.6 Luna replaces Terra Pro at a tenth of the price
+// (Luna Pro timed out on half its requests in a full hosted game).
 export const contestants = [
   {
     "displayName": "ChatGPT",
-    "model": "openai/gpt-5.6-luna-pro",
+    "model": "openai/gpt-5.6-luna",
     "personalityPrompt": "Polished strategist; persuasive, calm, dangerous when trusted. Speaks in measured, structured points and never raises their voice. Bias: builds coalitions early and avoids being the first to accuse anyone."
   },
   {

@@ -30,6 +30,11 @@ it('still gives Wolves their team and private-chat framing',()=>{
  expect(prompt).toContain('Your mafia team: Bo, Fay');
  expect(prompt).toMatch(/kind "wolf_chat"/);
 });
+it('tells Wolves that skipping the night kill helps Town, when planning and at night only',()=>{
+ for(const r of [{kind:'wolf_chat',turn:0,maxCharacters:480},{kind:'night',choices:[]}] as const)expect(playerSystemPrompt(as(1,r as Observation['request']),'')).toContain('Skipping the night kill almost always helps Town');
+ expect(playerSystemPrompt(as(1,{kind:'vote',targets:[0,2],allowPass:true}),'')).not.toContain('Skipping the night kill');
+ expect(playerSystemPrompt(as(0,{kind:'night',choices:[]}),'')).not.toContain('Skipping the night kill');
+});
 
 const withResults=(slot:number,privateResults:Observation['privateResults'])=>({...as(slot,{kind:'vote',targets:[0,1,2],allowPass:true}),privateResults}) as Observation;
 it('turns a Dairy Maid visit into a plain confirmed-town statement',()=>{

@@ -1,7 +1,8 @@
 import {NodeHttpHandler} from '@smithy/node-http-handler';
 import {BedrockRuntimeClient,InvokeModelCommand,type InvokeModelCommandOutput} from '@aws-sdk/client-bedrock-runtime';
 import {DecisionError} from './timed-llm.js';
-export type BedrockInput={model:string;messages:{role:string;content:string}[];signal:AbortSignal;metadata:(data:Record<string,unknown>)=>void;endpoint?:string;region?:string;maxTokens?:number};
+import {modelSettings} from './provider.js';
+export type BedrockInput={model:string;messages:{role:string;content:string}[];signal:AbortSignal;metadata:(data:Record<string,unknown>)=>void;endpoint?:string;region?:string;maxTokens?:number;schema?:Record<string,unknown>};
 export type BedrockSender=(command:InvokeModelCommand,options:{abortSignal:AbortSignal})=>Promise<InvokeModelCommandOutput>;
 export async function bedrockCompletion(input:BedrockInput,sender?:BedrockSender):Promise<string>{
  const messages:{role:'user'|'assistant';content:{type:'text';text:string}[]}[]=[],system:string[]=[];
@@ -16,11 +17,12 @@ export async function bedrockCompletion(input:BedrockInput,sender?:BedrockSender
  if(input.endpoint&&!sender){
   if(!/^[a-z0-9-]+\/[a-z0-9][a-z0-9._:-]*$/i.test(input.model))throw new DecisionError('invalid_request','Hosted model must be a canonical OpenRouter slug',false);
   const claude=input.model.startsWith('anthropic/');
+  // Chat models get the same per-model reasoning, token and schema settings as direct OpenRouter calls.
   const url=`${input.endpoint.replace(/\/$/,'')}/v1/${claude?'messages':'chat/completions'}`;
   input.metadata({provider:'softmax',endpoint:url});
   let response:Response;
   try{
-   response=await fetch(url,{method:'POST',redirect:'error',signal:input.signal,headers:{'Content-Type':'application/json',...(claude?{'x-api-key':'sidecar','anthropic-version':'2023-06-01'}:{Authorization:'Bearer sidecar'})},body:JSON.stringify(claude?{model:input.model,system:system.join('\n\n'),messages,max_tokens:input.maxTokens??1600,stream:false}:{model:input.model,messages:input.messages,max_tokens:input.maxTokens??1600,stream:false})});
+   response=await fetch(url,{method:'POST',redirect:'error',signal:input.signal,headers:{'Content-Type':'application/json',...(claude?{'x-api-key':'sidecar','anthropic-version':'2023-06-01'}:{Authorization:'Bearer sidecar'})},body:JSON.stringify(claude?{model:input.model,system:system.join('\n\n'),messages,max_tokens:input.maxTokens??1600,stream:false}:{model:input.model,messages:input.messages,...modelSettings(input.model),...(input.maxTokens?{max_tokens:input.maxTokens}:{}),temperature:.7,...(input.schema?{response_format:{type:'json_schema',json_schema:{name:'game_action',strict:true,schema:input.schema}}}:{}),provider:{sort:'throughput'},stream:false})});
   }catch{
    throw new DecisionError(input.signal.aborted?'timeout':'transport_error','Hosted proxy request failed',!input.signal.aborted);
   }

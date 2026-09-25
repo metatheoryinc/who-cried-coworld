@@ -3,8 +3,10 @@ import { timedAction } from '../../src/player/timed-llm.js';
 import { Session } from '../../src/game/runtime/session.js';
 import { GameConfig } from '../../src/shared/config.js';
 const obs=()=>{const s=new Session(GameConfig.parse({tokens:Array.from({length:9},(_,i)=>`${i}`),players:Array.from({length:9},(_,i)=>({name:`P${i}`}))}),'episode');s.start(0);return {...s.observation([...s.pending.keys()][0]!,0)!,remainingMs:45000};};
-it('bounds a hung provider to fifteen seconds and returns legal fallback',async()=>{
- vi.useFakeTimers();try{const complete=vi.fn(()=>new Promise<string>(()=>{}));const pending=timedAction(obs(),complete);await vi.advanceTimersByTimeAsync(15000);const a=await pending;expect(complete).toHaveBeenCalledTimes(1);expect(a.report?.code).toBe('provider_error');}finally{vi.useRealTimers();}
+it('lets a slow model use the whole window, then returns legal fallback',async()=>{
+ vi.useFakeTimers();try{const complete=vi.fn(()=>new Promise<string>(()=>{}));let done=false;const pending=timedAction(obs(),complete).finally(()=>{done=true;});
+  await vi.advanceTimersByTimeAsync(40000);expect(done).toBe(false);
+  await vi.advanceTimersByTimeAsync(4500);const a=await pending;expect(complete).toHaveBeenCalledTimes(1);expect(a.report?.code).toBe('provider_error');}finally{vi.useRealTimers();}
 });
 it('repairs malformed output once without extending the action budget',async()=>{
  const complete=vi.fn().mockResolvedValueOnce('bad json').mockResolvedValueOnce(JSON.stringify({kind:'wolf_chat',text:'Coordinate here.',summary:''}));

@@ -51,14 +51,17 @@ it('rejects malformed JSON responses and distinguishes empty or refused content'
 });
 
 it('routes non-Claude hosted models to chat completions without personal credentials',async()=>{
- const fetcher=vi.fn().mockResolvedValue(new Response(JSON.stringify({choices:[{message:{content:'reply'},finish_reason:'stop'}]})));
+ const fetcher=vi.fn(async(_url:string,_init:any)=>new Response(JSON.stringify({choices:[{message:{content:'reply'},finish_reason:'stop'}]})));
  vi.stubGlobal('fetch',fetcher);
  try{
   await expect(bedrockCompletion({model:'google/gemini-test',endpoint:'http://localhost:9100/',messages:[{role:'user',content:'Hi'}],signal:AbortSignal.timeout(1000),metadata:()=>{}})).resolves.toBe('reply');
   expect(fetcher.mock.calls[0]![0]).toBe('http://localhost:9100/v1/chat/completions');
   expect(fetcher.mock.calls[0]![1].headers.Authorization).toBe('Bearer sidecar');
   expect(JSON.parse(fetcher.mock.calls[0]![1].body).stream).toBe(false);
+  // Hosted chat models get the same per-model settings and strict schema as direct OpenRouter calls.
+  await bedrockCompletion({model:'z-ai/glm-test',endpoint:'http://localhost:9100',schema:{type:'object'},messages:[{role:'user',content:'Hi'}],signal:AbortSignal.timeout(1000),metadata:()=>{}});
+  expect(JSON.parse(fetcher.mock.calls[1]![1].body)).toMatchObject({max_tokens:1600,reasoning:{effort:'low',exclude:true},response_format:{type:'json_schema',json_schema:{name:'game_action',strict:true,schema:{type:'object'}}}});
   await expect(bedrockCompletion({model:'us.anthropic.old-model:0',endpoint:'http://localhost:9100',messages:[],signal:AbortSignal.timeout(1000),metadata:()=>{}})).rejects.toMatchObject({code:'invalid_request',retryable:false});
-  expect(fetcher).toHaveBeenCalledTimes(1);
+  expect(fetcher).toHaveBeenCalledTimes(2);
  }finally{vi.unstubAllGlobals();}
 });

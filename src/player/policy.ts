@@ -14,7 +14,7 @@ export async function llmAction(o:Observation,options:PolicyOptions,signal?:Abor
   if(signal?.aborted)throw new DecisionError('cancelled','Player request cancelled',false);
   const messages=[{role:'system',content:playerSystemPrompt(o,options.personality)},{role:'user',content:JSON.stringify(o)},...(repair?[{role:'user',content:repair}]:[])];
   metadata={};
-  if(options.provider==='bedrock')return bedrockCompletion({model:options.model,messages,endpoint:options.endpoint,region:options.region,maxTokens:options.maxTokens,signal:signal?AbortSignal.any([signal,attemptSignal]):attemptSignal,metadata:data=>Object.assign(metadata,data)},options.bedrockSender);
+  if(options.provider==='bedrock')return bedrockCompletion({model:options.model,messages,schema:actionSchema(o),endpoint:options.endpoint,region:options.region,maxTokens:options.maxTokens,signal:signal?AbortSignal.any([signal,attemptSignal]):attemptSignal,metadata:data=>Object.assign(metadata,data)},options.bedrockSender);
   return providerCompletion({model:options.model,messages,schema:actionSchema(o),key:options.key!,signal:signal?AbortSignal.any([signal,attemptSignal]):attemptSignal,metadata:data=>Object.assign(metadata,data)},options.fetcher);
  },attempt=>options.onLog?.({slot:o.self.slot,model:options.model,requestId:o.requestId,requestKind:o.request.kind,...metadata,...attempt}));
 }

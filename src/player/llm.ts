@@ -23,7 +23,7 @@ export function outputInstruction(o:Observation){
 export function parseModelAction(content:string,o:Observation){
  // Normalize presentation only, never repair JSON or change action values.
  // Check the original size before removing prose/fences so the limit cannot be bypassed.
- if(new TextEncoder().encode(content).byteLength>8192)throw new Error('Malformed model action: expected unambiguous JSON under 8192 bytes');
+ if(new TextEncoder().encode(content).byteLength>8192)throw new Error('Malformed model action: output is over 8192 bytes; return one short JSON object');
  let json=content.trim();
  const fence=/^([^`{}\[\]]*)```(?:json)?[ \t]*\r?\n([\s\S]*?)\r?\n```$/i.exec(json);
  if(fence)json=fence[2]!.trim();
@@ -34,16 +34,17 @@ export function parseModelAction(content:string,o:Observation){
   if(start>0&&!/[`\[\]]/.test(json.slice(0,start)))json=json.slice(start);
  }
  const decoded=decodeText(json,z.unknown());
- if(!decoded.ok)throw new Error('Malformed model action: expected unambiguous JSON under 8192 bytes');
+ if(!decoded.ok)throw new Error('Malformed model action: not one valid JSON object; check quotes, commas and brackets, and give each key once');
  const value=decoded.value;
- // Tolerate only known schema annotations on an actual action; preserve all other validation.
- if(value&&typeof value==='object'&&!Array.isArray(value)&&'kind' in value){
-  const annotated=value as Record<string,unknown>;
-  if(annotated.$schema==='https://json-schema.org/draft/2020-12/schema')delete annotated.$schema;
-  if(annotated.type==='object')delete annotated.type;
- }
+ // Drop keys the action's schema does not define (schema annotations, or stray keys from providers
+ // that ignore the strict schema); this removes noise without changing any action value.
+ const shape=value&&typeof value==='object'&&!Array.isArray(value)?ActionBody.options.find(x=>x.shape.kind.value===(value as {kind?:unknown}).kind)?.shape:undefined;
+ if(shape)for(const key of Object.keys(value as object))if(!(key in shape))delete (value as Record<string,unknown>)[key];
  const parsed=ActionBody.safeParse(value);
- if(!parsed.success)throw new Error('Malformed model action: '+parsed.error.issues.map(i=>`${i.path.join('.')||'body'}: ${i.message}`).join('; ').slice(0,1200));
+ if(!parsed.success){
+  const long=Object.entries({text:480,summary:240,reason:240}).flatMap(([key,limit])=>{const v=(value as Record<string,unknown>)?.[key];return typeof v==='string'&&[...v].length>limit?[`${key} is ${[...v].length} characters; the limit is ${limit}`]:[];});
+  throw new Error('Malformed model action: '+[...long,...parsed.error.issues.map(i=>`${i.path.join('.')||'body'}: ${i.message}`)].join('; ').slice(0,1200));
+ }
  const b=parsed.data;
  if(b.kind!==o.request.kind)throw new Error('Wrong action kind');
  if(b.kind==='vote'&&o.request.kind==='vote'&&b.target!==null&&!o.request.targets.includes(b.target))throw new Error('Illegal vote');

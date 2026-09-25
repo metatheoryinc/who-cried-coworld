@@ -51,6 +51,8 @@ Historical context: [port assessment](../plans/2026-09-14-who-cried-wolf-coworld
 
 **Tradeoff:** A slightly larger protocol buys independent policy authorship and attribution. No game import of provider packages, source workspace dependencies, or submitted policy images. Coworld owns pod scheduling and infrastructure failures, which game fallbacks cannot repair.
 
+**Baseline LLM player (September 25, 2026):** each decision may use the whole remaining window. Hosted chat models get the same per-model reasoning, token and strict-schema settings as direct OpenRouter calls. The parser drops keys the action schema does not define, since some providers ignore the strict schema, but it still rejects malformed or ambiguous JSON and never changes a value.
+
 ## Audience and reveal
 
 **Context:** Hidden roles and private plans are essential during play. Static replay bytes are publicly served by Coworld after the episode.

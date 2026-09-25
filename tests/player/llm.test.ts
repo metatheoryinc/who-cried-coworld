@@ -23,11 +23,19 @@ it('canonicalizes ability order without changing targets or permitting illegal t
  body.actions[0]!.target=8;
  expect(()=>parseModelAction(JSON.stringify(body),two)).toThrow(/block.*3/);
 });
-it('accepts harmless schema metadata but rejects schema documents and unrelated keys',()=>{
+it('accepts harmless schema metadata, drops unknown keys, and rejects schema documents',()=>{
  const action={kind:'night',actions:[{ability:'inspect',target:2}],summary:''};
  expect(parseModelAction(JSON.stringify({...action,$schema:'https://json-schema.org/draft/2020-12/schema',type:'object'}),o).body).toEqual(action);
  expect(()=>parseModelAction(JSON.stringify({$schema:'https://json-schema.org/draft/2020-12/schema',type:'object',properties:{kind:{const:'night'}}}),o)).toThrow();
- expect(()=>parseModelAction(JSON.stringify({...action,unexpected:true}),o)).toThrow();
+ // Some hosted providers ignore the strict schema and add stray keys (GLM: "":"", "":0, replyTo on chat); dropping them changes no action value.
+ expect(parseModelAction(JSON.stringify({...action,unexpected:true,'':''}),o).body).toEqual(action);
+});
+it('names the actual length when a text field is over its limit',()=>{
+ expect(()=>parseModelAction(JSON.stringify({kind:'night',actions:[{ability:'inspect',target:2}],summary:'x'.repeat(250)}),o)).toThrow('summary is 250 characters; the limit is 240');
+});
+it('explains malformed JSON separately from oversized output',()=>{
+ expect(()=>parseModelAction('{"kind":"night","summary":"a","summary":""}',o)).toThrow('each key once');
+ expect(()=>parseModelAction('x'.repeat(8193),o)).toThrow('8192 bytes');
 });
 it('accepts one fenced JSON action or a single action after prose without rewriting text',()=>{
  const body={kind:'night',actions:[{ability:'inspect',target:2}],summary:'Check {the claim} and "quotes".'};

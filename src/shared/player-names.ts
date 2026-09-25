@@ -13,6 +13,6 @@ export function assignDisplayNames(original:string[],requested:ReadonlyMap<numbe
 export function modelDisplayName(model:string,override?:string):string|undefined{
  if(override!==undefined)return DisplayName.parse(override);
  const lower=model.toLowerCase();
- for(const [pattern,name] of [['sonnet','Sonnet'],['haiku','Haiku'],['opus','Opus'],['gemini','Gemini'],['deepseek','DeepSeek'],['qwen','Qwen'],['llama','Llama'],['mistral','Mistral'],['kimi','Kimi'],['glm','GLM'],['gpt','GPT'],['claude','Claude']] as const)if(lower.includes(pattern))return name;
+ for(const [pattern,name] of [['sonnet','Sonnet'],['haiku','Haiku'],['opus','Opus'],['gemini','Gemini'],['deepseek','DeepSeek'],['qwen','Qwen'],['llama','Llama'],['mistral','Mistral'],['kimi','Kimi'],['mimo','MiMo'],['glm','GLM'],['gpt','GPT'],['claude','Claude']] as const)if(lower.includes(pattern))return name;
  return undefined;
 }

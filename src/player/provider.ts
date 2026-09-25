@@ -5,7 +5,7 @@ export function modelSettings(model:string){
  if(model.startsWith('qwen/'))return {max_tokens:1200,reasoning:{enabled:true,effort:'minimal',exclude:true}};
  if(model.startsWith('google/'))return {max_tokens:1600,reasoning:{effort:'minimal',exclude:true}};
  if(model.startsWith('deepseek/'))return {max_tokens:2400,reasoning:{effort:'low',exclude:true}};
- if(/^(moonshotai|z-ai)\//.test(model))return {max_tokens:1600,reasoning:{effort:'low',exclude:true}};
+ if(/^(moonshotai|z-ai|xiaomi)\//.test(model))return {max_tokens:1600,reasoning:{effort:'low',exclude:true}};
  if(model.startsWith('meta-llama/'))return {max_tokens:800};
  return {max_tokens:1000,reasoning:{effort:'minimal',exclude:true}};
 }

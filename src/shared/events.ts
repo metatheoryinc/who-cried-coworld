@@ -31,7 +31,7 @@ export const Payload=z.discriminatedUnion('kind',[
  z.object({kind:z.literal('speech'),speech:z.object({slot:Slot,text:GameText(480,1),replyTo:Id.nullable(),accusation:Slot.nullable()}).strict()}).strict(),
  z.object({kind:z.literal('wolf_chat'),slot:Slot,text:GameText(480,1)}).strict(),
  z.object({kind:z.literal('noble_chat'),slot:Slot,text:GameText(480,1)}).strict(),
- z.object({kind:z.literal('confessional'),slot:Slot,requestKind:RequestKind,text:GameText(240)}).strict(),
+ z.object({kind:z.literal('confessional'),slot:Slot,requestKind:RequestKind,text:GameText(300)}).strict(),
  z.object({kind:z.literal('bid'),slot:Slot,window:z.number().int().min(0).max(17),bid:Bid,rank:z.number().int().min(0).max(8).nullable(),selected:z.boolean()}).strict(),
  z.object({kind:z.literal('ballots'),ballots:ballotRows,eliminated:Slot.nullable(),resolution:z.enum(['majority','no_majority','tie','all_abstain'])}).strict(),
  z.object({kind:z.literal('night_choices'),slot:Slot,actions:z.array(NightChoice).max(2)}).strict(),

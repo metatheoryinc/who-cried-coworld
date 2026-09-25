@@ -56,7 +56,7 @@ The launcher prints each opponent’s model; `run.json` records the roster/model
 
 ## Model output budgets
 
-Mistral: 1,800 tokens and reasoning disabled; Qwen: 1,200 with mandatory reasoning enabled at minimal effort (excluded from the returned content); Gemini: 1,600 with minimal reasoning; DeepSeek/Kimi/GLM: 1,600 with low reasoning; Llama: 800 without a reasoning option; other models: 1,000 with minimal reasoning. These are initial settings, not measured latency guarantees. Dialogue limits remain short. A `length` finish reason is logged as `output_limit`, distinct from invalid actions and network failures. Settings follow [OpenRouter reasoning controls](https://openrouter.ai/docs/guides/best-practices/reasoning-tokens).
+Mistral: 1,800 tokens and reasoning disabled; Qwen: 1,200 with mandatory reasoning enabled at minimal effort (excluded from the returned content); Gemini: 1,600 with minimal reasoning; DeepSeek/Kimi/GLM/MiMo: 1,600 with low reasoning; Llama: 800 without a reasoning option; other models: 1,000 with minimal reasoning. These are initial settings, not measured latency guarantees. Dialogue limits remain short. A `length` finish reason is logged as `output_limit`, distinct from invalid actions and network failures. Settings follow [OpenRouter reasoning controls](https://openrouter.ai/docs/guides/best-practices/reasoning-tokens).
 
 Verification uses fake clocks and mocked provider responses, including slow successful calls, hung calls, early repair, exhausted retry budgets, HTTP errors, output truncation and empty night actions. No paid model run was performed for this change.
 

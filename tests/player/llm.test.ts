@@ -13,8 +13,9 @@ it('provides the correct typed output contract',()=>{
  expect(outputInstruction(o)).toContain('inspect');expect(outputInstruction(o)).toContain('zero-based');
 });
 it('reports the specific invalid field and supplies explicit text limits',()=>{
- expect(()=>parseModelAction(JSON.stringify({kind:'night',actions:[],summary:'x'.repeat(241)}),o)).toThrow(/summary/);
- expect(outputInstruction(o)).toContain('summary and reason: 240');
+ expect(()=>parseModelAction(JSON.stringify({kind:'night',actions:[],summary:'x'.repeat(301)}),o)).toThrow(/summary/);
+ expect(parseModelAction(JSON.stringify({kind:'night',actions:[],summary:'x'.repeat(300)}),{...o,request:{kind:'night',choices:[]}} as typeof o).body).toMatchObject({summary:'x'.repeat(300)});
+ expect(outputInstruction(o)).toContain('summary and reason: aim for about 240 characters, never over 300');
 });
 it('canonicalizes ability order without changing targets or permitting illegal targets',()=>{
  const two={...o,request:{kind:'night',choices:[{ability:'kill',targets:[2],actors:[1],allowPass:true},{ability:'block',targets:[3],allowPass:true}]}} as Observation;
@@ -31,7 +32,7 @@ it('accepts harmless schema metadata, drops unknown keys, and rejects schema doc
  expect(parseModelAction(JSON.stringify({...action,unexpected:true,'':''}),o).body).toEqual(action);
 });
 it('names the actual length when a text field is over its limit',()=>{
- expect(()=>parseModelAction(JSON.stringify({kind:'night',actions:[{ability:'inspect',target:2}],summary:'x'.repeat(250)}),o)).toThrow('summary is 250 characters; the limit is 240');
+ expect(()=>parseModelAction(JSON.stringify({kind:'night',actions:[{ability:'inspect',target:2}],summary:'x'.repeat(310)}),o)).toThrow('summary is 310 characters; the limit is 300');
 });
 it('explains malformed JSON separately from oversized output',()=>{
  expect(()=>parseModelAction('{"kind":"night","summary":"a","summary":""}',o)).toThrow('each key once');

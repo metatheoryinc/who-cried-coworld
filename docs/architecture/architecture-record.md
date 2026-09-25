@@ -53,6 +53,8 @@ Historical context: [port assessment](../plans/2026-09-14-who-cried-wolf-coworld
 
 **Baseline LLM player (September 25, 2026):** each decision may use the whole remaining window. Hosted chat models get the same per-model reasoning, token and strict-schema settings as direct OpenRouter calls. The parser drops keys the action schema does not define, since some providers ignore the strict schema, but it still rejects malformed or ambiguous JSON and never changes a value.
 
+**Notes limit (0.2.2):** `summary` and `reason` accept up to 300 characters, raised from 240. Policies are asked to aim for about 240. The notes are private confessionals, and hosted Claude calls get no strict schema, so a slightly long note voided an otherwise valid vote. Speech stays at 480.
+
 ## Audience and reveal
 
 **Context:** Hidden roles and private plans are essential during play. Static replay bytes are publicly served by Coworld after the episode.

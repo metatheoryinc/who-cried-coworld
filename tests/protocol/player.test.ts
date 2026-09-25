@@ -10,7 +10,7 @@ it.each([
 ])('accepts canonical action %j',body=>expect(Action.safeParse(envelope(body)).success).toBe(true));
 it.each([
  {...pass,text:'secret'}, {...pass,urgency:1}, {...pass,replyTo:'x'}, {...pass,accusation:1},
- {...pass,wantsToSpeak:true}, {...pass,reason:'x'.repeat(241)},
+ {...pass,wantsToSpeak:true}, {...pass,reason:'x'.repeat(301)},
  {kind:'vote',target:9,summary:''}, {kind:'vote',target:1},
  {kind:'night',actions:[{ability:'kill',target:4},{ability:'kill',target:5}],summary:''},
  {kind:'night',actions:[{ability:'poison',target:4}],summary:''},

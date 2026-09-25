@@ -28,9 +28,10 @@ export async function bedrockCompletion(input:BedrockInput,sender?:BedrockSender
   let response:Response;
   try{
    response=await send(tuned??plain);
-   // The proxy answers 404 when no provider supports every requested parameter (GPT-5.6: temperature; Mistral Medium: reasoning).
+   // The proxy answers 404 when no provider supports every requested parameter (GPT-5.6: temperature; Mistral Medium: reasoning),
+   // and a provider may answer 400 for a setting it rejects outright.
    // Fall back to the plain request, and keep using it for this model.
-   if(tuned&&response.status===404){plainModels.add(input.model);input.metadata({settingsFallback:true});response=await send(plain);}
+   if(tuned&&(response.status===404||response.status===400)){plainModels.add(input.model);input.metadata({settingsFallback:true});response=await send(plain);}
   }catch{
    throw new DecisionError(input.signal.aborted?'timeout':'transport_error','Hosted proxy request failed',!input.signal.aborted);
   }

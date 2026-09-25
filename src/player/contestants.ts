@@ -1,6 +1,7 @@
 // Benchmark contestant defaults, snapshotted for standalone distribution.
 // Cost tiering (2026-09-24): Claude, Gemini and Mistral use cheaper siblings (Haiku 4.5, Gemini 3.8 Flash,
 // Mistral Medium 3.1) instead of Opus 5, Gemini 3.1 Pro and Mistral Medium 3.5.
+// 2026-09-25: Xiaomi MiMo v2.6 Pro replaces DeepSeek V4 Pro, which was too slow for hosted chat turns.
 export const contestants = [
   {
     "displayName": "ChatGPT",
@@ -28,8 +29,8 @@ export const contestants = [
     "personalityPrompt": "Scrappy underdog; practical, blunt, surprisingly sharp. Short sentences, no hedging, calls a bad argument ugly to its face. Bias: targets whoever is steering the conversation, not whoever is loudest."
   },
   {
-    "displayName": "DeepSeek",
-    "model": "deepseek/deepseek-v4-pro-0813",
+    "displayName": "MiMo",
+    "model": "xiaomi/mimo-v2.6-pro",
     "personalityPrompt": "Cold analyst; quiet, logical, scary in endgame. Speaks rarely and only in numbered, falsifiable claims. Bias: tracks voting records silently and strikes late with one compiled case."
   },
   {

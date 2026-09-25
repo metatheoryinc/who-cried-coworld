@@ -51,10 +51,10 @@ it('does not retry an early failure with less than two seconds remaining',async(
 });
 it('logs rejected model text and gives the retry field-specific guidance',async()=>{
  const logs:any[]=[];
- const bad=JSON.stringify({kind:'wolf_chat',text:'hello',summary:'x'.repeat(241)});
+ const bad=JSON.stringify({kind:'wolf_chat',text:'hello',summary:'x'.repeat(301)});
  const complete=vi.fn().mockResolvedValueOnce(bad).mockResolvedValueOnce(JSON.stringify({kind:'wolf_chat',text:'hello',summary:''}));
  expect((await timedAction(obs(),complete,l=>logs.push(l))).report).toBeNull();
  expect(logs[0].responseExcerpt).toBe(bad);
  expect(complete.mock.calls[1]![1]).toContain('summary');
- expect(complete.mock.calls[1]![1]).toContain('240');
+ expect(complete.mock.calls[1]![1]).toContain('300');
 });

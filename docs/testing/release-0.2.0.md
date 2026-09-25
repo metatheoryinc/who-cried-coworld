@@ -45,3 +45,26 @@ proxy). Use v7 or later with 0.2.0.
 - Per-model policies for the rest of the roster: model availability depends on the
   Softmax proxy allowlist.
 - Hosted multi-human lobby (five-minute auto-start) and phone full-screen safe areas.
+
+## 0.2.1 and Haiku v8 — September 25, 2026
+
+The first hosted LLM check on 0.2.0 (`xreq_ada10dd6-fb0f-43ff-aa1e-c61eb1bc8a2c`,
+nine `wcw-bedrock-haiku:v7`, two-day cap) completed with valid results, but only 2
+of 12 Town suspicion reports were usable: 8 were dropped as `unknown_player` because
+Haiku listed itself (hosted Claude calls use Anthropic Messages without our strict
+schema), and 2 were missing after proxy `provider_error` retries.
+
+0.2.1 ignores report entries for yourself or eliminated players, counts actions whose
+policy reports its own failure against `valid_actions`, and `wcw-bedrock-haiku:v8`
+lists exactly which players a report must include. Source `c10d7fc`; 343 tests,
+typecheck, and build passed; local and hosted certification passed all 10 checks.
+Coworld 0.2.1: `cow_0349d8e1-7976-4cf2-b643-f0d3f0ab3373` (canonical).
+
+Hosted recheck `xreq_05ddae31-3929-4a98-a7bb-8cfba572911c` (episode
+`ereq_46869597-bdf9-4624-bb3c-3d30fc6b1158`, same config with v8): 12 of 13 Town
+reports usable; the one miss followed a proxy `provider_error`. `valid_actions`
+now reflects policy-reported failures (0.33–0.67 for three seats). Remaining issues:
+eight illegal day-speech bid attempts across four seats (five recovered by retry or
+fallback) and three proxy `provider_error` failures. Evidence:
+`artifacts/hosted-0.2.0-v7/`, `artifacts/hosted-0.2.1-v8/`,
+`artifacts/release-0.2.1-certification/`. Use 0.2.1 with v8 or later.

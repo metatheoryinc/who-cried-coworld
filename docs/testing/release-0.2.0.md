@@ -161,3 +161,26 @@ the Town voted out the Wolf on day 1, and the game ended in a draw at the day ca
 - **Gemini:** one HTTP 429, which its retry fixed.
 - GPT-OSS, Llama, Mistral and GLM answered every request.
 - **Suspicion reports:** 11 of 14 usable.
+
+## 0.2.3 — 512-character notes, MiMo Flash (September 25, 2026)
+
+Coworld 0.2.3 (`cow_ca1c2eba-7cc0-4333-a931-63fcd5814f20`, source `5015163`) accepts notes
+up to 512 characters and asks for about 240. The baseline player keeps its own
+300-character limit and shortens longer notes at a word boundary. Local and hosted
+certification passed. Roster: `wcw-bedrock-haiku:v13`, `wcw-mimo:v2` (MiMo v2.6 Flash),
+and v5 of the other seven (`artifacts/release-v13/`).
+
+Hosted run `xreq_270bf8f7-8833-423d-94d2-49bba0642809` (`artifacts/hosted-0.2.3-roster/`):
+draw at the day cap. It cost $0.67, of which GPT-5.6 as a Wolf cost $0.58 (24 requests,
+about 9 s each).
+
+- **Note failures are gone.** No action was rejected for its note length (0.2.2 had
+  four). One note was shortened, and the longest confessional was 297 characters.
+- **MiMo v2.6 Flash:** answered 0 of 7 requests, and like v2.6 Pro, no call returned an
+  HTTP status before the deadline. Neither Xiaomi model is served in time through the
+  hosted proxy.
+- **Gemini:** the platform deleted its container before log collection. Its bid was
+  accepted, but two later requests timed out on the game side.
+- **GPT-OSS:** one illegal accusation (its retry timed out) and two timeouts.
+- **Kimi:** one timeout.
+- Llama (22 of 22), GLM, Mistral and Haiku answered every request.

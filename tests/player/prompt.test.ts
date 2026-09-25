@@ -79,3 +79,9 @@ it('explains that replyTo is a speech id string, not a player number',()=>{
  const prompt=playerSystemPrompt(as(2,{kind:'bid',window:1,maxCharacters:480}),'');
  expect(prompt).toContain('replyTo is the id string of a speech event in the transcript (such as "public_5"), never a player number');
 });
+it('explains that votes are secret and simultaneous, so a skip cannot draw out other votes',()=>{
+ // Hosted Haiku passed to "force others to vote first"; nobody sees a ballot until all are revealed together.
+ const prompt=playerSystemPrompt(as(0,{kind:'vote',targets:[1,2],allowPass:true}),'');
+ expect(prompt).toContain('Votes are secret and simultaneous');
+ expect(prompt).toContain('A skip is not a move');
+});

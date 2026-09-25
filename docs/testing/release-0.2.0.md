@@ -219,3 +219,20 @@ Hosted run `xreq_7e86b20f-fac6-4d21-9d7f-7829a713ea8b` on 0.2.3 with nine v15 se
 - The game cost $0.54, or $0.06 per seat.
 
 The roster now uses `wcw-bedrock-haiku:v15`.
+
+### Current roster, full run (September 25, 2026)
+
+Hosted run `xreq_622c601e-1382-419f-9e0a-72f0aebdf682` on 0.2.3 (episode
+`ereq_bfa7e147-394c-4432-a16d-3bba57f9be9c`, `artifacts/hosted-0.2.3-roster-v15/`), using
+`wcw-bedrock-haiku:v15`, `wcw-deepseek:v4` and v6 of `wcw-chatgpt`, `wcw-gemini`,
+`wcw-gpt-oss`, `wcw-llama`, `wcw-mistral`, `wcw-glm` and `wcw-kimi`.
+
+Result: the Town voted out the Alchemist (a Wolf), and the game ended in a draw at the
+two-day cap. It cost $0.31.
+
+- **Fallbacks:** 3 of 74 requests, all single timeouts: GPT-OSS bid, GLM bid, DeepSeek vote.
+  No invalid actions and no plain-request fallbacks.
+- **Every model answered.** Haiku, the busiest Wolf, answered 25 of 25 requests with no over-long
+  speech.
+- **Suspicion reports:** 11 of 12 usable. The miss followed DeepSeek's vote timeout.
+- **Town `read` scores:** 0.16–0.48 for seven of the eight Town seats; the eighth had no usable report.

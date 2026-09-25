@@ -202,3 +202,20 @@ ended in a draw at the day cap. It cost $0.34, of which Haiku, as the busiest Wo
 - **DeepSeek V4.1 Flash:** answered 3 of 3 (about 4 s). **Luna Pro:** answered 4 of 5
   (about 9 s) for $0.01.
 - **Haiku:** six speech texts ran over 480 characters (503–645); every one was fixed on retry.
+
+### Haiku v15: speech-length reminder
+
+Claude models get no strict schema, so `wcw-bedrock-haiku:v15` (source `0a5abeb`) adds a
+closing reminder on bid and chat turns: keep text to at most 300 characters (the game rejects
+anything over 480). Before this, Haiku's seat in the last roster game wrote 6 over-long speeches
+in 31 attempts, all fixed on retry.
+
+Hosted run `xreq_7e86b20f-fac6-4d21-9d7f-7829a713ea8b` on 0.2.3 with nine v15 seats
+(`artifacts/hosted-0.2.3-haiku-v15/`):
+
+- **Speech:** 0 of 56 attempts ran over (median 249 characters, maximum 310).
+- **Failures:** none. All 80 attempts were accepted first time, with no fallbacks.
+- **Suspicion reports:** all 13 usable.
+- The game cost $0.54, or $0.06 per seat.
+
+The roster now uses `wcw-bedrock-haiku:v15`.

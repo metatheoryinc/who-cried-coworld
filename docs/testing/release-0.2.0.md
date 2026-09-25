@@ -267,3 +267,15 @@ The Seer found Haiku on night 2, and Haiku was voted out the next day.
   timeouts: the policy's own fallback vote carries no report.
 - **Strategy:** on night 1 both Wolves deliberately chose not to kill ("let town settle"). It
   is legal but helps Town.
+
+## 0.2.4 — replay scrolling, one count per failed vote (September 25, 2026)
+
+Coworld 0.2.4 (`cow_56ab5fc4-8467-4cf1-b3d4-e9e65e73a782`, source `33d2331`). Local and hosted
+certification passed all 10 checks (`artifacts/release-0.2.4-certification/`).
+
+- **Replay:** the viewer no longer scrolls the page. At widths up to 1000px it called
+  `scrollIntoView` on each step. Embedded on softmax.com, that scrolled the host page and moved
+  the pause button away. The viewer now scrolls only its own event list.
+- **Suspicion diagnostics:** a vote whose policy reported its own failure (a timeout) is
+  recorded once, as a failure, not also as a missing suspicion report. `valid_actions` and the
+  report check share one rule for a failed decision.

@@ -137,3 +137,27 @@ Current roster: `wcw-bedrock-haiku:v11` and v3 of `wcw-chatgpt`, `wcw-gemini`,
 Remaining issues:
 - DeepSeek is too slow for short chat turns.
 - Hosted Haiku sometimes writes summaries over 240 characters. Its calls use Anthropic Messages, which does not get the strict schema.
+
+## 0.2.2 — 300-character notes, MiMo seat (September 25, 2026)
+
+Coworld 0.2.2 (`cow_fa854465-e920-4871-8682-bf616bd3d9ad`, source `c30e439`) accepts
+`summary`/`reason` notes up to 300 characters, raised from 240. Policies are asked to aim
+for about 240. Local and hosted certification passed all 10 checks
+(`artifacts/release-0.2.2-certification/`). Roster: `wcw-bedrock-haiku:v12`,
+`wcw-mimo:v1` (Xiaomi MiMo v2.6 Pro, replacing DeepSeek), and v4 of the other seven
+(`artifacts/release-v12/`).
+
+Hosted run `xreq_47d4a9e0-aafb-4fe4-bbb9-dba3ed32391a` (`artifacts/hosted-0.2.2-roster/`):
+the Town voted out the Wolf on day 1, and the game ended in a draw at the day cap. It cost $0.16.
+
+- **MiMo v2.6 Pro:** answered 0 of 27 requests. Every call ran to the decision deadline
+  (5–14 s) with no HTTP status, so it is either very slow through the proxy or the proxy
+  holds the request. Not usable as configured.
+- **Haiku:** the 300-character limit saved only the notes between 241 and 300 characters.
+  Haiku still wrote four notes of 316–463 characters, and one vote and one night action fell
+  back.
+- **GPT-5.6:** 2 vote timeouts (answers take about 10 s).
+- **Kimi:** answered 4 of 4, but the median answer took 13 s.
+- **Gemini:** one HTTP 429, which its retry fixed.
+- GPT-OSS, Llama, Mistral and GLM answered every request.
+- **Suspicion reports:** 11 of 14 usable.

@@ -64,7 +64,7 @@ Hosted recheck `xreq_05ddae31-3929-4a98-a7bb-8cfba572911c` (episode
 `ereq_46869597-bdf9-4624-bb3c-3d30fc6b1158`, same config with v8): 12 of 13 Town
 reports usable; the one miss followed a proxy `provider_error`. `valid_actions`
 now reflects policy-reported failures (0.33–0.67 for three seats). Remaining issues:
-eight illegal day-speech bid attempts across four seats (five recovered by retry or
-fallback) and three proxy `provider_error` failures. Evidence:
+eight illegal day-speech bid attempts across four seats (five retried; three ended in
+fallbacks, so that bot stayed silent for the turn) and three proxy `provider_error` failures. Evidence:
 `artifacts/hosted-0.2.0-v7/`, `artifacts/hosted-0.2.1-v8/`,
 `artifacts/release-0.2.1-certification/`. Use 0.2.1 with v8 or later.

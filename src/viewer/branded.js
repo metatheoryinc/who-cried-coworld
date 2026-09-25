@@ -586,8 +586,6 @@ function renderChrome(m) {
     `<span class="sgm" data-phase="${esc(x.phase)}" data-past="${state.cursor >= x.end}" style="flex:${x.n}"></span>`).join('');
 }
 
-const pageLayout = () => typeof matchMedia === 'function' && matchMedia('(max-width: 1000px)').matches;
-
 function render({ follow = true } = {}) {
   if (state.source === 'live') { state.reveal = 'aired'; state.cursor = Infinity; }
   state.cursor = Math.max(1, Math.min(Number.isNaN(state.cursor) ? 2 : state.cursor, maxCursor()));
@@ -597,11 +595,10 @@ function render({ follow = true } = {}) {
 
   renderSeats(m);
   renderFloor(evs, m);
+  // Follow new events inside the floor only. Never scroll the page: embedded on softmax.com,
+  // scrollIntoView also scrolled the host page on every step, carrying the pause button away.
   const fl = document.getElementById('floor');
-  if (follow) {
-    if (pageLayout()) fl.lastElementChild?.scrollIntoView({ block: 'end', behavior: 'instant' });
-    else fl.scrollTop = fl.scrollHeight;
-  }
+  if (follow) fl.scrollTop = fl.scrollHeight;
 }
 
 /* ------------------------------------------------------------------ wiring */
@@ -634,9 +631,7 @@ document.getElementById('play').addEventListener('click', togglePlayback);
 setInterval(() => {
   if (!state.playing || state.source === 'live') return;
   const floor = document.getElementById('floor');
-  const following = pageLayout()
-    ? (floor.lastElementChild?.getBoundingClientRect().bottom ?? 0) <= document.getElementById('transport').getBoundingClientRect().top + 48
-    : floor.scrollHeight - floor.clientHeight - floor.scrollTop < 48;
+  const following = floor.scrollHeight - floor.clientHeight - floor.scrollTop < 48;
   advance(1, true);
   render({ follow: following });
 }, 1400);

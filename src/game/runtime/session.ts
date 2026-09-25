@@ -38,7 +38,9 @@ export class Session {
  protected fallbacks=Array(9).fill(0) as number[];
  protected tally(slot:number,request:Request,outcome:{fallback:boolean;failures:{source:string}[]}){if(request.kind==='night'&&!request.choices.length)return;this.decisions[slot]!++;
   // A policy that reports its own failure and sends a safe action did not make a real decision.
-  if(outcome.fallback||outcome.failures.some(f=>f.source==='policy_report'))this.fallbacks[slot]!++;}
+  if(this.failed(outcome))this.fallbacks[slot]!++;}
+ /** A decision failed if the game fell back or the policy reported its own failure (for example a timeout). */
+ protected failed(outcome:{fallback:boolean;failures:{source:string}[]}){return outcome.fallback||outcome.failures.some(f=>f.source==='policy_report');}
  protected counts:Record<number,number>={};
  protected recent:Record<number,string[]>={};
  protected schedule:(number|null)[]=[];
@@ -112,8 +114,8 @@ export class Session {
    this.tally(slot,request,outcome);
    for(const failure of outcome.failures)this.emit({kind:'failure',slot,requestKind:request.kind,...failure});
    if('summary' in outcome.body&&outcome.body.summary)this.emit({kind:'confessional',slot,requestKind:request.kind,text:outcome.body.summary});
-   // A fallen-back vote is already explained by its failure event; otherwise record the report or why it was dropped.
-   if(request.kind==='vote'&&request.suspicion&&outcome.body.kind==='vote'&&!outcome.fallback){
+   // A failed vote is already explained by its failure event; otherwise record the report or why it was dropped.
+   if(request.kind==='vote'&&request.suspicion&&outcome.body.kind==='vote'&&!this.failed(outcome)){
     const check=checkSuspicion(outcome.body.suspicion,this.living().filter(s=>s!==slot));
     if(check.ok)this.emit({kind:'suspicion',slot,reports:check.reports},{kind:'server'});
     else this.emit({kind:'suspicion_dropped',slot,reason:check.reason,...(check.player!==undefined?{player:check.player}:{})},{kind:'server'});

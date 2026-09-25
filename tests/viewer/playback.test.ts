@@ -17,3 +17,10 @@ it('handles empty and single-event replays',()=>{
   expect(nextReplayCursor([3],4,4,1,true)).toBe(3);
   expect(nextReplayCursor([3],3,4,1,true)).toBe(4);
 });
+
+it('never scrolls the host page while stepping or playing a replay', async () => {
+ // Embedded on softmax.com, scrollIntoView also scrolled the parent page on every step.
+ const { readFileSync } = await import('node:fs');
+ const source = readFileSync(new URL('../../src/viewer/branded.js', import.meta.url), 'utf8');
+ expect(source).not.toMatch(/\.scrollIntoView\(|window\.scroll(To|By)?\(|\bscrollTo\(/);
+});

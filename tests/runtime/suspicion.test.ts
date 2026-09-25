@@ -67,3 +67,11 @@ it('counts a vote the policy reports as failed against valid_actions',()=>{
  s.advance(195000);
  expect((s as any).decisions[2]-before.decisions).toBe(1);expect((s as any).fallbacks[2]-before.fallbacks).toBe(1);
 });
+it('does not also record a missing report when the policy reports its vote as failed',()=>{
+ // A timed-out policy sends its own fallback vote with a report; the failure event already explains it.
+ const s=game();const o=s.observation(2,150000)!;
+ s.receive(2,JSON.stringify({protocol:'wcw.player/1',type:'action',episodeId:o.episodeId,requestId:o.requestId,observationId:o.observationId,body:{kind:'vote',target:null,summary:''},report:{code:'provider_error',attempts:1}}),150001);
+ s.advance(195000);
+ expect(dropped(s).filter(e=>e.payload.kind==='suspicion_dropped'&&e.payload.slot===2)).toHaveLength(0);
+ expect(s.journal.some(e=>e.payload.kind==='failure'&&e.payload.slot===2&&e.payload.source==='policy_report')).toBe(true);
+});

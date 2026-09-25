@@ -184,3 +184,21 @@ about 9 s each).
 - **GPT-OSS:** one illegal accusation (its retry timed out) and two timeouts.
 - **Kimi:** one timeout.
 - Llama (22 of 22), GLM, Mistral and Haiku answered every request.
+
+### Luna Pro and DeepSeek V4.1 Flash (v14/v6)
+
+The player now sends each model only the parameters it supports (source `065d70b`):
+GPT-5.x gets no `temperature`, and Mistral Medium 3.1 gets no `reasoning`. The ChatGPT seat
+moves to GPT-5.6 Luna Pro, and DeepSeek returns on V4.1 Flash. Roster:
+`wcw-bedrock-haiku:v14`, `wcw-deepseek:v4`, and v6 of the other seven (`artifacts/release-v14/`).
+
+Hosted run `xreq_b37366eb-3e45-4117-8c97-55c00b1a0e03` on 0.2.3
+(`artifacts/hosted-0.2.3-roster-v14/`): the Town voted out a Wolf (the Alchemist), and the game
+ended in a draw at the day cap. It cost $0.34, of which Haiku, as the busiest Wolf, cost $0.22.
+
+- **4 fallbacks in total, all timeouts:** Kimi 2 (night), GPT-OSS 1, Luna Pro 1. No request
+  hit the plain-request fallback.
+- **All 13 Town suspicion reports were usable.** One note was shortened.
+- **DeepSeek V4.1 Flash:** answered 3 of 3 (about 4 s). **Luna Pro:** answered 4 of 5
+  (about 9 s) for $0.01.
+- **Haiku:** six speech texts ran over 480 characters (503–645); every one was fixed on retry.

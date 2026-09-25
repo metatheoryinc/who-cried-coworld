@@ -84,3 +84,36 @@ bid attempts** (v8: 8). 11 of 13 Town suspicion reports usable; both misses foll
 proxy `provider_error` fallbacks (3 in total across the game). Five Town seats
 earned a nonzero `read` (Seer 0.17). Evidence: `artifacts/hosted-0.2.1-v9/`,
 `artifacts/release-v9/`. Use 0.2.1 with v9 or later.
+
+## Nine-model roster (September 25, 2026)
+
+Eight per-model policies were uploaded from the v9 image (source `754981e`), one per
+roster model: `wcw-chatgpt:v1`, `wcw-gemini:v1`, `wcw-gpt-oss:v1`, `wcw-llama:v1`,
+`wcw-deepseek:v1`, `wcw-mistral:v1`, `wcw-glm:v1`, `wcw-kimi:v1`. With
+`wcw-bedrock-haiku:v9` they fill all nine seats. Upload logs are in `artifacts/release-roster/`.
+
+**The proxy serves all nine models:** each returned HTTP 200, and no request was
+refused.
+
+| Run | Timers | Failures |
+| --- | --- | --- |
+| `xreq_cc75a80b-c5fd-4ebd-8efb-4c50698c24d7` (`artifacts/hosted-0.2.1-roster/`) | short test timers (vote 20 s) | 9 fallbacks, all timeouts: GPT-OSS 4 of 5 requests, Kimi 2 of 2 (no answer), DeepSeek 1, Gemini 2 |
+| `xreq_3bee5891-6238-428c-a677-be463e2eaad2` (`artifacts/hosted-0.2.1-roster-default-timers/`) | defaults (vote 45 s) | 24 fallbacks; see below |
+
+Both runs ended in a day-cap draw with valid `wcw.results/2` results. The
+default-timer run cost $0.40, with GPT-5.6 Terra Pro accounting for $0.16.
+
+Failures in the default-timer run:
+
+- **Timeouts:** most failures are timeouts at the player's own 15-second decision cap
+  (`src/player/timed-llm.ts`), not the game window. Affected: Kimi (10–13 s when it
+  answers), GPT-OSS, DeepSeek and GPT-5.6.
+- **GLM 5.3 as a Wolf:** 11 of 21 `wolf_chat` requests failed, from oversized text,
+  a stray `""` key, over-8 KB JSON, and timeouts.
+- **Haiku:** one over-long `summary`, repaired on retry.
+- **Suspicion reports:** 9 of 13 usable. The 4 missing reports all followed timeout
+  fallbacks.
+
+Follow-ups:
+- Let slow models use more of the window than the 15-second cap.
+- Tighten GLM's `wolf_chat` output.

@@ -20,3 +20,28 @@ it('plays a complete legal deterministic game with no fallback',()=>{
  }
  expect(run()).toEqual(run());
 });
+
+it('votes for a random living player other than itself and uses random legal night targets',()=>{
+ const s=new Session(config,'e');s.start(0);
+ const targets=new Set<number>();let now=0;
+ for(;!s.state.result&&now<20800;now+=100){
+  for(const slot of s.pending.keys()){
+   const o=s.observation(slot,now+1)!,a=scriptedAction(o);
+   if(a.body.kind==='vote'){expect(a.body.target).not.toBeNull();expect(a.body.target).not.toBe(slot);targets.add(a.body.target!);}
+   if(a.body.kind==='night'&&o.request.kind==='night')for(const [i,act] of a.body.actions.entries()){const c=o.request.choices[i]!;if(c.targets.length)expect(c.targets).toContain(act.target);}
+   s.receive(slot,JSON.stringify(a),now+1);
+  }
+  s.advance(now+100);
+ }
+ // Nine baselines no longer all vote the same first seat.
+ expect(targets.size).toBeGreaterThan(2);
+});
+it('acts on an observation that carries fields it does not know',async()=>{
+ const {actOnLooseObservation}=await import('../../src/player/scripted.js');
+ const s=new Session(config,'e');s.start(0);const slot=[...s.pending.keys()][0]!;
+ const o={...s.observation(slot,1)!,futureField:{anything:true}};
+ const a=actOnLooseObservation(JSON.stringify(o));
+ expect(a?.requestId).toBe(o.requestId);
+ expect(s.receive(slot,JSON.stringify(a),2).status).toBe('accepted');
+ expect(actOnLooseObservation('{"type":"end"}')).toBeNull();
+});

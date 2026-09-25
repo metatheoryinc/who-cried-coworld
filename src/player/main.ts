@@ -1,7 +1,7 @@
 import WebSocket from 'ws';
 import { Observation,Control } from '../shared/player.js';
 import { decodeText } from '../shared/decode.js';
-import { scriptedAction } from './scripted.js';
+import { scriptedAction,actOnLooseObservation } from './scripted.js';
 const url=process.env.COWORLD_PLAYER_WS_URL;
 if(!url)throw new Error('Missing COWORLD_PLAYER_WS_URL');
 let finished=false,failures=0;
@@ -14,7 +14,11 @@ function connect(){
   const observation=decodeText(text,Observation,512*1024);
   if(observation.ok){ws.send(JSON.stringify(scriptedAction(observation.value)));return;}
   const control=decodeText(text,Control,512*1024);
-  if(!control.ok){ws.close(1008,'Invalid server message');return;}
+  if(!control.ok){
+   const action=actOnLooseObservation(text);
+   if(action){ws.send(JSON.stringify(action));return;}
+   ws.close(1008,'Invalid server message');return;
+  }
   if(control.value.type==='end'){finished=true;console.log(JSON.stringify({event:'finished',outcome:control.value.result.outcome}));ws.close();}
  });
  ws.on('close',()=>{

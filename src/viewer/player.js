@@ -7,6 +7,8 @@ import { stampIcon,stampLabels,stampArt,scatter } from './stamp-icons.js';
 import { systemLines } from './system-lines.js';
 import { unread } from './unread.js';
 import { roleNames,newD3Decks } from '../shared/roles.js';
+// Embedded in another page (softmax.com), the host draws its own controls over our corner.
+try{if(window.self!==window.top)document.documentElement.classList.add('embedded');}catch{document.documentElement.classList.add('embedded');}
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const assets=createAssetCache(),asset=assets.url;
 const art={wolf:'Role_Wolf_outline',alchemist:'Role_Alchemist_outline',track_reader:'Role_Track_reader_outline',seer:'Role_Seer_outline',guard:'Role_Guard_outline',chef:'Role_Chef_outline',dairy_maid:'Role_Dairymaid_outline',priest:'Role_Priest_outline',noble:'Role_Noble_01_outline',sheep:'Role_Villager_outline',jester:'Role_Villager_outline'};

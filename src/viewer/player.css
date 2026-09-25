@@ -198,8 +198,11 @@ body.lobby .action-panel p{margin:4px 0}
 @media(min-width:400px) and (max-width:760px){
  .players,body.lobby .players{gap:4px}
  .player,body.lobby .player{height:64px}
- .player .card-foot{display:block;position:absolute;left:0;right:0;bottom:-2px}
- .player .card-foot .name{position:static;display:block;font-size:9px;padding:1px;margin:0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ /* One-line name only: the role line doubled the label's height, covering the portrait and the stamps
+    and pushing a dead seat's label out of line. Dead seats keep their dimmed card and death mark. */
+ .player .card-foot{display:block;position:absolute;left:0;right:0;bottom:0}
+ .player .card-foot small{display:none}
+ .player .card-foot .name{position:static;display:block;font-size:9px;line-height:11px;padding:1px;margin:0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  .player>.seat-no{bottom:auto;top:0}
  .role-chip span{display:inline}
 }
@@ -360,3 +363,9 @@ body.holding{cursor:var(--stamp-cursor,default)}
 .journal>h2{font:italic 400 21px 'IM Fell English',Georgia,serif;letter-spacing:.2px}
 .journal .j-head{font:400 15px/1.3 'IM Fell English',Georgia,serif}
 .side-role h2{font:400 21px/1.05 'IM Fell English',Georgia,serif}
+
+/* Embedded on softmax.com the host overlays a full-screen button on the top-right corner; keep the header clear of it. */
+.embedded header{padding-right:44px}
+/* Seat strip, 400–760px: stamps sit above the one-line name label, sized to the small card,
+   so a vote on any seat, your own included, stays visible. */
+@media(min-width:400px) and (max-width:760px){.card-stamps{z-index:6}.card-stamps .stamp-mark,.card-stamps .stamp-mark.ballot{width:42%}.card-stamps .stamp-mark.pack{width:36%}}

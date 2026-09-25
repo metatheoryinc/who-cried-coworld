@@ -38,3 +38,11 @@ it('rejects missing credentials instead of silently playing scripted',async()=>{
  const fetcher=vi.fn();await expect(llmAction(observation(),{model:'test',fetcher})).rejects.toMatchObject({code:'missing_credentials',retryable:false});
  expect(fetcher).not.toHaveBeenCalled();
 });
+
+it('reminds Claude models, which get no strict schema, of the speech length before a chat or speech turn',async()=>{
+ const o=observation();
+ const send=(model:string)=>{const bedrockSender=vi.fn().mockResolvedValue({body:new TextEncoder().encode(JSON.stringify({content:[{type:'text',text:JSON.stringify({kind:o.request.kind,text:'Short.',summary:''})}],stop_reason:'end_turn'}))});return llmAction(o,{provider:'bedrock',model,bedrockSender}).then(()=>JSON.parse(bedrockSender.mock.calls[0]![0].input.body).messages as {content:{text:string}[]}[]);};
+ const claude=(await send('anthropic.claude-haiku-test')).at(-1)!.content.map(c=>c.text).join('');
+ expect(claude).toContain('at most 300 characters');expect(claude).toContain('480');
+ expect(JSON.stringify(await send('other-test'))).not.toContain('at most 300 characters');
+});

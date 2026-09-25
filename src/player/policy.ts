@@ -7,12 +7,19 @@ import {providerCompletion} from './provider.js';
 import {actionSchema} from './llm.js';
 import {playerSystemPrompt} from './prompt.js';
 export type PolicyOptions=Omit<InferenceConfig,'provider'>&{provider?:InferenceConfig['provider'];allowScripted?:boolean;bedrockSender?:BedrockSender;personality?:string;onLog?:(row:Record<string,unknown>)=>void;fetcher?:typeof fetch};
+/** Claude calls go through Anthropic Messages without the strict schema, and hosted Haiku wrote 500–645 character speech;
+ * a closing reminder with a tighter target keeps speech well inside the game's 480. */
+export function speechReminder(o:Observation,model:string){
+ if(!/anthropic|claude/i.test(model)||!['bid','wolf_chat','noble_chat'].includes(o.request.kind))return null;
+ return 'Length check before you answer: keep text at most 300 characters (about 50 words, two or three short sentences). The game rejects text over 480 characters. Keep summary or reason under 240.';
+}
 export async function llmAction(o:Observation,options:PolicyOptions,signal?:AbortSignal):Promise<Action>{
  if(options.provider!=='bedrock'&&!options.key){if(!options.allowScripted)throw new DecisionError('missing_credentials','LLM player requires inference credentials; scripted mode must be explicitly enabled',false);options.onLog?.({slot:o.self.slot,requestId:o.requestId,outcome:'scripted',reason:'no_credentials'});return scriptedAction(o);}
  let metadata:Record<string,unknown>={};
  return timedAction(o,async(attemptSignal,repair)=>{
   if(signal?.aborted)throw new DecisionError('cancelled','Player request cancelled',false);
-  const messages=[{role:'system',content:playerSystemPrompt(o,options.personality)},{role:'user',content:JSON.stringify(o)},...(repair?[{role:'user',content:repair}]:[])];
+  const reminder=speechReminder(o,options.model);
+  const messages=[{role:'system',content:playerSystemPrompt(o,options.personality)},{role:'user',content:JSON.stringify(o)},...(repair?[{role:'user',content:repair}]:[]),...(reminder?[{role:'user',content:reminder}]:[])];
   metadata={};
   if(options.provider==='bedrock')return bedrockCompletion({model:options.model,messages,schema:actionSchema(o),endpoint:options.endpoint,region:options.region,maxTokens:options.maxTokens,signal:signal?AbortSignal.any([signal,attemptSignal]):attemptSignal,metadata:data=>Object.assign(metadata,data)},options.bedrockSender);
   return providerCompletion({model:options.model,messages,schema:actionSchema(o),key:options.key!,signal:signal?AbortSignal.any([signal,attemptSignal]):attemptSignal,metadata:data=>Object.assign(metadata,data)},options.fetcher);

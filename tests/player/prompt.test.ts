@@ -66,3 +66,7 @@ it('requires the suspicion list in the Town vote schema and omits it for Wolves'
  expect(wolf.properties).not.toHaveProperty('suspicion');expect(wolf.required).not.toContain('suspicion');
  expect(outputInstruction(townVote)).toContain('"suspicion":[{"slot":0,"wolf":');
 });
+it('lists exactly which players a Town suspicion report must include',()=>{
+ const prompt=playerSystemPrompt(townVote,'');
+ expect(prompt).toContain('Include exactly these players, once each: 0 = Ann, 1 = Bo, 3 = Di, 4 = Eve, 5 = Fay, 6 = Gus, 7 = Hal, 8 = Ivy. Do not include yourself or eliminated players.');
+});

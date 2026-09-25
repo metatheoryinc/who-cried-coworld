@@ -23,7 +23,7 @@ it('journals a valid report privately and keeps the vote',()=>{
  expect(JSON.stringify(s.snapshot(0,195000))+JSON.stringify(s.observation(2,195000))).not.toContain('"suspicion"');
 });
 it.each([
- ['out of range',report(x=>x===1?1.5:0.1)],['missing a player',report(()=>0.2).slice(1)],['includes yourself',[...report(()=>0.2),{slot:0,wolf:0}]],['duplicate player',[...report(()=>0.2).slice(1),{slot:2,wolf:0.3}]],
+ ['out of range',report(x=>x===1?1.5:0.1)],['missing a player',report(()=>0.2).slice(1)],['names an invalid seat',[...report(()=>0.2),{slot:12,wolf:0}]],['duplicate player',[...report(()=>0.2).slice(1),{slot:2,wolf:0.3}]],
 ])('drops a report that is %s but still counts the vote',(_,bad)=>{
  const s=game();expect(vote(s,0,{suspicion:bad}).status).toBe('accepted');s.advance(195000);
  expect(suspicions(s)).toHaveLength(0);
@@ -41,7 +41,7 @@ const dropped=(s:HumanSession)=>s.journal.filter(e=>e.payload.kind==='suspicion_
 it.each([
  ['missing',undefined,{reason:'missing'}],
  ['wrong_count',report(()=>0.2).slice(1),{reason:'wrong_count'}],
- ['unknown_player',[...report(()=>0.2).slice(1),{slot:0,wolf:0.1}],{reason:'unknown_player',player:0}],
+ ['unknown_player',[...report(()=>0.2),{slot:12,wolf:0.1}],{reason:'unknown_player'}],
  ['duplicate_player',[...report(()=>0.2).slice(1),{slot:2,wolf:0.3}],{reason:'duplicate_player',player:2}],
  ['out_of_range',report(x=>x===4?1.5:0.1),{reason:'out_of_range',player:4}],
 ])('records why a report was not scored: %s',(_,suspicion,expected)=>{
@@ -54,4 +54,16 @@ it.each([
 it('does not record a dropped report when the whole vote fell back',()=>{
  const s=game();s.advance(195000);
  expect(dropped(s).filter(e=>e.payload.kind==='suspicion_dropped'&&e.payload.slot===0)).toHaveLength(0);
+});
+
+it('ignores entries for yourself and scores the rest of the report',()=>{
+ const s=game();vote(s,0,{suspicion:[{slot:0,wolf:0},...report(x=>x===1?0.9:0.1)]});s.advance(195000);
+ expect(suspicions(s)).toHaveLength(1);expect(dropped(s)).toHaveLength(0);
+ const p=suspicions(s)[0]!.payload;expect(p.kind==='suspicion'&&p.reports.map(r=>r.slot)).toEqual(others);
+});
+it('counts a vote the policy reports as failed against valid_actions',()=>{
+ const s=game();const o=s.observation(2,150000)!,before={decisions:(s as any).decisions[2],fallbacks:(s as any).fallbacks[2]};
+ s.receive(2,JSON.stringify({protocol:'wcw.player/1',type:'action',episodeId:o.episodeId,requestId:o.requestId,observationId:o.observationId,body:{kind:'vote',target:null,summary:''},report:{code:'provider_error',attempts:2}}),150001);
+ s.advance(195000);
+ expect((s as any).decisions[2]-before.decisions).toBe(1);expect((s as any).fallbacks[2]-before.fallbacks).toBe(1);
 });

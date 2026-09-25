@@ -36,7 +36,9 @@ export class Session {
  /** Requests with a real decision (not an empty night), and how many of those fell back; feeds `valid_actions`. */
  protected decisions=Array(9).fill(0) as number[];
  protected fallbacks=Array(9).fill(0) as number[];
- protected tally(slot:number,request:Request,outcome:{fallback:boolean}){if(request.kind==='night'&&!request.choices.length)return;this.decisions[slot]!++;if(outcome.fallback)this.fallbacks[slot]!++;}
+ protected tally(slot:number,request:Request,outcome:{fallback:boolean;failures:{source:string}[]}){if(request.kind==='night'&&!request.choices.length)return;this.decisions[slot]!++;
+  // A policy that reports its own failure and sends a safe action did not make a real decision.
+  if(outcome.fallback||outcome.failures.some(f=>f.source==='policy_report'))this.fallbacks[slot]!++;}
  protected counts:Record<number,number>={};
  protected recent:Record<number,string[]>={};
  protected schedule:(number|null)[]=[];

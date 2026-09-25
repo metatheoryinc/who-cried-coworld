@@ -117,3 +117,23 @@ Failures in the default-timer run:
 Follow-ups:
 - Let slow models use more of the window than the 15-second cap.
 - Tighten GLM's `wolf_chat` output.
+
+### Roster fixes: v10/v2 and v11/v3
+
+- **v10/v2** (source `fe146d0`, `xreq_f18979a4-609b-4d82-a3e5-b27b391334f4`):
+  - Decisions may use the whole window.
+  - Hosted chat calls send the per-model reasoning, token and strict-schema settings.
+  - The parser drops keys the action schema does not define.
+  - Results: GLM failed 1 attempt, which its retry fixed (was 11 of 21 Wolf-chat turns failed). Llama answered 23 of 23 and Kimi 19 of 22.
+  - Regression: every GPT-5.6 and Mistral call got HTTP 404, most likely because the proxy finds no provider that supports every requested parameter.
+- **v11/v3** (source `a7c3708`, `xreq_5dffd486-19e3-44b7-826d-4b3328e0b250`, `artifacts/hosted-0.2.1-roster-v11/`):
+  - After a 404, the policy resends the plain request and keeps using it for that model.
+  - Results: GPT-5.6 and Mistral each fell back once, then worked (Mistral 23 of 23). Every model returned accepted actions. 12 of 13 Town suspicion reports were usable.
+  - 11 fallbacks, all timeouts except Haiku's: DeepSeek as a Wolf (6 of 17 Wolf-chat turns, answers up to 14 s), Kimi 2, Llama 1, GPT-5.6 1, plus Haiku 2 (both repaired on retry). The game cost $0.25.
+
+Current roster: `wcw-bedrock-haiku:v11` and v3 of `wcw-chatgpt`, `wcw-gemini`,
+`wcw-gpt-oss`, `wcw-llama`, `wcw-deepseek`, `wcw-mistral`, `wcw-glm`, `wcw-kimi`.
+
+Remaining issues:
+- DeepSeek is too slow for short chat turns.
+- Hosted Haiku sometimes writes summaries over 240 characters. Its calls use Anthropic Messages, which does not get the strict schema.

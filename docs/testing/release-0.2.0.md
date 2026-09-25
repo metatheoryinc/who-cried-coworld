@@ -68,3 +68,19 @@ eight illegal day-speech bid attempts across four seats (five retried; three end
 fallbacks, so that bot stayed silent for the turn) and three proxy `provider_error` failures. Evidence:
 `artifacts/hosted-0.2.0-v7/`, `artifacts/hosted-0.2.1-v8/`,
 `artifacts/release-0.2.1-certification/`. Use 0.2.1 with v8 or later.
+
+## Haiku v9 — bid legality (September 25, 2026)
+
+Hosted Haiku v8 bids were rejected as illegal because `replyTo` sometimes held a
+player number instead of a speech id; the player did not check bid legality, so its
+retry failed blindly. `wcw-bedrock-haiku:v9` (source `754981e`, player-only; game
+0.2.1 unchanged) defines `replyTo` in the prompt and validates `replyTo` and
+`accusation` before sending, repairing with the exact valid ids. A local no-schema
+Haiku reproduction went from 7/8 to 12/12 legal bids.
+
+Hosted recheck `xreq_e81b6542-5a88-4364-aa7c-9732e618e3b7` (episode
+`ereq_6284a1d0-cc21-4dda-a529-a1661fe3fe7a`, 0.2.1, nine v9, two-day cap): **0 illegal
+bid attempts** (v8: 8). 11 of 13 Town suspicion reports usable; both misses followed
+proxy `provider_error` fallbacks (3 in total across the game). Five Town seats
+earned a nonzero `read` (Seer 0.17). Evidence: `artifacts/hosted-0.2.1-v9/`,
+`artifacts/release-v9/`. Use 0.2.1 with v9 or later.

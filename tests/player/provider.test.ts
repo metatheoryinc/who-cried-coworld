@@ -15,7 +15,8 @@ it('uses per-model settings in the outgoing request and returns content',async()
  const fetcher=vi.fn().mockResolvedValue(Response.json({choices:[{finish_reason:'stop',message:{content:'{}'}}]}));
  expect(await providerCompletion(input(),fetcher)).toBe('{}');
  const body=JSON.parse(fetcher.mock.calls[0]![1].body);
- expect(body).toMatchObject({max_tokens:1800,reasoning:{enabled:false}});
+ expect(body).toMatchObject({max_tokens:1800,temperature:.7});expect(body).not.toHaveProperty('reasoning');
+ expect(modelSettings('openai/gpt-5.6-luna-pro')).not.toHaveProperty('temperature');expect(modelSettings('openai/gpt-oss-120b')).toHaveProperty('temperature');
  expect(modelSettings('meta-llama/test')).not.toHaveProperty('reasoning');
  expect(modelSettings('google/test')).toMatchObject({max_tokens:1600,reasoning:{effort:'minimal'}});
 });

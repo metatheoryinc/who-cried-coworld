@@ -1,7 +1,11 @@
 import {DecisionError} from './timed-llm.js';
-/** Larger caps are ceilings, not requested answer lengths. */
+/** Larger caps are ceilings, not requested answer lengths. Only parameters each model supports are sent:
+ * the hosted proxy answers 404 when no provider supports every one (GPT-5.x takes no temperature; Mistral Medium no reasoning). */
 export function modelSettings(model:string){
- if(model.startsWith('mistralai/'))return {max_tokens:1800,reasoning:{enabled:false,exclude:true}};
+ return {...tokenSettings(model),...(/^openai\/gpt-5/.test(model)?{}:{temperature:.7})};
+}
+function tokenSettings(model:string){
+ if(model.startsWith('mistralai/'))return {max_tokens:1800};
  if(model.startsWith('qwen/'))return {max_tokens:1200,reasoning:{enabled:true,effort:'minimal',exclude:true}};
  if(model.startsWith('google/'))return {max_tokens:1600,reasoning:{effort:'minimal',exclude:true}};
  if(model.startsWith('deepseek/'))return {max_tokens:2400,reasoning:{effort:'low',exclude:true}};
@@ -11,7 +15,7 @@ export function modelSettings(model:string){
 }
 /** Every model gets the strict action schema when one is supplied: plain JSON mode let models return `{}` or extra fields. Without require_parameters, providers that cannot enforce it still answer. */
 export async function providerCompletion(input:{model:string;messages:unknown[];schema?:Record<string,unknown>;key:string;signal:AbortSignal;metadata:(data:Record<string,unknown>)=>void},fetcher:typeof fetch=fetch){
- const response=await fetcher('https://openrouter.ai/api/v1/chat/completions',{method:'POST',signal:input.signal,headers:{Authorization:`Bearer ${input.key}`,'Content-Type':'application/json'},body:JSON.stringify({model:input.model,messages:input.messages,...modelSettings(input.model),temperature:.7,response_format:input.schema?{type:'json_schema',json_schema:{name:'game_action',strict:true,schema:input.schema}}:{type:'json_object'},provider:{sort:'throughput'}})});
+ const response=await fetcher('https://openrouter.ai/api/v1/chat/completions',{method:'POST',signal:input.signal,headers:{Authorization:`Bearer ${input.key}`,'Content-Type':'application/json'},body:JSON.stringify({model:input.model,messages:input.messages,...modelSettings(input.model),response_format:input.schema?{type:'json_schema',json_schema:{name:'game_action',strict:true,schema:input.schema}}:{type:'json_object'},provider:{sort:'throughput'}})});
  input.metadata({httpStatus:response.status});
  if(!response.ok){
   let detail;

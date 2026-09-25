@@ -23,13 +23,13 @@ export async function bedrockCompletion(input:BedrockInput,sender?:BedrockSender
   const url=`${input.endpoint.replace(/\/$/,'')}/v1/${claude?'messages':'chat/completions'}`;
   input.metadata({provider:'softmax',endpoint:url});
   const plain=claude?{model:input.model,system:system.join('\n\n'),messages,max_tokens:input.maxTokens??1600,stream:false}:{model:input.model,messages:input.messages,max_tokens:input.maxTokens??1600,stream:false};
-  const tuned=claude||plainModels.has(input.model)?null:{model:input.model,messages:input.messages,...modelSettings(input.model),...(input.maxTokens?{max_tokens:input.maxTokens}:{}),temperature:.7,...(input.schema?{response_format:{type:'json_schema',json_schema:{name:'game_action',strict:true,schema:input.schema}}}:{}),provider:{sort:'throughput'},stream:false};
+  const tuned=claude||plainModels.has(input.model)?null:{model:input.model,messages:input.messages,...modelSettings(input.model),...(input.maxTokens?{max_tokens:input.maxTokens}:{}),...(input.schema?{response_format:{type:'json_schema',json_schema:{name:'game_action',strict:true,schema:input.schema}}}:{}),provider:{sort:'throughput'},stream:false};
   const send=(body:object)=>fetch(url,{method:'POST',redirect:'error',signal:input.signal,headers:{'Content-Type':'application/json',...(claude?{'x-api-key':'sidecar','anthropic-version':'2023-06-01'}:{Authorization:'Bearer sidecar'})},body:JSON.stringify(body)});
   let response:Response;
   try{
    response=await send(tuned??plain);
-   // The proxy answers 404 when no provider supports every requested parameter (GPT-5.6: temperature; Mistral Medium: reasoning),
-   // and a provider may answer 400 for a setting it rejects outright.
+   // The proxy answers 404 when no provider supports every requested parameter, and a provider may answer 400
+   // for a setting it rejects outright; modelSettings avoids the known cases, this covers new models.
    // Fall back to the plain request, and keep using it for this model.
    if(tuned&&(response.status===404||response.status===400)){plainModels.add(input.model);input.metadata({settingsFallback:true});response=await send(plain);}
   }catch{

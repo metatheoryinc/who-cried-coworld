@@ -71,9 +71,9 @@ it('falls back to the plain hosted request when the proxy finds no provider for 
  const fetcher=vi.fn(async(_url:string,init:any)=>{const body=JSON.parse(init.body);bodies.push(body);return body.reasoning?new Response(JSON.stringify({error:{code:404}}),{status:404}):new Response(JSON.stringify({choices:[{message:{content:'reply'},finish_reason:'stop'}]}));});
  vi.stubGlobal('fetch',fetcher);
  try{
-  const call=()=>bedrockCompletion({model:'mistralai/fallback-test',endpoint:'http://localhost:9100',schema:{type:'object'},messages:[{role:'user',content:'Hi'}],signal:AbortSignal.timeout(1000),metadata:()=>{}});
+  const call=()=>bedrockCompletion({model:'z-ai/fallback-test',endpoint:'http://localhost:9100',schema:{type:'object'},messages:[{role:'user',content:'Hi'}],signal:AbortSignal.timeout(1000),metadata:()=>{}});
   await expect(call()).resolves.toBe('reply');
-  expect(bodies[1]).toEqual({model:'mistralai/fallback-test',messages:[{role:'user',content:'Hi'}],max_tokens:1600,stream:false});
+  expect(bodies[1]).toEqual({model:'z-ai/fallback-test',messages:[{role:'user',content:'Hi'}],max_tokens:1600,stream:false});
   await expect(call()).resolves.toBe('reply');
   expect(bodies).toHaveLength(3);expect(bodies[2]).not.toHaveProperty('reasoning');
  }finally{vi.unstubAllGlobals();}

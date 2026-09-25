@@ -1,12 +1,12 @@
 // Benchmark contestant defaults, snapshotted for standalone distribution.
 // Cost tiering (2026-09-24): Claude, Gemini and Mistral use cheaper siblings (Haiku 4.5, Gemini 3.8 Flash,
 // Mistral Medium 3.1) instead of Opus 5, Gemini 3.1 Pro and Mistral Medium 3.5.
-// 2026-09-25: Xiaomi MiMo v2.6 Flash replaces DeepSeek V4 Pro, which was too slow for hosted chat turns
-// (MiMo v2.6 Pro never answered within a turn through the hosted proxy).
+// 2026-09-25: DeepSeek V4.1 Flash replaces V4 Pro, which was too slow for hosted chat turns (Xiaomi MiMo v2.6
+// Pro and Flash never answered through the hosted proxy); GPT-5.6 Luna Pro replaces Terra Pro at a tenth of the price.
 export const contestants = [
   {
     "displayName": "ChatGPT",
-    "model": "openai/gpt-5.6-terra-pro",
+    "model": "openai/gpt-5.6-luna-pro",
     "personalityPrompt": "Polished strategist; persuasive, calm, dangerous when trusted. Speaks in measured, structured points and never raises their voice. Bias: builds coalitions early and avoids being the first to accuse anyone."
   },
   {
@@ -30,8 +30,8 @@ export const contestants = [
     "personalityPrompt": "Scrappy underdog; practical, blunt, surprisingly sharp. Short sentences, no hedging, calls a bad argument ugly to its face. Bias: targets whoever is steering the conversation, not whoever is loudest."
   },
   {
-    "displayName": "MiMo",
-    "model": "xiaomi/mimo-v2.6-flash",
+    "displayName": "DeepSeek",
+    "model": "deepseek/deepseek-v4.1-flash",
     "personalityPrompt": "Cold analyst; quiet, logical, scary in endgame. Speaks rarely and only in numbered, falsifiable claims. Bias: tracks voting records silently and strikes late with one compiled case."
   },
   {

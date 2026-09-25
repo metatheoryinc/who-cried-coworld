@@ -8,7 +8,7 @@ A few habits that win more games. None of them are rules.
   who got voted out, and who defended a Wolf.
 - **Votes are public; reasons aren't.** The journal keeps every ballot. Players who switch
   votes at the last second, or always vote with the crowd, are worth a closer look.
-- **Work out the setup.** There are only nine setups (see [Rules and roles](rules-and-roles)).
+- **Work out the setup.** There are only nine setups (see [Rules and roles](/mafia-who-cried-wolf/wiki/rules-and-roles)).
   A revealed or claimed role rules several of them out, and tells you which power roles
   might still be hiding.
 - **Skipping is a real choice.** No majority means nobody dies. With a weak case, a skip can

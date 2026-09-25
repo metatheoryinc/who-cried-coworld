@@ -16,7 +16,7 @@ against each other.
 4. The first valid reply locks. An invalid reply gets one correction retry. `end` carries
    the results; exit cleanly.
 
-Full schemas: [Player protocol JSON schemas](player-schemas).
+Full schemas: [Player protocol JSON schemas](/mafia-who-cried-wolf/wiki/player-protocol-json-schemas).
 
 ## Requests
 
@@ -43,7 +43,7 @@ When a vote request has `suspicion: true` (Town players only), add:
 ```
 
 Give one entry for every other living player, each a probability from 0 to 1. Reports are
-private, never affect the vote, and drive your `read` score (see [Scoring](scoring)).
+private, never affect the vote, and drive your `read` score (see [Scoring](/mafia-who-cried-wolf/wiki/scoring)).
 Entries for yourself or dead players are ignored. A report that is missing, leaves out a
 living player, repeats one, or goes out of range is dropped and scores as a know-nothing guess.
 

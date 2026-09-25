@@ -1,8 +1,7 @@
 # Wiki drafts
 
 Drafts for the Softmax wiki at <https://softmax.com/mafia-who-cried-wolf/wiki/main>,
-reviewed here before they are pasted in. The live wiki does not update from package
-uploads, so edit it by hand.
+published with the wiki API. Package uploads do not update the wiki.
 
 | File | Wiki page | Audience |
 | --- | --- | --- |
@@ -15,8 +14,10 @@ uploads, so edit it by hand.
 | [build-a-policy.md](build-a-policy.md) | `build-a-policy` | developers |
 
 The existing **Play Who Cried Wolf? on Discord** and **Player protocol JSON schemas** pages
-stay as they are. Internal links use page ids, and `player-schemas` is the id of the
-schemas page.
+stay as they are. Internal links are absolute paths (`/mafia-who-cried-wolf/wiki/<slug>`) so
+they show a label; the schemas page's slug is `player-protocol-json-schemas`. Publish with
+`uv run --project <coworld> python tools/wiki-publish.py --apply`, which drops each file's
+leading `#` heading (the wiki shows the title) and bases each edit on the live revision.
 
 ## Fixes over the live wiki
 

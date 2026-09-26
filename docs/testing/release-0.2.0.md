@@ -304,3 +304,41 @@ Wolves: Haiku (Wolf) and Gemini (Alchemist). Seer: Kimi. Guard: Mistral.
 - **Suspicion reports:** all 16 usable, with no double-counted drops.
 - **Scores:** Town winners scored 0.75–0.85, led by Mistral (`read` 0.41) and Kimi (0.40). The
   Wolves scored 0.06 (Haiku, `hidden` 0.25) and 0.04 (Gemini).
+
+## 0.2.5: village replay, embed fixes, names, baseline (September 25, 2026)
+
+Coworld 0.2.5 (`cow_c2b56406-43c0-410f-8cf3-eeaae697534b`, source `b57bbcb`). Local and hosted
+certification passed all 10 checks (`artifacts/release-0.2.5-certification/`). Both leagues
+(Playtests and Competition Pilot) moved to it automatically.
+
+- **Replay:**
+  - Desktop shows a village board: painted frame and table, player cards with character portraits,
+    death marks, the speaking glow and dusk vote stamps, a parchment vote summary, and Village voices
+    with All, Public and Private filters. A newly reached phase plays its painted card over the board.
+  - Compact embeds (728×793 column, 813×343 league frame) get a one-line status bar, seat chips, and
+    slim painted banners over the village art.
+  - Character avatars everywhere. Replays open on everything, with a "Public info only" checkbox.
+  - No more flash on each step, and the host page no longer scrolls.
+- **Game screen:**
+  - Embedded seat strip: stamps are visible, portraits show, and cards stay aligned.
+  - The header leaves room for the host's full-screen button.
+  - New one-tap journal button.
+- **Names and seats:**
+  - Duplicate names take letters (Haiku, Haiku B), with a shared mention rule for host routing and
+    unread badges.
+  - Replay seats are numbered from 1.
+  - The player prompt maps each id to its seat.
+- **Baseline:** random legal votes and night actions. It acts on observations with fields it does
+  not know (38 of 40 all-baseline games ended in a Wolf win, 2 in a draw).
+
+Haiku v17 vote guidance (secret, simultaneous votes; a skip is a free day for Wolves): in nine-Haiku
+test games, Town skips fell from 4 of 13 votes to 2 of 19, with no failed votes
+(`artifacts/hosted-0.2.4-haiku-v17/`).
+
+The lobby game `lby_72fc2e81-75c3-4d2f-b9c4-ad2bb58647a0` (Playtests league) seated the stale
+champion `wcw-bedrock-haiku:v6`, which rejects Town vote observations. 20 Town votes were lost as
+`disconnected`, and the Wolves won on day 5 (`artifacts/lobby-72fc/`).
+
+Policies from this build (`artifacts/release-v18/`): `wcw-bedrock-haiku:v18`, `wcw-deepseek:v6`,
+and v8 of `wcw-chatgpt`, `wcw-gemini`, `wcw-gpt-oss`, `wcw-llama`, `wcw-mistral`, `wcw-glm` and
+`wcw-kimi`. `wcw-bedrock-haiku:v18` is submitted to the Playtests league to replace v6 as champion.

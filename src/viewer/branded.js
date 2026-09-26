@@ -68,7 +68,7 @@ try {
 
 const state = {
   source: replayUrl ? 'replay' : 'live',    // 'live' | 'replay' — context in the real product
-  reveal: 'omniscient', // 'aired' | 'omniscient'. Replays open on everything; "Public info only" narrows it
+  reveal: 'omniscient', // 'aired' | 'omniscient'. Replays open on everything; "No spoilers" narrows it
   cursor: 2,
   playing: Boolean(replayUrl),
 };
@@ -158,6 +158,10 @@ function derive(evs) {
     }
     if (p.kind === 'finished') { m.finished = true; m.phase = 'finished'; }
   }
+  // Who performs the event at the cursor (a speaker, a Wolf chatting, a confessional, a night action), for the highlight.
+  const last = evs.at(-1)?.payload;
+  m.actor = !last ? null : last.kind === 'speech' ? last.speech.slot
+    : ['confessional', 'wolf_chat', 'noble_chat', 'bid', 'night_choices', 'failure', 'suspicion', 'suspicion_dropped', 'private_result'].includes(last.kind) ? last.slot : null;
   return m;
 }
 
@@ -202,7 +206,7 @@ function renderBoard(m) {
       return `<img class="stamp" src="${PLAY}vote_banner_town_hoof.png" alt="" title="${esc(nameOf(b.slot))} voted ${esc(s.name)}" style="left:${p.x}%;top:${p.y}%;transform:rotate(${p.r}deg)">`;
     }).join('');
     const death = gone ? `<img class="death ${gone.cause === 'vote' ? 'meat' : 'claw'}" src="${PLAY}${gone.cause === 'vote' ? 'dead_icon_meat' : 'dead_icon_claw'}.png" alt="">` : '';
-    return `<div class="card${gone ? ' dead' : ''}${r?.faction === 'wolf' ? ' wolf' : ''}${m.speaking === n && !gone ? ' speaking' : ''}" style="--seat:${SEAT_COLORS[n % 9]}" title="${esc(s.policyName ? `Policy: ${s.policyName}` : s.name)}">
+    return `<div class="card${gone ? ' dead' : ''}${r?.faction === 'wolf' ? ' wolf' : ''}${m.speaking === n && !gone ? ' speaking' : ''}${m.actor === n ? ' acting' : ''}" style="--seat:${SEAT_COLORS[n % 9]}" title="${esc(s.policyName ? `Policy: ${s.policyName}` : s.name)}">
       <img class="shadow" src="${PLAY}base_playercard_shadow.png" alt="">${r?.faction === 'wolf' ? '<span class="ring"></span>' : ''}
       <img class="art" src="${esc(art)}" alt="">${death}${stamps}
       <span class="no">${n + 1}</span><span class="plate">${esc(s.name)}</span><small>${esc(tag)}</small></div>`;
@@ -246,7 +250,7 @@ function renderSeats(m) {
     const r = m.roles || publicRole(n) ? roleOf(n) : null;
 
     const face = avatar(n);
-    return `<li><details class="seat" data-slot="${n}" ${openSeats.has(String(n)) ? 'open' : ''} data-alive="${!gone}" data-speaking="${m.speaking === n && !gone}">
+    return `<li><details class="seat" data-slot="${n}" ${openSeats.has(String(n)) ? 'open' : ''} data-alive="${!gone}" data-speaking="${m.speaking === n && !gone}" data-acting="${m.actor === n}">
       <summary>
         ${face}
         <span class="who"><span class="nm">${esc(s.name)}</span><span class="st">Seat ${n + 1} &middot; ${esc(st)}</span></span>
@@ -593,7 +597,8 @@ let floorBeats = [], freshTransition = null, overlayTimer;
 /* Desktop: a newly reached phase plays its painted card over the board, like the game's dusk and dawn screens. */
 function playPhaseOverlay() {
   const html = freshTransition; freshTransition = null;
-  if (!html || compact.matches) return;
+  // Only where the board is on screen (desktop and the mini village); elsewhere the banner stays in the feed.
+  if (!html || getComputedStyle(document.getElementById('board')).display === 'none') return;
   const o = document.getElementById('phase-overlay');
   o.innerHTML = html; o.classList.add('show');
   clearTimeout(overlayTimer); overlayTimer = setTimeout(() => o.classList.remove('show'), 2400);
@@ -637,12 +642,12 @@ function renderChrome(m) {
   const alive = m.alive.filter(Boolean).length;
   document.getElementById('day-title').textContent = m.finished ? 'Game over' : m.phase === 'night' ? `Night ${m.day}` : m.day ? `Day ${m.day}` : 'The fold';
   document.getElementById('day-sub').textContent = `${m.finished ? 'Final roles revealed' : m.dusk ? 'Votes revealed' : m.phase === 'vote' ? 'The village votes' : m.phase === 'night' ? 'The village sleeps' : m.day ? 'Discuss and deduce' : 'Waiting to begin'} · ${alive} of ${ROSTER().length} alive`;
-  document.getElementById('voices-sub').textContent = state.reveal === 'aired' ? 'Public info only · what the table saw' : 'Everything · public talk, private chats and night actions';
+  document.getElementById('voices-sub').textContent = state.reveal === 'aired' ? 'No spoilers · what the table saw' : 'Everything · public talk, private chats and night actions';
   document.getElementById('phase-line').textContent = `${m.finished ? 'Game over' : m.phase === 'night' ? `Night ${m.day}` : m.phase === 'vote' ? `Day ${m.day} · vote` : `Day ${m.day}`} · ${alive}/${ROSTER().length} alive`;
   document.querySelector('.brand').title = document.getElementById('ep-sub').textContent;
   document.getElementById('reveal-hint').textContent = live
     ? 'Public view · roles stay secret until the episode ends.'
-    : state.reveal === 'aired' ? 'Only what the table saw as it happened.' : 'Showing roles, private chats, and night actions. Spoilers ahead.';
+    : state.reveal === 'aired' ? 'No spoilers: only what the table saw as it happened.' : 'Showing roles, private chats and night actions. Tick No spoilers to hide them.';
 
   ['play', 'prev', 'next', 'tlabel'].forEach(id => { document.getElementById(id).hidden = live; });
   document.querySelector('.timeline').hidden = live;

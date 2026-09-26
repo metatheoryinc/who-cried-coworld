@@ -607,7 +607,8 @@ body::after {
 .seats-btn[aria-expanded="true"] { background: rgba(255,242,201,.22); }
 
 @media (max-width: 1000px) {
-  body { height: 100dvh; padding-bottom: 0; overflow: hidden; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+  /* grid-template-columns: minmax(0,1fr), or the implicit column grows to the widest beat and the page overflows narrow frames. */
+  body { height: 100dvh; padding-bottom: 0; overflow: hidden; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; grid-template-columns: minmax(0, 1fr); }
   .masthead { margin: 6px 10px 0; padding: 5px 10px; gap: 8px; flex-wrap: nowrap; align-items: center; }
   .masthead .brand { flex: 0 0 auto; }
   .masthead .brand-art { width: 38px; height: 38px; }
@@ -695,7 +696,7 @@ body::after {
 .seat > summary { grid-template-columns: 40px minmax(0, 1fr) 12px; }
 .seat .avatar { width: 40px; height: 40px; }
 
-/* "Public info only": replays open on everything; this narrows to what the table saw. */
+/* "No spoilers": replays open on everything; this narrows to what the table saw. */
 .public-only { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; cursor: pointer;
   background: rgba(21,15,27,.64); border: 1px solid rgba(255,238,193,.2); color: #eee6f1; font: 600 13px var(--ui); white-space: nowrap; }
 .public-only input { width: 16px; height: 16px; margin: 0; accent-color: #d9a63c; }
@@ -726,40 +727,9 @@ body::after {
 .board, .table-band, .day-head, .voices-head, .phase-overlay { display: none; }
 @media (max-width: 1000px) { .voices { display: contents; } }
 
-@media (min-width: 1001px) {
-  :root { --u: calc(min(100vw, 2000px) / 2600); --fw: calc(175 * var(--u)); --ft: calc(160 * var(--u)); --fb: calc(150 * var(--u)); --tb: max(64px, calc(210 * var(--u))); }
-  body { grid-template-rows: auto minmax(0, 1fr) auto; }
-  body::after { display: none; }
-  .world-layer { background: #baa878 url("assets/wcw/backgrounds/bg_day.png") center / cover no-repeat; filter: none; }
-  body[data-world="night"] .world-layer { background-image: url("assets/wcw/backgrounds/bg_night.png"); filter: none; }
-  .world-layer::after { inset: 0 0 var(--tb) 0; background: none; filter: none; border-style: solid; border-color: transparent;
-    border-width: var(--ft) var(--fw) var(--fb); border-image: url("assets/play/frame_day.png") 160 175 150 fill / var(--ft) var(--fw) var(--fb) stretch; }
-  body[data-world="night"] .world-layer::after { border-image-source: url("assets/play/frame_night.png"); }
-  .table-band { display: block; position: fixed; left: 0; right: 0; bottom: 0; height: calc(var(--tb) + 30px); z-index: -1;
-    background: url("assets/play/table.png") center top / cover no-repeat; }
 
-  .masthead { margin: calc(var(--ft) * .28) calc(var(--fw) * .62) 0; padding: 0; gap: 18px; border: 0; background: none; box-shadow: none; }
-  .masthead .brand { flex: 0 0 auto; }
-  .masthead .brand-art { width: clamp(64px, 6vw, 96px); height: auto; }
-  .masthead .brand .sub, .phase-line, .seats-btn { display: none; }
-  .day-head { display: block; flex: 1 1 auto; min-width: 0; }
-  .day-head h2 { margin: 0; font: 400 clamp(32px, 3.2vw, 46px)/1 'IM Fell English', Georgia, serif; color: #3a2716; text-shadow: 0 1px 0 #fff8; }
-  .day-head p { margin: 4px 0 0; font: 600 14px var(--ui); color: #5b4330; }
-  body[data-world="night"] .day-head h2 { color: #fff3d7; text-shadow: 0 2px 6px #1b1024; }
-  body[data-world="night"] .day-head p { color: #e8dcc8; }
-  .masthead .control { flex: 0 0 auto; display: flex; flex-direction: row; align-items: center; gap: 10px; }
-  .masthead .control .hint { display: none; }
-  .masthead .status, .public-only { background: #fff1d8ee; border: 1px solid #ae894e; color: #3a2716; }
-  .masthead .status .dot { background: #8a7a68; }
-
-  .stage { width: auto; margin: 0 calc(var(--fw) * .62); padding: 14px 0 6px; min-height: 0; display: grid;
-    grid-template-columns: minmax(0, 1fr) clamp(360px, 30vw, 460px); grid-template-rows: minmax(0, 1fr); gap: 22px; align-items: stretch; }
-  .rail { display: none; }
-  .board { display: flex; flex-direction: column; gap: 14px; min-height: 0; position: relative; }
-  .cards { --cw: calc((100vw - 2 * var(--fw) * .62 - clamp(360px, 30vw, 460px) - 22px) / 5 - 14px);
-    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px 14px; }
-  .card { position: relative; justify-self: center; aspect-ratio: 1 / 1.28;
-    height: min(calc((100dvh - var(--ft) - var(--tb) - 250px) / 2), calc(var(--cw) * 1.28), 250px); }
+/* Painted cards and Village voices, shared by the desktop village and the mini village (landscape 680px+). */
+@media (min-width: 1001px), (min-width: 680px) and (orientation: landscape) {
   .card > img.shadow { position: absolute; inset: 0; width: 100%; height: 79%; object-fit: fill; }
   .card > img.art { position: absolute; left: 8%; top: 5%; width: 84%; height: 70%; object-fit: contain; }
   .card .ring { position: absolute; z-index: 2; left: 5%; right: 5%; top: 2%; height: 75%; border-radius: 10px; box-shadow: inset 0 0 0 3px rgba(192,57,43,.75); }
@@ -822,6 +792,41 @@ body::after {
   .voices .hold .why { display: none; }
   .floor[data-filter="public"] > .sealed, .floor[data-filter="public"] > .scene, .floor[data-filter="public"] > .hold { display: none; }
   .floor[data-filter="private"] > :not(.sealed):not(.scene) { display: none; }
+}
+@media (min-width: 1001px) {
+  :root { --u: calc(min(100vw, 2000px) / 2600); --fw: calc(175 * var(--u)); --ft: calc(160 * var(--u)); --fb: calc(150 * var(--u)); --tb: max(64px, calc(210 * var(--u))); }
+  body { grid-template-rows: auto minmax(0, 1fr) auto; }
+  body::after { display: none; }
+  .world-layer { background: #baa878 url("assets/wcw/backgrounds/bg_day.png") center / cover no-repeat; filter: none; }
+  body[data-world="night"] .world-layer { background-image: url("assets/wcw/backgrounds/bg_night.png"); filter: none; }
+  .world-layer::after { inset: 0 0 var(--tb) 0; background: none; filter: none; border-style: solid; border-color: transparent;
+    border-width: var(--ft) var(--fw) var(--fb); border-image: url("assets/play/frame_day.png") 160 175 150 fill / var(--ft) var(--fw) var(--fb) stretch; }
+  body[data-world="night"] .world-layer::after { border-image-source: url("assets/play/frame_night.png"); }
+  .table-band { display: block; position: fixed; left: 0; right: 0; bottom: 0; height: calc(var(--tb) + 30px); z-index: -1;
+    background: url("assets/play/table.png") center top / cover no-repeat; }
+
+  .masthead { margin: calc(var(--ft) * .28) calc(var(--fw) * .62) 0; padding: 0; gap: 18px; border: 0; background: none; box-shadow: none; }
+  .masthead .brand { flex: 0 0 auto; }
+  .masthead .brand-art { width: clamp(64px, 6vw, 96px); height: auto; }
+  .masthead .brand .sub, .phase-line, .seats-btn { display: none; }
+  .day-head { display: block; flex: 1 1 auto; min-width: 0; }
+  .day-head h2 { margin: 0; font: 400 clamp(32px, 3.2vw, 46px)/1 'IM Fell English', Georgia, serif; color: #3a2716; text-shadow: 0 1px 0 #fff8; }
+  .day-head p { margin: 4px 0 0; font: 600 14px var(--ui); color: #5b4330; }
+  body[data-world="night"] .day-head h2 { color: #fff3d7; text-shadow: 0 2px 6px #1b1024; }
+  body[data-world="night"] .day-head p { color: #e8dcc8; }
+  .masthead .control { flex: 0 0 auto; display: flex; flex-direction: row; align-items: center; gap: 10px; }
+  .masthead .control .hint { display: none; }
+  .masthead .status, .public-only { background: #fff1d8ee; border: 1px solid #ae894e; color: #3a2716; }
+  .masthead .status .dot { background: #8a7a68; }
+
+  .stage { width: auto; margin: 0 calc(var(--fw) * .62); padding: 14px 0 6px; min-height: 0; display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(360px, 30vw, 460px); grid-template-rows: minmax(0, 1fr); gap: 22px; align-items: stretch; }
+  .rail { display: none; }
+  .board { display: flex; flex-direction: column; gap: 14px; min-height: 0; position: relative; }
+  .cards { --cw: calc((100vw - 2 * var(--fw) * .62 - clamp(360px, 30vw, 460px) - 22px) / 5 - 14px);
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px 14px; }
+  .card { position: relative; justify-self: center; aspect-ratio: 1 / 1.28;
+    height: min(calc((100dvh - var(--ft) - var(--tb) - 250px) / 2), calc(var(--cw) * 1.28), 250px); }
 
   .transport { position: relative; z-index: 2; background: transparent; box-shadow: none; border: 0; padding: 6px calc(var(--fw) * .62) 12px; }
   .tbtn { background: rgba(58,39,22,.92); border-color: #6b4a2a; color: #fff3d7; }
@@ -831,3 +836,35 @@ body::after {
 
 /* Embedded on softmax.com the host overlays a full-screen button on the top-right corner. */
 .embedded .masthead { padding-right: 48px; }
+
+/* Mini village: landscape embeds 680–1000px wide (the league's featured match, up to 862×484).
+   A 3×3 board of painted cards beside Village voices; seats need no chip strip or Seats button. */
+@media (min-width: 680px) and (max-width: 1000px) and (orientation: landscape) {
+  .rail, .seats-btn { display: none !important; }
+  .stage { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 8px; align-items: stretch; }
+  .board { display: flex; flex-direction: column; min-height: 0; position: relative; padding: 6px; border-radius: 12px;
+    background: rgba(255,241,216,.18); border: 1px solid rgba(255,238,193,.35); }
+  .cards { display: grid; grid-template-columns: repeat(3, auto); gap: 4px 6px; }
+  .card { position: relative; aspect-ratio: 1 / 1.2; height: max(58px, calc((100dvh - 124px) / 3 - 5px)); }
+  .card > img.shadow { height: 84%; }
+  .card > img.art { top: 4%; height: 72%; }
+  .card .plate { bottom: 0; font: 600 10px/1.25 var(--ui); padding: 1px 2px; }
+  .card small, .vote-card, .voices-head { display: none; }
+  .card .no { min-width: 15px; height: 15px; font-size: 9px; line-height: 15px; padding: 0 3px; }
+  .card .stamp { width: 40%; }
+  .voices { border-radius: 12px; }
+  .voices .floor { padding: 8px 10px; }
+  .phase-overlay .transition { width: min(100%, 560px); }
+}
+/* Very small frames: keep the header on one line within the frame. */
+@media (max-width: 560px) {
+  .masthead { gap: 6px; }
+  .masthead .status #status-text { display: none; }
+  .masthead .status { padding: 4px 6px; }
+  .public-only { padding: 4px 8px; font-size: 11px; }
+  .masthead .brand-art { width: 28px; height: 28px; }
+}
+
+/* The player behind the event at the cursor: speaker, Wolf chatting, confessional, night action. */
+.card.acting { filter: drop-shadow(0 0 9px #ffd36b) drop-shadow(0 0 2px #b8741a); transform: translateY(-3px); transition: transform .15s ease; }
+.seat[data-acting="true"] { border-color: #d39d28; background-color: #fff2bf; box-shadow: 0 0 0 2px rgba(211,157,40,.55), 0 2px 6px rgba(39,24,27,.22); }

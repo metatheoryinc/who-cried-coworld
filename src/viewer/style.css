@@ -673,3 +673,37 @@ body::after {
   .transition-copy p { font-size: 12px; }
   .tbtn, #play { min-height: 32px; }
 }
+
+/* Character avatars: the sheep until a role is known in this view, then the role's portrait. */
+.avatar.char { position: relative; display: grid; place-items: center; overflow: visible; color: transparent;
+  border-radius: 50%; background: #efe1bd; background-image: none; border: 1px solid rgba(111,77,38,.45); }
+.avatar.char > .face { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; }
+/* The portraits are full-body figures on a 1024px canvas; zoom to the head and shoulders. */
+.avatar.char > .face > img { width: 100%; height: 100%; object-fit: contain; transform: scale(1.85); transform-origin: 50% 32%; }
+.avatar.char[data-faction="wolf"] { background: #f3d4c8; box-shadow: 0 0 0 2px rgba(150,61,54,.8); }
+.avatar.char[data-faction="town"] { box-shadow: 0 0 0 1.5px rgba(36,96,71,.55); }
+.avatar.char .seat-tag { position: absolute; right: -5px; bottom: -4px; min-width: 16px; height: 16px; padding: 0 4px;
+  border-radius: 8px; background: #3b2a22; color: #fff3d7; font: 700 10px/16px var(--ui); text-align: center; }
+.seat[data-alive="false"] .avatar.char { filter: grayscale(.35); opacity: .92; }
+.speech { grid-template-columns: 52px minmax(0,1fr); }
+.speech .avatar { width: 52px; height: 52px; }
+.line { grid-template-columns: 34px minmax(0,1fr); }
+.line .avatar { width: 34px; height: 34px; }
+.rrow .avatar { width: 30px; height: 30px; }
+.seat > summary { grid-template-columns: 40px minmax(0, 1fr) 12px; }
+.seat .avatar { width: 40px; height: 40px; }
+
+/* "Public info only": replays open on everything; this narrows to what the table saw. */
+.public-only { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+  background: rgba(21,15,27,.64); border: 1px solid rgba(255,238,193,.2); color: #eee6f1; font: 600 13px var(--ui); white-space: nowrap; }
+.public-only input { width: 16px; height: 16px; margin: 0; accent-color: #d9a63c; }
+.public-only:has(input:disabled) { opacity: .6; cursor: default; }
+@media (max-width: 1000px) {
+  .public-only { padding: 4px 10px; font-size: 12px; }
+  .seat .avatar { width: 26px; height: 26px; }
+  .seat .avatar .seat-tag { display: none; }
+}
+@media (max-width: 620px) {
+  .speech { grid-template-columns: 38px minmax(0,1fr); }
+  .speech > .avatar { display: grid; width: 38px; height: 38px; }
+}

@@ -66,7 +66,7 @@ try {
 
 const state = {
   source: replayUrl ? 'replay' : 'live',    // 'live' | 'replay' — context in the real product
-  reveal: 'aired',     // 'aired' | 'omniscient' — the one real viewer control
+  reveal: 'omniscient', // 'aired' | 'omniscient'. Replays open on everything; "Public info only" narrows it
   cursor: 2,
   playing: Boolean(replayUrl),
 };
@@ -163,10 +163,13 @@ function derive(evs) {
 
 /* Seats are numbered from 1 for people, matching the game screen and journal; `n` is the 0-based slot. */
 function avatar(n, cls) {
-  if (!isCharacter(n))
-    return `<span class="avatar ${cls || ''}" data-kind="neutral" aria-hidden="true">${esc(String(n + 1))}</span>`;
-  return `<span class="avatar ${cls || ''}" style="--av:hsl(${HUES[n]} 46% 66%)" aria-hidden="true">${esc(nameOf(n)[0])}</span>`;
+  // Every seat is a character: the sheep until its role is known in this view, then the role's portrait.
+  const r = viewRoles || publicRole(n) ? roleOf(n) : null;
+  return `<span class="avatar char ${cls || ''}"${r ? ` data-faction="${esc(r.faction)}"` : ''} aria-hidden="true"><span class="face"><img src="${esc(r ? ROLE_ART[r.role] : SHEEP_ART)}" alt=""></span><b class="seat-tag">${n + 1}</b></span>`;
 }
+const SHEEP_ART = 'assets/wcw/player-card/Player_sheep_base.png';
+/* Whether the current view reveals every role (set per render from the reveal setting and progress). */
+let viewRoles = false;
 
 function roleBadge(n) {
   const r = roleOf(n);
@@ -199,8 +202,7 @@ function renderSeats(m) {
       : `<p>No character is configured for this seat. It is known by its display name and seat number, and nothing else.</p>`;
     const r = m.roles || publicRole(n) ? roleOf(n) : null;
 
-    // A known role (always after death, or everything in the Everything view) shows its art.
-    const face = r ? `<span class="avatar role-face" data-faction="${esc(r.faction)}" aria-hidden="true"><img src="${esc(ROLE_ART[r.role])}" alt=""></span>` : avatar(n);
+    const face = avatar(n);
     return `<li><details class="seat" data-slot="${n}" ${openSeats.has(String(n)) ? 'open' : ''} data-alive="${!gone}" data-speaking="${m.speaking === n && !gone}">
       <summary>
         ${face}
@@ -575,26 +577,15 @@ function renderChrome(m) {
     : m.finished ? 'Replay · complete' : 'Replay';
 
   document.querySelectorAll('.seg[data-kind="source"] button').forEach(b => b.setAttribute('aria-pressed', String(b.value === state.source)));
-  // Compact layout: short frames tuck the seats behind a button; chips open one detail pop-over at a time.
-const compact = typeof matchMedia === 'function' ? matchMedia('(max-width: 1000px)') : { matches: false };
-document.getElementById('seats-btn').addEventListener('click', ev => {
-  const open = document.body.classList.toggle('seats-open');
-  ev.currentTarget.setAttribute('aria-expanded', String(open));
-});
-document.getElementById('seats').addEventListener('toggle', ev => {
-  if (!compact.matches || !ev.target.open) return;
-  document.querySelectorAll('#seats .seat[open]').forEach(s => { if (s !== ev.target) s.open = false; });
-}, true);
-document.querySelectorAll('.seg[data-kind="reveal"] button').forEach(b => {
-    b.setAttribute('aria-pressed', String(b.value === state.reveal));
-    b.disabled = live;
-  });
+  const publicOnly = document.getElementById('public-only');
+  publicOnly.checked = state.reveal === 'aired';
+  publicOnly.disabled = live;
   const alive = m.alive.filter(Boolean).length;
   document.getElementById('phase-line').textContent = `${m.finished ? 'Game over' : m.phase === 'night' ? `Night ${m.day}` : m.phase === 'vote' ? `Day ${m.day} · vote` : `Day ${m.day}`} · ${alive}/${ROSTER().length} alive`;
   document.querySelector('.brand').title = document.getElementById('ep-sub').textContent;
   document.getElementById('reveal-hint').textContent = live
     ? 'Public view · roles stay secret until the episode ends.'
-    : 'Everything includes roles and private conversations. Spoilers ahead.';
+    : state.reveal === 'aired' ? 'Only what the table saw as it happened.' : 'Showing roles, private chats, and night actions. Spoilers ahead.';
 
   ['play', 'prev', 'next', 'tlabel'].forEach(id => { document.getElementById(id).hidden = live; });
   document.querySelector('.timeline').hidden = live;
@@ -602,7 +593,7 @@ document.querySelectorAll('.seg[data-kind="reveal"] button').forEach(b => {
 
   const scrub = document.getElementById('scrub');
   scrub.max = maxCursor(); scrub.value = Math.min(state.cursor, maxCursor());
-  document.querySelector('.seg[data-kind="reveal"]').title = document.getElementById('reveal-hint').textContent;
+  document.querySelector('.public-only').title = document.getElementById('reveal-hint').textContent;
   document.getElementById('tlabel').textContent =
     m.finished ? 'End of episode' : m.phase === 'night' ? `Night ${m.day}` : m.phase === 'vote' ? `Day ${m.day} · vote` : `Day ${m.day}`;
   const play = document.getElementById('play');
@@ -628,6 +619,7 @@ function render({ follow = true } = {}) {
   state.cursor = Math.max(1, Math.min(Number.isNaN(state.cursor) ? 2 : state.cursor, maxCursor()));
   const evs = shown();
   const m = derive(evs);
+  viewRoles = m.roles;
   renderChrome(m);
 
   renderSeats(m);
@@ -641,8 +633,17 @@ function render({ follow = true } = {}) {
 /* ------------------------------------------------------------------ wiring */
 document.querySelectorAll('.seg[data-kind="source"] button').forEach(b =>
   b.addEventListener('click', () => { state.source = b.value; state.cursor = b.value === 'live' ? Infinity : 2; state.playing = b.value === 'replay'; render(); }));
-document.querySelectorAll('.seg[data-kind="reveal"] button').forEach(b =>
-  b.addEventListener('click', () => { state.reveal = b.value; render(); }));
+// Compact layout: short frames tuck the seats behind a button; chips open one detail pop-over at a time.
+const compact = typeof matchMedia === 'function' ? matchMedia('(max-width: 1000px)') : { matches: false };
+document.getElementById('seats-btn').addEventListener('click', ev => {
+  const open = document.body.classList.toggle('seats-open');
+  ev.currentTarget.setAttribute('aria-expanded', String(open));
+});
+document.getElementById('seats').addEventListener('toggle', ev => {
+  if (!compact.matches || !ev.target.open) return;
+  document.querySelectorAll('#seats .seat[open]').forEach(s => { if (s !== ev.target) s.open = false; });
+}, true);
+document.getElementById('public-only').addEventListener('change', ev => { state.reveal = ev.currentTarget.checked ? 'aired' : 'omniscient'; render(); });
 
 // Navigate only events that can change this view; hidden replay events must not
 // create apparently unresponsive steps or long silent pauses in As it aired.

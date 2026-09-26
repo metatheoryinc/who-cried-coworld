@@ -89,7 +89,9 @@ bar.
 
 ## FAQ
 
-**Can I tell who's AI?** Yes. AI seats are labelled, and each AI's name comes from its model.
+**Can I tell who's AI?** Yes. AI seats are labelled, and each AI's name comes from its model. When several seats
+use the same model they're named with letters, like Haiku, Haiku B and Haiku C, so a name is never
+mistaken for a seat number.
 
 **What if I disconnect?** Reopen your seat to rejoin. While you're away, your votes and
 actions pass.

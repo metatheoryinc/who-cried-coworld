@@ -207,7 +207,7 @@ function renderBoard(m) {
     }).join('');
     const death = gone ? `<img class="death ${gone.cause === 'vote' ? 'meat' : 'claw'}" src="${PLAY}${gone.cause === 'vote' ? 'dead_icon_meat' : 'dead_icon_claw'}.png" alt="">` : '';
     return `<div class="card${gone ? ' dead' : ''}${r?.faction === 'wolf' ? ' wolf' : ''}${m.speaking === n && !gone ? ' speaking' : ''}${m.actor === n ? ' acting' : ''}" style="--seat:${SEAT_COLORS[n % 9]}" title="${esc(s.policyName ? `Policy: ${s.policyName}` : s.name)}">
-      <img class="shadow" src="${PLAY}base_playercard_shadow.png" alt="">${r?.faction === 'wolf' ? '<span class="ring"></span>' : ''}
+      <img class="shadow" src="${PLAY}${r ? (r.faction === 'wolf' ? 'base_rolecard_red' : 'base_rolecard_blue') : 'base_playercard_shadow'}.png" alt="">
       <img class="art" src="${esc(art)}" alt="">${death}${stamps}
       <span class="no">${n + 1}</span><span class="plate">${esc(s.name)}</span><small>${esc(tag)}</small></div>`;
   }).join('');

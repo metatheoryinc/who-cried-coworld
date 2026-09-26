@@ -732,7 +732,6 @@ body::after {
 @media (min-width: 1001px), (min-width: 680px) and (orientation: landscape) {
   .card > img.shadow { position: absolute; inset: 0; width: 100%; height: 79%; object-fit: fill; }
   .card > img.art { position: absolute; left: 8%; top: 5%; width: 84%; height: 70%; object-fit: contain; }
-  .card .ring { position: absolute; z-index: 2; left: 5%; right: 5%; top: 2%; height: 75%; border-radius: 10px; box-shadow: inset 0 0 0 3px rgba(192,57,43,.75); }
   .card .no { position: absolute; z-index: 6; top: 3%; left: 5%; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 11px; background: var(--seat);
     color: #fff; font: 700 12px/22px var(--ui); text-align: center; box-shadow: 0 1px 2px #0005; }
   .card .plate { position: absolute; z-index: 6; left: 3%; right: 3%; bottom: 12%; padding: 3px 4px; background: #fff0d1; border: 1px solid #a7834f; border-radius: 4px;
@@ -741,8 +740,10 @@ body::after {
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   body[data-world="night"] .card small { color: #f1e6d2; text-shadow: 0 1px 3px #000; }
   .card.wolf small { color: #8e2f25; }
+  /* Role cards carry the art on a coloured field; keep the portrait clear of the card's top band. */
+  .card > img.shadow[src*="rolecard"] { height: 82%; }
   body[data-world="night"] .card.wolf small { color: #ffb3a8; }
-  .card.speaking { filter: drop-shadow(0 0 10px #ffd36b) drop-shadow(0 0 2px #b8741a); }
+  .card.speaking:not(.acting) { filter: drop-shadow(0 0 6px #ffd36b99); }
   .card.dead > img.art, .card.dead > img.shadow { filter: grayscale(.75) brightness(.9); }
   .card .death { position: absolute; z-index: 4; pointer-events: none; }
   .card .death.claw { left: 16%; top: 12%; width: 68%; height: 58%; }
@@ -866,5 +867,9 @@ body::after {
 }
 
 /* The player behind the event at the cursor: speaker, Wolf chatting, confessional, night action. */
-.card.acting { filter: drop-shadow(0 0 9px #ffd36b) drop-shadow(0 0 2px #b8741a); transform: translateY(-3px); transition: transform .15s ease; }
+/* The game's speaking glow: a soft gold pulse, with one pop when the actor changes. */
+.card.acting { animation: acting-pop .35s ease-out, acting-glow 1.6s ease-in-out .35s infinite; }
+@keyframes acting-pop { 0% { transform: scale(.96); filter: drop-shadow(0 0 0 #ffd36b00); } 60% { transform: scale(1.04); filter: drop-shadow(0 0 14px #ffd36b) drop-shadow(0 0 3px #b8741a); } 100% { transform: none; } }
+@keyframes acting-glow { 0%, 100% { filter: drop-shadow(0 0 3px #ffd36b88); } 50% { filter: drop-shadow(0 0 12px #ffd36b) drop-shadow(0 0 3px #b8741a); } }
+@media (prefers-reduced-motion: reduce) { .card.acting { animation: none; filter: drop-shadow(0 0 8px #ffd36b); } }
 .seat[data-acting="true"] { border-color: #d39d28; background-color: #fff2bf; box-shadow: 0 0 0 2px rgba(211,157,40,.55), 0 2px 6px rgba(39,24,27,.22); }

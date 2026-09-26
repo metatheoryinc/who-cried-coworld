@@ -6,6 +6,8 @@ import { ViewerPacket } from '../shared/events.js';
 import { decodeText } from '../shared/decode.js';
 import {deathReveal} from './stage-summary.js';
 import { roleNames } from '../shared/roles.js';
+// Embedded in another page (softmax.com), the host draws its own controls over our top-right corner.
+try { if (window.self !== window.top) document.documentElement.classList.add('embedded'); } catch { document.documentElement.classList.add('embedded'); }
 const params = new URLSearchParams(location.search);
 const isSeatInspector=/\/client\/player\/?$/.test(location.pathname);
 const replayUrl = new URLSearchParams(location.hash.slice(1)).get('replay') ?? params.get('replay');

@@ -619,7 +619,8 @@ body::after {
   .masthead .seg button { min-height: 32px; padding: 4px 10px; font-size: 12px; }
   .masthead .status { font-size: 10px; padding: 3px 8px; }
 
-  .stage { min-height: 0; display: flex; flex-direction: column; gap: 6px; padding: 6px 10px; position: relative; }
+  /* align-items: stretch, or the old start alignment shrinks the floor to its content (half width early in a game). */
+  .stage { min-height: 0; display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding: 6px 10px; position: relative; }
   /* top:auto drops the desktop sticky offset, which otherwise shifted the chips 16px onto the floor. */
   .rail { flex: none; position: relative; top: auto; gap: 0; }
   .rail > .head { display: none; }
@@ -827,3 +828,6 @@ body::after {
   .tbtn:hover:not([disabled]) { background: rgba(80,54,30,.95); }
   .tlabel { color: #fff3d7; text-shadow: 0 1px 2px #000; font-weight: 700; }
 }
+
+/* Embedded on softmax.com the host overlays a full-screen button on the top-right corner. */
+.embedded .masthead { padding-right: 48px; }

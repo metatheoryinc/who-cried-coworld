@@ -620,7 +620,8 @@ body::after {
   .masthead .status { font-size: 10px; padding: 3px 8px; }
 
   .stage { min-height: 0; display: flex; flex-direction: column; gap: 6px; padding: 6px 10px; position: relative; }
-  .rail { flex: none; position: relative; gap: 0; }
+  /* top:auto drops the desktop sticky offset, which otherwise shifted the chips 16px onto the floor. */
+  .rail { flex: none; position: relative; top: auto; gap: 0; }
   .rail > .head { display: none; }
   .seats { flex-direction: row; flex-wrap: wrap; overflow: visible; gap: 4px; padding: 0; scroll-snap-type: none; }
   .seats > li { flex: 0 1 auto; flex-basis: auto; max-width: 136px; min-width: 0; }
@@ -706,4 +707,12 @@ body::after {
 @media (max-width: 620px) {
   .speech { grid-template-columns: 38px minmax(0,1fr); }
   .speech > .avatar { display: grid; width: 38px; height: 38px; }
+}
+
+/* Compact frames show the painted village itself: the ornate gold frame, stretched to a narrow or
+   short window, turned most of the view into a flat yellow band. */
+@media (max-width: 1000px) {
+  .world-layer { background-position: center 40%; }
+  .world-layer::after { display: none; }
+  body::after { background: linear-gradient(180deg, rgba(26,17,31,.28), rgba(26,17,31,.42) 60%, rgba(20,14,24,.7)); }
 }

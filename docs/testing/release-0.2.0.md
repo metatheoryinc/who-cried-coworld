@@ -342,3 +342,27 @@ champion `wcw-bedrock-haiku:v6`, which rejects Town vote observations. 20 Town v
 Policies from this build (`artifacts/release-v18/`): `wcw-bedrock-haiku:v18`, `wcw-deepseek:v6`,
 and v8 of `wcw-chatgpt`, `wcw-gemini`, `wcw-gpt-oss`, `wcw-llama`, `wcw-mistral`, `wcw-glm` and
 `wcw-kimi`. `wcw-bedrock-haiku:v18` is submitted to the Playtests league to replace v6 as champion.
+
+## 0.2.6: mini village, No spoilers, role cards (September 26, 2026)
+
+Coworld 0.2.6 (`cow_e003ca32-f8ae-4613-a1ba-7436acf0a7b3`, source `9acbcb7`). Local and hosted
+certification passed all 10 checks (`artifacts/release-0.2.6-certification/`). Both leagues moved to
+it automatically.
+
+- **Mini village:** landscape embeds 680–1000px wide (the league's featured match, up to 862×484)
+  show a 3×3 board of painted cards beside Village voices.
+- **Who's acting:** every step marks the player behind the event at the cursor (speech, Wolf chat,
+  confessional, bid, night action) with the game's breathing gold glow, plus a pop when the actor
+  changes.
+- **Role cards:** known roles sit on the game's red (Wolf) and blue (Town) role cards, replacing the
+  red box.
+- **No spoilers:** the checkbox replaces "Public info only".
+- **Embeds:**
+  - The floor fills the frame early in a game.
+  - The host's full-screen button no longer covers the header.
+  - The page column is capped at the frame width. A real 434×320 iframe fits with no overflow.
+
+The full-length game on 0.2.5 used to review the viewer, `xreq_499a1091-4a23-4993-bb77-7bc6425b94a9`
+(`artifacts/hosted-0.2.5-roster-full/`), ran setup C3. The Wolves (Haiku and Kimi) won on day 3. There
+were 15 fallbacks: 6 bids, 4 votes, 3 Noble chats and 2 Wolf chats. Their causes have not been
+examined yet.

@@ -139,16 +139,16 @@ function derive(evs) {
     alive: R.map(() => true), died: R.map(() => null),
     speaking: null, accused: R.map(() => 0),
     lastBallot: R.map(() => undefined), spoke: R.map(() => 0),
-    day: 0, phase: 'waiting', roles: rolesKnown(evs), finished: false,
+    day: 0, phase: 'waiting', roles: rolesKnown(evs), finished: false, dusk: null, lastVote: null,
   };
   for (const e of evs) {
     const p = e.payload;
-    if (p.kind === 'phase') { m.day = p.day; m.phase = p.phase; m.speaking = null; }
+    if (p.kind === 'phase') { m.day = p.day; m.phase = p.phase; m.speaking = null; m.dusk = null; }
     if (p.kind === 'speech') {
       m.speaking = p.speech.slot; m.spoke[p.speech.slot]++;
       if (p.speech.accusation !== null) m.accused[p.speech.accusation]++;
     }
-    if (p.kind === 'ballots') { m.lastBallot = R.map(() => undefined); p.ballots.forEach(b => m.lastBallot[b.slot] = b.target); }
+    if (p.kind === 'ballots') { m.lastBallot = R.map(() => undefined); p.ballots.forEach(b => m.lastBallot[b.slot] = b.target); m.dusk = p.ballots; m.lastVote = { day: e.day, ballots: p.ballots, eliminated: p.eliminated }; }
     if (p.kind === 'elimination') {
       m.alive[p.slot] = false;
       m.died[p.slot] = { cause: p.cause, day: e.day };
@@ -174,6 +174,47 @@ let viewRoles = false;
 function roleBadge(n) {
   const r = roleOf(n);
   return r ? `<span class="badge" data-faction="${esc(r.faction)}"><img class="role-icon" src="${esc(ROLE_ART[r.role])}" alt="">${esc(ROLE_LABEL[r.role] || r.role)}</span>` : '';
+}
+
+/* ------------------------------------------------------------ village board
+   Desktop replay: the game's own table. Painted cards with character portraits, death marks,
+   the speaking glow, and the closed vote stamped onto the cards until night falls. */
+const SEAT_COLORS = ['#b5452f','#c07a1c','#8a8f1f','#3f8a4a','#2d8a86','#3a6fae','#6a55b0','#a2479a','#7d5b3c'];
+const PLAY = 'assets/play/';
+function scatter(key) {
+  let h = 2166136261; for (const c of key) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>>0; }
+  const pick = (shift, range) => ((h >>> shift) & 255) / 255 * range;
+  return { x: Math.round(8 + pick(0, 50)), y: Math.round(6 + pick(8, 40)), r: Math.round(pick(16, 60) - 30) };
+}
+function renderBoard(m) {
+  const R = ROSTER();
+  document.getElementById('cards').innerHTML = R.map(s => {
+    const n = s.slot, gone = m.died[n], r = m.roles || publicRole(n) ? roleOf(n) : null;
+    const art = r ? ROLE_ART[r.role] : SHEEP_ART;
+    let tag;
+    if (gone) tag = `${r ? ROLE_LABEL[r.role] + ' · ' : ''}${gone.cause === 'vote' ? `Voted out day ${gone.day}` : `Killed night ${gone.day}`}`;
+    else if (m.speaking === n) tag = r ? `${ROLE_LABEL[r.role]} · speaking` : 'Speaking';
+    else tag = r ? `${ROLE_LABEL[r.role]} · ${r.faction === 'wolf' ? 'Wolf' : 'Town'}` : 'Role unknown';
+    const stamps = (m.dusk || []).filter(b => b.target === n).map(b => {
+      const p = scatter(`${b.slot}:${n}:${m.day}`);
+      return `<img class="stamp" src="${PLAY}vote_banner_town_hoof.png" alt="" title="${esc(nameOf(b.slot))} voted ${esc(s.name)}" style="left:${p.x}%;top:${p.y}%;transform:rotate(${p.r}deg)">`;
+    }).join('');
+    const death = gone ? `<img class="death ${gone.cause === 'vote' ? 'meat' : 'claw'}" src="${PLAY}${gone.cause === 'vote' ? 'dead_icon_meat' : 'dead_icon_claw'}.png" alt="">` : '';
+    return `<div class="card${gone ? ' dead' : ''}${r?.faction === 'wolf' ? ' wolf' : ''}${m.speaking === n && !gone ? ' speaking' : ''}" style="--seat:${SEAT_COLORS[n % 9]}" title="${esc(s.policyName ? `Policy: ${s.policyName}` : s.name)}">
+      <img class="shadow" src="${PLAY}base_playercard_shadow.png" alt="">${r?.faction === 'wolf' ? '<span class="ring"></span>' : ''}
+      <img class="art" src="${esc(art)}" alt="">${death}${stamps}
+      <span class="no">${n + 1}</span><span class="plate">${esc(s.name)}</span><small>${esc(tag)}</small></div>`;
+  }).join('');
+
+  const v = m.lastVote, card = document.getElementById('vote-card');
+  card.hidden = !v;
+  if (v) {
+    const counts = new Map(); for (const b of v.ballots) { const k = b.target === null ? 'pass' : b.target; counts.set(k, (counts.get(k) || 0) + 1); }
+    const summary = [...counts].sort((a, b) => b[1] - a[1]).map(([k, c]) => `${k === 'pass' ? 'pass' : esc(nameOf(k))} ×${c}`).join(' · ');
+    const dot = n => `<span class="dot" style="--seat:${SEAT_COLORS[n % 9]}">${n + 1}</span>`;
+    card.innerHTML = `<h3>Day ${v.day} vote · ${v.eliminated === null ? 'nobody eliminated' : `${esc(revealedName(v.eliminated))} eliminated`}</h3>
+      <div class="ballots-row"><span class="sum">${summary}</span>${v.ballots.map(b => `<span class="bal">${dot(b.slot)}→${b.target === null ? '<i>pass</i>' : dot(b.target)}</span>`).join('')}</div>`;
+  }
 }
 
 function renderSeats(m) {
@@ -540,13 +581,23 @@ function renderFloor(rawEvs, m) {
   }
   if (!out.length) out.push('<div class="beat hold"><p class="big">The episode has not begun.</p></div>');
   patchFloor(document.getElementById('floor'), out);
+  playPhaseOverlay();
 }
 
 /* Keep unchanged beats in place and replace only from the first difference, so a
    step does not reload images or replay entrance animations (the phase art used to
    flash on every step). A beat that was already on screen never animates again. */
-let floorBeats = [];
+let floorBeats = [], freshTransition = null, overlayTimer;
+/* Desktop: a newly reached phase plays its painted card over the board, like the game's dusk and dawn screens. */
+function playPhaseOverlay() {
+  const html = freshTransition; freshTransition = null;
+  if (!html || compact.matches) return;
+  const o = document.getElementById('phase-overlay');
+  o.innerHTML = html; o.classList.add('show');
+  clearTimeout(overlayTimer); overlayTimer = setTimeout(() => o.classList.remove('show'), 2400);
+}
 function patchFloor(floor, html) {
+  const firstRender = !floorBeats.length;
   let k = 0;
   while (k < html.length && k < floorBeats.length && floorBeats[k].html === html[k]) k++;
   const seen = new Set(floorBeats.map(b => b.html));
@@ -557,6 +608,7 @@ function patchFloor(floor, html) {
     t.innerHTML = h;
     const nodes = [...t.content.childNodes];
     if (seen.has(h)) nodes.forEach(n => n.classList?.add('seen'));
+    else if (!firstRender && nodes.some(n => n.classList?.contains('transition'))) freshTransition = h;
     floor.append(...nodes);
     floorBeats.push({ html: h, nodes });
   }
@@ -581,6 +633,9 @@ function renderChrome(m) {
   publicOnly.checked = state.reveal === 'aired';
   publicOnly.disabled = live;
   const alive = m.alive.filter(Boolean).length;
+  document.getElementById('day-title').textContent = m.finished ? 'Game over' : m.phase === 'night' ? `Night ${m.day}` : m.day ? `Day ${m.day}` : 'The fold';
+  document.getElementById('day-sub').textContent = `${m.finished ? 'Final roles revealed' : m.dusk ? 'Votes revealed' : m.phase === 'vote' ? 'The village votes' : m.phase === 'night' ? 'The village sleeps' : m.day ? 'Discuss and deduce' : 'Waiting to begin'} · ${alive} of ${ROSTER().length} alive`;
+  document.getElementById('voices-sub').textContent = state.reveal === 'aired' ? 'Public info only · what the table saw' : 'Everything · public talk, private chats and night actions';
   document.getElementById('phase-line').textContent = `${m.finished ? 'Game over' : m.phase === 'night' ? `Night ${m.day}` : m.phase === 'vote' ? `Day ${m.day} · vote` : `Day ${m.day}`} · ${alive}/${ROSTER().length} alive`;
   document.querySelector('.brand').title = document.getElementById('ep-sub').textContent;
   document.getElementById('reveal-hint').textContent = live
@@ -623,6 +678,7 @@ function render({ follow = true } = {}) {
   renderChrome(m);
 
   renderSeats(m);
+  renderBoard(m);
   renderFloor(evs, m);
   // Follow new events inside the floor only. Never scroll the page: embedded on softmax.com,
   // scrollIntoView also scrolled the host page on every step, carrying the pause button away.
@@ -643,6 +699,10 @@ document.getElementById('seats').addEventListener('toggle', ev => {
   if (!compact.matches || !ev.target.open) return;
   document.querySelectorAll('#seats .seat[open]').forEach(s => { if (s !== ev.target) s.open = false; });
 }, true);
+document.querySelectorAll('.voices-tabs button').forEach(b => b.addEventListener('click', () => {
+  document.getElementById('floor').dataset.filter = b.dataset.filter;
+  document.querySelectorAll('.voices-tabs button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+}));
 document.getElementById('public-only').addEventListener('change', ev => { state.reveal = ev.currentTarget.checked ? 'aired' : 'omniscient'; render(); });
 
 // Navigate only events that can change this view; hidden replay events must not

@@ -15,6 +15,7 @@
     <h1 id="ep-title"><img class="brand-art" src="assets/wcw/title_logo.png" alt="Who Cried Wolf"></h1>
     <span class="sub" id="ep-sub">—</span>
   </div>
+  <div class="day-head"><h2 id="day-title">—</h2><p id="day-sub">—</p></div>
 
   <span class="phase-line" id="phase-line" aria-live="polite">—</span>
   <button type="button" class="seats-btn" id="seats-btn" aria-expanded="false" aria-controls="seats">Seats</button>
@@ -35,8 +36,24 @@
     <ul class="seats" id="seats"></ul>
   </aside>
 
-  <main class="floor" id="floor" aria-label="Episode floor" aria-live="polite" aria-relevant="additions"></main>
+  <section class="board" id="board" aria-label="The village">
+    <div class="cards" id="cards"></div>
+    <div class="vote-card" id="vote-card" hidden></div>
+    <div class="phase-overlay" id="phase-overlay" aria-hidden="true"></div>
+  </section>
+
+  <section class="voices" aria-label="Village voices">
+    <div class="voices-head"><h2>Village voices</h2><p id="voices-sub">—</p>
+      <div class="voices-tabs" role="group" aria-label="Show">
+        <button type="button" data-filter="all" aria-pressed="true">All</button>
+        <button type="button" data-filter="public" aria-pressed="false">Public</button>
+        <button type="button" data-filter="private" aria-pressed="false">Private</button>
+      </div>
+    </div>
+    <main class="floor" id="floor" aria-label="Episode floor" aria-live="polite" aria-relevant="additions"></main>
+  </section>
 </div>
+<div class="table-band" aria-hidden="true"></div>
 
 <footer class="transport" id="transport">
   <button class="tbtn" id="play" type="button" aria-label="Play or pause">▶</button>

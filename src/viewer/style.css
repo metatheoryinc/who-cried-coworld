@@ -716,3 +716,114 @@ body::after {
   .world-layer::after { display: none; }
   body::after { background: linear-gradient(180deg, rgba(26,17,31,.28), rgba(26,17,31,.42) 60%, rgba(20,14,24,.7)); }
 }
+
+/* ------------------------------------------------------ desktop: the village
+   Wide screens show the replay as the game's own table: the painted frame and wood table,
+   a village board of player cards, a parchment vote summary, and Village voices beside it. */
+@font-face { font-family: 'IM Fell English'; src: url('assets/fonts/IMFeENrm28P.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'IM Fell English'; src: url('assets/fonts/IMFeENit28P.ttf') format('truetype'); font-style: italic; font-display: swap; }
+.board, .table-band, .day-head, .voices-head, .phase-overlay { display: none; }
+@media (max-width: 1000px) { .voices { display: contents; } }
+
+@media (min-width: 1001px) {
+  :root { --u: calc(min(100vw, 2000px) / 2600); --fw: calc(175 * var(--u)); --ft: calc(160 * var(--u)); --fb: calc(150 * var(--u)); --tb: max(64px, calc(210 * var(--u))); }
+  body { grid-template-rows: auto minmax(0, 1fr) auto; }
+  body::after { display: none; }
+  .world-layer { background: #baa878 url("assets/wcw/backgrounds/bg_day.png") center / cover no-repeat; filter: none; }
+  body[data-world="night"] .world-layer { background-image: url("assets/wcw/backgrounds/bg_night.png"); filter: none; }
+  .world-layer::after { inset: 0 0 var(--tb) 0; background: none; filter: none; border-style: solid; border-color: transparent;
+    border-width: var(--ft) var(--fw) var(--fb); border-image: url("assets/play/frame_day.png") 160 175 150 fill / var(--ft) var(--fw) var(--fb) stretch; }
+  body[data-world="night"] .world-layer::after { border-image-source: url("assets/play/frame_night.png"); }
+  .table-band { display: block; position: fixed; left: 0; right: 0; bottom: 0; height: calc(var(--tb) + 30px); z-index: -1;
+    background: url("assets/play/table.png") center top / cover no-repeat; }
+
+  .masthead { margin: calc(var(--ft) * .28) calc(var(--fw) * .62) 0; padding: 0; gap: 18px; border: 0; background: none; box-shadow: none; }
+  .masthead .brand { flex: 0 0 auto; }
+  .masthead .brand-art { width: clamp(64px, 6vw, 96px); height: auto; }
+  .masthead .brand .sub, .phase-line, .seats-btn { display: none; }
+  .day-head { display: block; flex: 1 1 auto; min-width: 0; }
+  .day-head h2 { margin: 0; font: 400 clamp(32px, 3.2vw, 46px)/1 'IM Fell English', Georgia, serif; color: #3a2716; text-shadow: 0 1px 0 #fff8; }
+  .day-head p { margin: 4px 0 0; font: 600 14px var(--ui); color: #5b4330; }
+  body[data-world="night"] .day-head h2 { color: #fff3d7; text-shadow: 0 2px 6px #1b1024; }
+  body[data-world="night"] .day-head p { color: #e8dcc8; }
+  .masthead .control { flex: 0 0 auto; display: flex; flex-direction: row; align-items: center; gap: 10px; }
+  .masthead .control .hint { display: none; }
+  .masthead .status, .public-only { background: #fff1d8ee; border: 1px solid #ae894e; color: #3a2716; }
+  .masthead .status .dot { background: #8a7a68; }
+
+  .stage { width: auto; margin: 0 calc(var(--fw) * .62); padding: 14px 0 6px; min-height: 0; display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(360px, 30vw, 460px); grid-template-rows: minmax(0, 1fr); gap: 22px; align-items: stretch; }
+  .rail { display: none; }
+  .board { display: flex; flex-direction: column; gap: 14px; min-height: 0; position: relative; }
+  .cards { --cw: calc((100vw - 2 * var(--fw) * .62 - clamp(360px, 30vw, 460px) - 22px) / 5 - 14px);
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px 14px; }
+  .card { position: relative; justify-self: center; aspect-ratio: 1 / 1.28;
+    height: min(calc((100dvh - var(--ft) - var(--tb) - 250px) / 2), calc(var(--cw) * 1.28), 250px); }
+  .card > img.shadow { position: absolute; inset: 0; width: 100%; height: 79%; object-fit: fill; }
+  .card > img.art { position: absolute; left: 8%; top: 5%; width: 84%; height: 70%; object-fit: contain; }
+  .card .ring { position: absolute; z-index: 2; left: 5%; right: 5%; top: 2%; height: 75%; border-radius: 10px; box-shadow: inset 0 0 0 3px rgba(192,57,43,.75); }
+  .card .no { position: absolute; z-index: 6; top: 3%; left: 5%; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 11px; background: var(--seat);
+    color: #fff; font: 700 12px/22px var(--ui); text-align: center; box-shadow: 0 1px 2px #0005; }
+  .card .plate { position: absolute; z-index: 6; left: 3%; right: 3%; bottom: 12%; padding: 3px 4px; background: #fff0d1; border: 1px solid #a7834f; border-radius: 4px;
+    box-shadow: 0 2px 4px #0003; text-align: center; font: 400 clamp(12px, 1.05vw, 16px) 'IM Fell English', Georgia, serif; color: #3a2716; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card small { position: absolute; left: -10%; right: -10%; bottom: 0; text-align: center; font: 600 11px var(--ui); color: #4a3524; text-shadow: 0 1px 2px #fffa;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  body[data-world="night"] .card small { color: #f1e6d2; text-shadow: 0 1px 3px #000; }
+  .card.wolf small { color: #8e2f25; }
+  body[data-world="night"] .card.wolf small { color: #ffb3a8; }
+  .card.speaking { filter: drop-shadow(0 0 10px #ffd36b) drop-shadow(0 0 2px #b8741a); }
+  .card.dead > img.art, .card.dead > img.shadow { filter: grayscale(.75) brightness(.9); }
+  .card .death { position: absolute; z-index: 4; pointer-events: none; }
+  .card .death.claw { left: 16%; top: 12%; width: 68%; height: 58%; }
+  .card .death.meat { left: 8%; top: 4%; width: 32%; transform: rotate(12deg); }
+  .card .stamp { position: absolute; z-index: 5; width: 36%; opacity: .95; pointer-events: none; animation: stamp-in .35s ease-out both; }
+  @keyframes stamp-in { from { transform: scale(1.8); opacity: 0; } }
+
+  .vote-card { display: block; border: 16px solid transparent; border-image: url("assets/play/journal_paper.png") 32 fill / 16px stretch;
+    padding: 2px 10px; color: #3b2a1c; }
+  .vote-card[hidden] { display: none; }
+  .vote-card h3 { margin: 0 0 6px; font: 400 clamp(18px, 1.6vw, 22px) 'IM Fell English', Georgia, serif; }
+  .vote-card .ballots-row { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; font: 13px var(--ui); }
+  .vote-card .sum { margin-right: 4px; }
+  .vote-card .bal { display: inline-flex; align-items: center; gap: 3px; }
+  .vote-card .dot { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--seat); color: #fff; font: 700 10px/18px var(--ui); }
+
+  .phase-overlay { position: absolute; inset: 0; z-index: 20; align-items: center; justify-content: center; pointer-events: none; }
+  .phase-overlay.show { display: flex; animation: overlay-io 2.4s ease both; }
+  .phase-overlay .transition { width: min(100%, 820px); height: auto; min-height: 0; aspect-ratio: 16 / 9; animation: none; }
+  @keyframes overlay-io { 0% { opacity: 0; transform: scale(.97); } 12%, 80% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+
+  .voices { display: flex; flex-direction: column; min-height: 0; background: rgba(42,34,48,.95); border: 2px solid #7a5a3a; border-radius: 14px;
+    box-shadow: 0 10px 28px rgba(42,26,14,.4); overflow: hidden; }
+  .voices-head { display: block; padding: 12px 16px 0; border-bottom: 1px solid #6d5238; }
+  .voices-head h2 { margin: 0; font: 400 26px/1.1 'IM Fell English', Georgia, serif; color: #fff3d7; }
+  .voices-head p { margin: 2px 0 8px; font: 12px var(--ui); color: #c9b99f; }
+  .voices-tabs { display: flex; gap: 6px; }
+  .voices-tabs button { appearance: none; padding: 6px 12px; border: 1px solid #6d5238; border-bottom: 0; border-radius: 8px 8px 0 0; background: transparent;
+    color: #d9c8ab; font: 600 12px var(--ui); cursor: pointer; min-height: 0; }
+  .voices-tabs button[aria-pressed="true"] { background: #3a2f3f; color: #fff3d7; }
+  .voices .floor { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 12px 14px; gap: 10px; border-radius: 0; }
+  .voices .floor .transition { display: none; }
+  .voices .speech { background: transparent; border: 0; box-shadow: none; padding: 2px 0; grid-template-columns: 38px minmax(0,1fr); gap: 10px;
+    --text: #f4ecde; --text-dim: #d9c8ab; --text-faint: #b8a58a; color: #f4ecde; }
+  .voices .speech .avatar { width: 38px; height: 38px; }
+  .voices .speech .hdr .nm { color: #f0c890; font-size: 13px; }
+  .voices .speech .body { font: 16px/1.45 'IM Fell English', Georgia, serif; color: #f4ecde; }
+  .voices .speech .meta .badge { background: rgba(255,240,209,.1); border-color: rgba(255,240,209,.25); color: #e8d7b8; }
+  .voices .phase, .voices .knell { background: transparent; border: 0; box-shadow: none; justify-content: center; padding: 4px 0; margin: 0;
+    --text: #e8c878; --text-dim: #d8b86a; color: #d8b86a; }
+  .voices .phase .mark { background: rgba(216,184,106,.15); color: #e8c878; }
+  .voices .phase .narr, .voices .knell .txt { font: 600 13px var(--ui); color: #d8b86a; }
+  .voices .knell .txt b { color: #f0d69a; }
+  .voices .knell .glyph { background: rgba(216,184,106,.15); color: #e8c878; }
+  .voices .hold { padding: 10px; background: transparent; border-color: rgba(216,184,106,.3); }
+  .voices .hold .big { font-size: 14px; color: #d8b86a; margin: 0; }
+  .voices .hold .why { display: none; }
+  .floor[data-filter="public"] > .sealed, .floor[data-filter="public"] > .scene, .floor[data-filter="public"] > .hold { display: none; }
+  .floor[data-filter="private"] > :not(.sealed):not(.scene) { display: none; }
+
+  .transport { position: relative; z-index: 2; background: transparent; box-shadow: none; border: 0; padding: 6px calc(var(--fw) * .62) 12px; }
+  .tbtn { background: rgba(58,39,22,.92); border-color: #6b4a2a; color: #fff3d7; }
+  .tbtn:hover:not([disabled]) { background: rgba(80,54,30,.95); }
+  .tlabel { color: #fff3d7; text-shadow: 0 1px 2px #000; font-weight: 700; }
+}

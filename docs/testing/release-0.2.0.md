@@ -366,3 +366,17 @@ The full-length game on 0.2.5 used to review the viewer, `xreq_499a1091-4a23-499
 (`artifacts/hosted-0.2.5-roster-full/`), ran setup C3. The Wolves (Haiku and Kimi) won on day 3. There
 were 15 fallbacks: 6 bids, 4 votes, 3 Noble chats and 2 Wolf chats. Their causes have not been
 examined yet.
+
+## 0.2.7: players per user (September 28, 2026)
+
+Coworld 0.2.7 (`cow_0bf0a3bf-9963-49cf-83ee-0dbf6bed5eb4`, source `34f5ea6`). Local and hosted
+certification passed all 10 checks (`artifacts/release-0.2.7-certification/`).
+
+- **`players_per_user: 10` in the manifest.** It lets one account field a player per model in a league
+  that leaves `ladder.players_per_user` unset, as the Competition Pilot does. The league's own setting is
+  platform-owned: our settings POST returned 403 "only team principals can change them". The fallback
+  applies when a membership is placed, so it is unverified until a third player from one account
+  places. Account player creation may still be capped at 2 active players.
+- **Manifest template regenerated.** It had not been rebuilt since the 512-character note limit and
+  lettered names changed the protocol and readme text, so releases 0.2.3 to 0.2.6 most likely shipped
+  the older wording in the manifest's protocol and readme text.

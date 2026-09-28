@@ -26,6 +26,8 @@ for(const branch of configSchema.anyOf??[]){
 const readme=await readFile('docs/package/readme.md','utf8');
 const manifest={
  episode_timeout_minutes:60,
+ // Leagues that leave ladder.players_per_user unset use this: one user may field a player per model (nine) plus a spare.
+ players_per_user:10,
  tags:['mafia','social-deduction','multiplayer','turn-based'],
  game:{name:'Mafia: Who Cried Wolf?',description:'Nine-seat Mafia with wolves in sheep’s clothing, private team chats, secret roles, and a replay that reveals the whole story. Also play with friends on Discord at https://whocriedwolf.gg/.',owner:'jt',runnable:{type:'game',image:'{{GAME_IMAGE}}',run:['node','build/game.mjs'],env:{WCW_MODERATOR_BEDROCK_MODEL:'anthropic/claude-haiku-4.5'}},
  config_schema:configSchema,results_schema:z.toJSONSchema(ResultsV2),

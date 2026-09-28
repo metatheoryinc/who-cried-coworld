@@ -25,3 +25,7 @@ it('gives human lobbies a five-minute wait inside a sixty-minute episode',()=>{
  for(const id of ['human','human-llm']){const config=manifest.variants.find(v=>v.id===id)!.game_config;
   expect(config).toMatchObject({mode:'human',player_connect_timeout_seconds:300});expect(config).not.toHaveProperty('humanSlots');}
 });
+it('lets one user field several players (one per model) in a league unless the league overrides it',()=>{
+ // Leagues without their own ladder players_per_user fall back to this; the Pilot league seats nine per-model players.
+ expect((manifest as {players_per_user?:number}).players_per_user).toBe(10);
+});

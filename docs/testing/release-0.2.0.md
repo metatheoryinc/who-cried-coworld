@@ -398,3 +398,10 @@ jt@metatheory.gg. Local and hosted certification passed all 10 checks
   that tag, so `tools/roster-players.sh` now rebuilds the image and checks that it starts with the sidecar
   variables alone before it uploads anything. `wcwl-gemini:v2` is the first policy from the rebuilt image;
   `wcwl-chatgpt` and `wcwl-haiku` need re-uploading from jt@entropyfails.com.
+- **Player pods get no LLM sidecar (platform side, open).** With the rebuilt image, nine `wcwl-gemini:v2`
+  on 0.2.8 (`ereq_3bc716dc-6ff6-4dc7-9534-1205d7159d8e`) all started with `COWORLD_LLM_MODEL` set but no
+  `COWORLD_LLM_ENDPOINT`, so none acted. The policy version stores `COWORLD_LLM_ENABLED=true` and the
+  model in `attributes.env`, as the docs describe. A mixed run (`ereq_1fbdda19-acea-43c6-b42e-b698f946ccd1`)
+  with `wcw-gemini:v8`, uploaded under the old `USE_BEDROCK` secret, did no better: those seats saw the
+  opt-in but no endpoint either, and every model call failed. In both runs the game log shows a sidecar
+  only for the game pod, where the LLM host made its model calls. Reported to Softmax.

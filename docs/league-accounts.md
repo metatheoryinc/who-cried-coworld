@@ -8,9 +8,9 @@ League: **Who Cried Wolf Competition Pilot** (`league_a10c10a8-46da-4f0f-bff6-40
 
 | GitHub account | Player (= policy) | Model | Player id | Policy version |
 | --- | --- | --- | --- | --- |
-| signed in as jt@metatheory.gg (EntropyFails' account) | `wcw-gemini` (renamed from `EF_gemini`) | `google/gemini-3.8-flash` | `ply_37566da1-f9f6-4131-977c-ef4357c4c9ad` | _fill in_ |
-| `jtmetatheory` or `entropyfails` (whichever the account above is not) | `wcw-chatgpt` | `openai/gpt-5.6-luna` | _fill in_ | _fill in_ |
-|  | `wcw-haiku` | `anthropic/claude-haiku-4.5` | _fill in_ | _fill in_ |
+| jt@metatheory.gg (EntropyFails' account) | `wcw-gemini` (renamed from `EF_gemini`) | `google/gemini-3.8-flash` | `ply_37566da1-f9f6-4131-977c-ef4357c4c9ad` | not uploaded (see below) |
+| jt@entropyfails.com | `wcw-chatgpt` | `openai/gpt-5.6-luna` | `ply_71d4f92c-2326-4ea0-b180-48956c3700db` | not uploaded (see below) |
+|  | `wcw-haiku` (will rename the default player `Jt Gleason`, `ply_ccd0ec92-e97d-4804-808a-c679e9a9623d`) | `anthropic/claude-haiku-4.5` | — | — |
 | `jt-sm1-mt` | `wcw-gpt-oss` | `openai/gpt-oss-120b` | _fill in_ | _fill in_ |
 |  | `wcw-llama` | `meta-llama/llama-4-maverick` | _fill in_ | _fill in_ |
 | `jt-sm2-mt` | `wcw-deepseek` | `deepseek/deepseek-v4.1-flash` | _fill in_ | _fill in_ |
@@ -19,6 +19,12 @@ League: **Who Cried Wolf Competition Pilot** (`league_a10c10a8-46da-4f0f-bff6-40
 |  | `wcw-kimi` | `moonshotai/kimi-k3` | _fill in_ | _fill in_ |
 
 The script prints each player id and policy version as it goes; copy them into the table.
+
+**Blocked (September 30, 2026):**
+- **Uploads are refused.** `upload-policy --use-bedrock` fails with 422 "Secret key 'USE_BEDROCK' is
+  reserved for Coworld runtime configuration". The CLI, including upstream `main`, sends it as a policy
+  secret. The upload request now also has a non-secret `env` field.
+- **Other accounts cannot see the Pilot league**, because it is private.
 
 ## Uploading an account's two models
 

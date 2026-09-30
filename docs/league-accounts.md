@@ -8,8 +8,7 @@ League: **Who Cried Wolf Competition Pilot** (`league_a10c10a8-46da-4f0f-bff6-40
 
 | GitHub account | Player (= policy) | Model | Player id | Policy version |
 | --- | --- | --- | --- | --- |
-| signed in as jt@metatheory.gg (EntropyFails' account) | `EntropyFails` (personal; Playtests Haiku champion) | Claude Haiku 4.5 (`wcw-bedrock-haiku:v18`, Playtests) | `ply_ab9a5599-9e99-464d-8fee-07acdc46d25d` | — |
-|  | `wcw-gemini` (renamed from `EF_gemini`) | `google/gemini-3.8-flash` | `ply_37566da1-f9f6-4131-977c-ef4357c4c9ad` | _fill in_ |
+| signed in as jt@metatheory.gg (EntropyFails' account) | `wcw-gemini` (renamed from `EF_gemini`) | `google/gemini-3.8-flash` | `ply_37566da1-f9f6-4131-977c-ef4357c4c9ad` | _fill in_ |
 | `jtmetatheory` or `entropyfails` (whichever the account above is not) | `wcw-chatgpt` | `openai/gpt-5.6-luna` | _fill in_ | _fill in_ |
 |  | `wcw-haiku` | `anthropic/claude-haiku-4.5` | _fill in_ | _fill in_ |
 | `jt-sm1-mt` | `wcw-gpt-oss` | `openai/gpt-oss-120b` | _fill in_ | _fill in_ |
@@ -59,6 +58,11 @@ by `coworld build`).
 Logs for each step land in `artifacts/roster-players/`. The script always switches the CLI back to
 the account's main user when it finishes. Signing in again to your usual account afterwards (step 1)
 puts everything back.
+
+The account signed in as jt@metatheory.gg also keeps your personal player `EntropyFails`
+(`ply_ab9a5599-9e99-464d-8fee-07acdc46d25d`). It fields no model in this league. In the separate
+**Playtests** league (`league_9d8825e1-58ff-48ee-ac3d-c6953e048b9b`) it holds the Haiku champion,
+`wcw-bedrock-haiku:v18`, which lobbies there seat.
 
 ## Also in the league
 

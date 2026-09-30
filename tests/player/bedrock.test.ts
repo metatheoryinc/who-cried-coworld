@@ -78,3 +78,11 @@ it('falls back to the plain hosted request when the proxy finds no provider for 
   expect(bodies).toHaveLength(3);expect(bodies[2]).not.toHaveProperty('reasoning');
  }finally{vi.unstubAllGlobals();}
 });
+
+it('uses the hosted LLM sidecar from COWORLD_LLM_ENDPOINT and COWORLD_LLM_MODEL', () => {
+ // Softmax moved hosted model access to these variables (policies uploaded with --use-llm); the old names still work.
+ const env = { COWORLD_LLM_ENDPOINT: 'http://127.0.0.1:9100', COWORLD_LLM_MODEL: 'moonshotai/kimi-k3' };
+ expect(resolveInference(env)).toMatchObject({ provider: 'bedrock', model: 'moonshotai/kimi-k3', endpoint: 'http://127.0.0.1:9100' });
+ expect(resolveInference({ ...env, AWS_ENDPOINT_URL_BEDROCK_RUNTIME: 'http://old:1', BEDROCK_MODEL: 'old/model' })).toMatchObject({ model: 'moonshotai/kimi-k3', endpoint: 'http://127.0.0.1:9100' });
+ expect(resolveInference({ ...env, WCW_MODERATOR_BEDROCK_MODEL: 'anthropic/claude-haiku-4.5' }, 'moderator')).toMatchObject({ model: 'anthropic/claude-haiku-4.5' });
+});

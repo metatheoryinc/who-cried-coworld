@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Give roster models their own Softmax players on the signed-in account, upload each model's policy as its
+# Give roster models their own Softmax players on the signed-in account (names wcwl-<seat>: policy names are
+# global, and the wcw-<seat> policies belong to the jt@metatheory.gg account), upload each model's policy as its
 # player, and submit it to a league. Player name = policy name, so anyone can match them.
 #
 #   tools/roster-players.sh <league_id> [policy-name ...]     # default: all nine models
@@ -19,18 +20,18 @@ trap '"${C[@]}" player unset >/dev/null 2>&1 || true' EXIT
 
 model_of() { # macOS ships bash 3.2, which has no associative arrays
   case "$1" in
-    wcw-chatgpt) echo openai/gpt-5.6-luna ;;
-    wcw-haiku) echo anthropic/claude-haiku-4.5 ;;
-    wcw-gemini) echo google/gemini-3.8-flash ;;
-    wcw-gpt-oss) echo openai/gpt-oss-120b ;;
-    wcw-llama) echo meta-llama/llama-4-maverick ;;
-    wcw-deepseek) echo deepseek/deepseek-v4.1-flash ;;
-    wcw-mistral) echo mistralai/mistral-medium-3.1 ;;
-    wcw-glm) echo z-ai/glm-5.3 ;;
-    wcw-kimi) echo moonshotai/kimi-k3 ;;
+    wcwl-chatgpt) echo openai/gpt-5.6-luna ;;
+    wcwl-haiku) echo anthropic/claude-haiku-4.5 ;;
+    wcwl-gemini) echo google/gemini-3.8-flash ;;
+    wcwl-gpt-oss) echo openai/gpt-oss-120b ;;
+    wcwl-llama) echo meta-llama/llama-4-maverick ;;
+    wcwl-deepseek) echo deepseek/deepseek-v4.1-flash ;;
+    wcwl-mistral) echo mistralai/mistral-medium-3.1 ;;
+    wcwl-glm) echo z-ai/glm-5.3 ;;
+    wcwl-kimi) echo moonshotai/kimi-k3 ;;
   esac
 }
-if [ $# -gt 0 ]; then NAMES=("$@"); else NAMES=(wcw-chatgpt wcw-haiku wcw-gemini wcw-gpt-oss wcw-llama wcw-deepseek wcw-mistral wcw-glm wcw-kimi); fi
+if [ $# -gt 0 ]; then NAMES=("$@"); else NAMES=(wcwl-chatgpt wcwl-haiku wcwl-gemini wcwl-gpt-oss wcwl-llama wcwl-deepseek wcwl-mistral wcwl-glm wcwl-kimi); fi
 
 token() { uv run --project /Users/jt/projects/coworld python -c "import yaml,pathlib;print(yaml.safe_load((pathlib.Path.home()/'.softmax/credentials.yaml').read_text())['tokens']['https://softmax.com/api'])" 2>/dev/null; }
 players_json() { "${C[@]}" player list --json 2>/dev/null; }
@@ -46,12 +47,19 @@ rename_target() { # $RENAME, else the default player unless it already carries a
 import json,sys
 t=sys.stdin.read(); i=t.find("["); rows=json.loads(t[i:],strict=False) if i>=0 else []
 d=next((r for r in rows if r.get("is_default") and not r.get("disabled_at")),None)
-print(d["id"] if d and not d["name"].startswith("wcw-") else "")'
+print(d["id"] if d and not d["name"].startswith("wcw") else "")'
 }
 
 for name in "${NAMES[@]}"; do
   model=$(model_of "$name"); [ -n "$model" ] || { echo "$name: not a roster model"; continue; }
   id=$(player_id "$name")
+  if [ -z "$id" ] && [ -n "$(player_id "wcw-${name#wcwl-}")" ]; then
+    # A player from before the wcwl- names (wcw-<seat>) takes the new name instead of using another slot.
+    old=$(player_id "wcw-${name#wcwl-}")
+    code=$(curl -s -o "$LOG/$name.rename.json" -w "%{http_code}" -X PATCH -H "Authorization: Bearer $(token)" \
+      -H "Content-Type: application/json" -d "{\"name\":\"$name\"}" "$API/players/$old")
+    [ "$code" = 200 ] && echo "$name: renamed player $old from wcw-${name#wcwl-}" && id=$old
+  fi
   if [ -z "$id" ]; then
     "${C[@]}" player unset >/dev/null 2>&1 || true
     if ! "${C[@]}" player create "$name" > "$LOG/$name.create.log" 2>&1; then
@@ -67,7 +75,8 @@ for name in "${NAMES[@]}"; do
   fi
   [ -n "$id" ] || { echo "$name: could not create or find the player"; continue; }
   "${C[@]}" player use "$id" > "$LOG/$name.use.log" 2>&1
-  DOCKER_DEFAULT_PLATFORM=linux/amd64 "${C[@]}" upload-policy "$IMAGE" --name "$name" --run node --run build/llm-player.mjs \
+  # Through tools/coworld-llm-upload.py: hosted LLM access now goes in policy env, not the USE_BEDROCK secret.
+  DOCKER_DEFAULT_PLATFORM=linux/amd64 uv run --project /Users/jt/projects/coworld python tools/coworld-llm-upload.py upload-policy "$IMAGE" --name "$name" --run node --run build/llm-player.mjs \
     --use-bedrock --bedrock-model "$model" > "$LOG/$name.upload.log" 2>&1 </dev/null
   ver=$(grep -o "Upload complete: .*" "$LOG/$name.upload.log" | sed 's/Upload complete: //')
   [ -n "$ver" ] || { echo "$name: upload failed (see $LOG/$name.upload.log)"; continue; }

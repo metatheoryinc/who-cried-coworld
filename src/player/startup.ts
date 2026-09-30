@@ -1,8 +1,8 @@
 import {resolveInference} from './inference.js';
 export function playerEnvironmentStatus(env:NodeJS.ProcessEnv){
  return {
-  bedrockEndpointConfigured:!!env.AWS_ENDPOINT_URL_BEDROCK_RUNTIME?.trim(),
-  bedrockModelConfigured:!!env.BEDROCK_MODEL?.trim(),
+  bedrockEndpointConfigured:!!(env.COWORLD_LLM_ENDPOINT?.trim()||env.AWS_ENDPOINT_URL_BEDROCK_RUNTIME?.trim()),
+  bedrockModelConfigured:!!(env.COWORLD_LLM_MODEL?.trim()||env.BEDROCK_MODEL?.trim()),
   bedrockOptIn:['1','true'].includes(env.USE_BEDROCK?.toLowerCase()??''),
   openRouterKeyConfigured:!!env.OPENROUTER_API_KEY?.trim(),
   awsCredentialsConfigured:!!(env.AWS_ACCESS_KEY_ID&&env.AWS_SECRET_ACCESS_KEY||env.AWS_BEARER_TOKEN_BEDROCK),

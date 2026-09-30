@@ -41,14 +41,14 @@ export function diagnosticReporter(env:NodeJS.ProcessEnv){
  };
 }
 export function diagnosticPresence(env:NodeJS.ProcessEnv){
- return `endpoint ${env.AWS_ENDPOINT_URL_BEDROCK_RUNTIME?.trim()?'present':'missing'}; model ${env.BEDROCK_MODEL?.trim()?'present':'missing'}`;
+ return `endpoint ${(env.COWORLD_LLM_ENDPOINT||env.AWS_ENDPOINT_URL_BEDROCK_RUNTIME)?.trim()?'present':'missing'}; model ${(env.COWORLD_LLM_MODEL||env.BEDROCK_MODEL)?.trim()?'present':'missing'}`;
 }
 /** One hosted-only probe. Never expose raw responses, credentials, URLs or model output. */
 export async function probeBedrock(env:NodeJS.ProcessEnv,signal:AbortSignal,deps:Dependencies={},progress:(text:string)=>void=()=>{}){
  const parts=[diagnosticPresence(env)];
  const publish=()=>{const text=parts.join('; ');progress(text);return text;};
  publish();
- if(!env.AWS_ENDPOINT_URL_BEDROCK_RUNTIME?.trim()||!env.BEDROCK_MODEL?.trim())return publish();
+ if(!(env.COWORLD_LLM_ENDPOINT||env.AWS_ENDPOINT_URL_BEDROCK_RUNTIME)?.trim()||!(env.COWORLD_LLM_MODEL||env.BEDROCK_MODEL)?.trim())return publish();
  let config;
  try{config=resolveInference({...env,WCW_LLM_PROVIDER:'bedrock'});}catch{parts.push('invalid configuration');return publish();}
  const fetcher=deps.fetcher??fetch;

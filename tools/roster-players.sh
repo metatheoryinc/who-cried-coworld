@@ -4,7 +4,7 @@
 # player, and submit it to a league. Player name = policy name, so anyone can match them.
 #
 #   tools/roster-players.sh <league_id> [policy-name ...]     # default: all nine models
-#   IMAGE=wcw-player:local tools/roster-players.sh ...          # player image to upload (default shown)
+#   IMAGE=wcw-player:local tools/roster-players.sh ...          # player image to build and upload (default shown)
 #   RENAME=ply_... tools/roster-players.sh ...                  # player to rename when the account is full
 #
 # Accounts are limited to 2 active players. When creating a player is refused, the script renames a player
@@ -31,6 +31,13 @@ model_of() { # macOS ships bash 3.2, which has no associative arrays
     wcwl-kimi) echo moonshotai/kimi-k3 ;;
   esac
 }
+# Build the player image from the current source (coworld build does not refresh this tag), then check it
+# starts with the hosted sidecar variables alone. A stale image once uploaded policies that died at startup.
+DOCKER_DEFAULT_PLATFORM=linux/amd64 docker build -q --target player -t "$IMAGE" . > "$LOG/image.build.log" 2>&1 \
+  || { echo "player image build failed (see $LOG/image.build.log)"; exit 1; }
+docker run --rm --platform linux/amd64 -e COWORLD_LLM_ENDPOINT=http://127.0.0.1:9 -e COWORLD_LLM_MODEL=check \
+  -e COWORLD_PLAYER_WS_URL=ws://127.0.0.1:9/x "$IMAGE" node build/llm-player.mjs 2>&1 | grep -q '"status":"configured"' \
+  || { echo "$IMAGE does not start with COWORLD_LLM_* alone; not uploading"; exit 1; }
 if [ $# -gt 0 ]; then NAMES=("$@"); else NAMES=(wcwl-chatgpt wcwl-haiku wcwl-gemini wcwl-gpt-oss wcwl-llama wcwl-deepseek wcwl-mistral wcwl-glm wcwl-kimi); fi
 
 token() { uv run --project /Users/jt/projects/coworld python -c "import yaml,pathlib;print(yaml.safe_load((pathlib.Path.home()/'.softmax/credentials.yaml').read_text())['tokens']['https://softmax.com/api'])" 2>/dev/null; }

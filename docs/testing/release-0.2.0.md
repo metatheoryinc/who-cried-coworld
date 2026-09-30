@@ -380,3 +380,21 @@ certification passed all 10 checks (`artifacts/release-0.2.7-certification/`).
 - **Manifest template regenerated.** It had not been rebuilt since the 512-character note limit and
   lettered names changed the protocol and readme text, so releases 0.2.3 to 0.2.6 most likely shipped
   the older wording in the manifest's protocol and readme text.
+
+## 0.2.8: hosted LLM through COWORLD_LLM_* (September 30, 2026)
+
+Coworld 0.2.8 (`cow_d8508f3b-58ca-4a3a-9f52-7298d40133f3`, source `abce8a2`), uploaded from
+jt@metatheory.gg. Local and hosted certification passed all 10 checks
+(`artifacts/release-0.2.8-certification/`).
+
+- **Hosted models come from `COWORLD_LLM_ENDPOINT` and `COWORLD_LLM_MODEL`.** Softmax replaced the
+  Bedrock-named sidecar variables. The game's LLM host and the players read the new names first and fall
+  back to the old ones. On 0.2.7 a hosted game with the LLM host exited at startup (`game_unhealthy`,
+  `xreq_435e252e`). The same game with the deterministic host (`xreq_a0ec1d88`) ran to its day cap, but
+  every player seat exited with code 1 and played dead.
+- **The players died because their image was stale.** `wcwl-chatgpt:v1`, `wcwl-haiku:v1` and
+  `wcwl-gemini:v1` were uploaded from a `wcw-player:local` built before the fix. Run locally with only
+  the sidecar variables, that image reported `invalid_configuration`. `coworld build` does not refresh
+  that tag, so `tools/roster-players.sh` now rebuilds the image and checks that it starts with the sidecar
+  variables alone before it uploads anything. `wcwl-gemini:v2` is the first policy from the rebuilt image;
+  `wcwl-chatgpt` and `wcwl-haiku` need re-uploading from jt@entropyfails.com.

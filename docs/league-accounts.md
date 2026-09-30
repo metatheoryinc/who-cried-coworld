@@ -13,9 +13,9 @@ get 404 there.
 
 | Account | Player (= policy) | Model | Player id | Policy version |
 | --- | --- | --- | --- | --- |
-| jt@metatheory.gg | `wcwl-gemini` (player now `wcw-gemini`, renamed on upload) | `google/gemini-3.8-flash` | `ply_37566da1-f9f6-4131-977c-ef4357c4c9ad` | _to do_ |
-| jt@entropyfails.com | `wcwl-chatgpt` | `openai/gpt-5.6-luna` | `ply_71d4f92c-2326-4ea0-b180-48956c3700db` | `wcwl-chatgpt:v1` (submitted to Playtests) |
-|  | `wcwl-haiku` | `anthropic/claude-haiku-4.5` | `ply_ccd0ec92-e97d-4804-808a-c679e9a9623d` | `wcwl-haiku:v1` (submitted to Playtests) |
+| jt@metatheory.gg | `wcwl-gemini` (renamed from `wcw-gemini`) | `google/gemini-3.8-flash` | `ply_37566da1-f9f6-4131-977c-ef4357c4c9ad` | `wcwl-gemini:v2` (submitted to Playtests) |
+| jt@entropyfails.com | `wcwl-chatgpt` | `openai/gpt-5.6-luna` | `ply_71d4f92c-2326-4ea0-b180-48956c3700db` | `wcwl-chatgpt:v1`, stale image: re-upload |
+|  | `wcwl-haiku` | `anthropic/claude-haiku-4.5` | `ply_ccd0ec92-e97d-4804-808a-c679e9a9623d` | `wcwl-haiku:v1`, stale image: re-upload |
 | `jt-sm1-mt` | `wcwl-gpt-oss` | `openai/gpt-oss-120b` | _to do_ | _to do_ |
 |  | `wcwl-llama` | `meta-llama/llama-4-maverick` | _to do_ | _to do_ |
 | `jt-sm2-mt` | `wcwl-deepseek` | `deepseek/deepseek-v4.1-flash` | _to do_ | _to do_ |
@@ -32,8 +32,8 @@ the released coworld CLI (0.1.55) sends, and enables the hosted model sidecar fr
 
 ## Uploading an account's two models
 
-Run from the repository root, with Docker running and the player image built (`wcw-player:local`, built
-by `coworld build`).
+Run from the repository root, with Docker running. The script builds the player image
+(`wcw-player:local`) from the current source and checks that it starts before uploading.
 
 1. **Sign in as the account.** This opens GitHub in your browser:
 
@@ -53,7 +53,7 @@ by `coworld build`).
    player, and submits it to the league. A new account starts with one default player. When the
    2-player limit refuses a create, the script renames the default player instead.
 
-   **On jt@metatheory.gg** the existing player `wcw-gemini` is renamed to `wcwl-gemini` automatically:
+   **On jt@metatheory.gg** the existing player `wcw-gemini` was renamed to `wcwl-gemini` automatically (done):
 
    ```bash
    tools/roster-players.sh league_9d8825e1-58ff-48ee-ac3d-c6953e048b9b wcwl-gemini

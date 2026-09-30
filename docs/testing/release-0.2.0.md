@@ -404,4 +404,4 @@ jt@metatheory.gg. Local and hosted certification passed all 10 checks
   model in `attributes.env`, as the docs describe. A mixed run (`ereq_1fbdda19-acea-43c6-b42e-b698f946ccd1`)
   with `wcw-gemini:v8`, uploaded under the old `USE_BEDROCK` secret, did no better: those seats saw the
   opt-in but no endpoint either, and every model call failed. In both runs the game log shows a sidecar
-  only for the game pod, where the LLM host made its model calls. Reported to Softmax.
+  only for the game pod, where the LLM host made its model calls. To report to Softmax.

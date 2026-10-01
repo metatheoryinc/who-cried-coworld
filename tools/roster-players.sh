@@ -14,6 +14,7 @@ set -euo pipefail
 LEAGUE="${1:?league id}"; shift
 IMAGE="${IMAGE:-wcw-player:local}"
 C=(uv run --project /Users/jt/projects/coworld coworld)
+UPLOAD=(uvx --from coworld==0.1.56 coworld) # the local checkout predates --use-llm
 API=https://softmax.com/api/observatory
 LOG=artifacts/roster-players; mkdir -p "$LOG"
 trap '"${C[@]}" player unset >/dev/null 2>&1 || true' EXIT
@@ -82,9 +83,10 @@ for name in "${NAMES[@]}"; do
   fi
   [ -n "$id" ] || { echo "$name: could not create or find the player"; continue; }
   "${C[@]}" player use "$id" > "$LOG/$name.use.log" 2>&1
-  # Through tools/coworld-llm-upload.py: hosted LLM access now goes in policy env, not the USE_BEDROCK secret.
-  DOCKER_DEFAULT_PLATFORM=linux/amd64 uv run --project /Users/jt/projects/coworld python tools/coworld-llm-upload.py upload-policy "$IMAGE" --name "$name" --run node --run build/llm-player.mjs \
-    --use-bedrock --bedrock-model "$model" > "$LOG/$name.upload.log" 2>&1 </dev/null
+  # coworld >= 0.1.56: --use-llm stores COWORLD_LLM_ENABLED/COWORLD_LLM_MODEL as policy secrets, which is what
+  # attaches the hosted sidecar. The older USE_BEDROCK secret and plain policy env both leave players without one.
+  DOCKER_DEFAULT_PLATFORM=linux/amd64 "${UPLOAD[@]}" upload-policy "$IMAGE" --name "$name" --run node --run build/llm-player.mjs \
+    --use-llm --llm-model "$model" > "$LOG/$name.upload.log" 2>&1 </dev/null
   ver=$(grep -o "Upload complete: .*" "$LOG/$name.upload.log" | sed 's/Upload complete: //')
   [ -n "$ver" ] || { echo "$name: upload failed (see $LOG/$name.upload.log)"; continue; }
   if "${C[@]}" submit "$ver" --league "$LEAGUE" --no-open-browser > "$LOG/$name.submit.log" 2>&1 </dev/null; then

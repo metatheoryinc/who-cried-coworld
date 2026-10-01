@@ -13,7 +13,7 @@ get 404 there.
 
 | Account | Player (= policy) | Model | Player id | Policy version |
 | --- | --- | --- | --- | --- |
-| jt@metatheory.gg | `wcwl-gemini` (renamed from `wcw-gemini`) | `google/gemini-3.8-flash` | `ply_37566da1-f9f6-4131-977c-ef4357c4c9ad` | `wcwl-gemini:v2` (submitted to Playtests) |
+| jt@metatheory.gg | `wcwl-gemini` (renamed from `wcw-gemini`) | `google/gemini-3.8-flash` | `ply_37566da1-f9f6-4131-977c-ef4357c4c9ad` | `wcwl-gemini:v3` (works hosted; submit to Playtests) |
 | jt@entropyfails.com | `wcwl-chatgpt` | `openai/gpt-5.6-luna` | `ply_71d4f92c-2326-4ea0-b180-48956c3700db` | `wcwl-chatgpt:v1`, stale image: re-upload |
 |  | `wcwl-haiku` | `anthropic/claude-haiku-4.5` | `ply_ccd0ec92-e97d-4804-808a-c679e9a9623d` | `wcwl-haiku:v1`, stale image: re-upload |
 | `jt-sm1-mt` | `wcwl-gpt-oss` | `openai/gpt-oss-120b` | _to do_ | _to do_ |
@@ -25,10 +25,11 @@ get 404 there.
 
 The script prints each player id and policy version as it goes; copy them into the table.
 
-Uploads go through `tools/coworld-llm-upload.py`. Softmax now rejects the `USE_BEDROCK` policy secret that
-the released coworld CLI (0.1.55) sends, and enables the hosted model sidecar from non-secret policy env
-(`COWORLD_LLM_ENABLED`, `COWORLD_LLM_MODEL`). The wrapper sends that instead. The player reads
-`COWORLD_LLM_ENDPOINT` and `COWORLD_LLM_MODEL`, and falls back to the older Bedrock variable names.
+Uploads use coworld 0.1.56 or later (`uvx --from coworld==0.1.56 coworld`). Its `upload-policy --use-llm
+--llm-model <slug>` stores `COWORLD_LLM_ENABLED` and `COWORLD_LLM_MODEL` as policy **secrets**, and that is what
+attaches the hosted model sidecar to the player. Policies uploaded the older way (the `USE_BEDROCK` secret, or
+those two values as plain policy env) start without `COWORLD_LLM_ENDPOINT` and cannot act. Hence every policy
+up to `wcwl-gemini:v2` needs re-uploading. The player reads `COWORLD_LLM_ENDPOINT` and `COWORLD_LLM_MODEL`.
 
 ## Uploading an account's two models
 

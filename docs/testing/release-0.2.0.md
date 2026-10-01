@@ -404,4 +404,12 @@ jt@metatheory.gg. Local and hosted certification passed all 10 checks
   model in `attributes.env`, as the docs describe. A mixed run (`ereq_1fbdda19-acea-43c6-b42e-b698f946ccd1`)
   with `wcw-gemini:v8`, uploaded under the old `USE_BEDROCK` secret, did no better: those seats saw the
   opt-in but no endpoint either, and every model call failed. In both runs the game log shows a sidecar
-  only for the game pod, where the LLM host made its model calls. To report to Softmax.
+  only for the game pod, where the LLM host made its model calls.
+- **Resolved October 1: upload with the official CLI.** coworld 0.1.56 adds `upload-policy --use-llm
+  --llm-model`, which stores `COWORLD_LLM_ENABLED` and `COWORLD_LLM_MODEL` as policy *secrets*. Our wrapper
+  (`tools/coworld-llm-upload.py`, now deleted) had put them in plain policy env, following the docs' "non-secret"
+  wording, and the platform does not attach a sidecar for that. `wcwl-gemini:v3`, uploaded with 0.1.56, ran nine
+  seats on 0.2.8 with the LLM host (`ereq_c606f851-e35e-4008-b173-f42a92e7b9ca`, one-day cap): every seat
+  started with the endpoint, every seat acted, and seat 0's 11 model calls all returned 200 from the sidecar.
+  The same day, a rerun with the earlier uploads (`ereq_bf6d3a57-58b9-4deb-8abe-f0185e92cd5a`) still failed, so
+  `USE_BEDROCK` policies no longer get a sidecar at all and must be re-uploaded.

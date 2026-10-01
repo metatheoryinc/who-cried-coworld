@@ -36,9 +36,11 @@ model_of() { # macOS ships bash 3.2, which has no associative arrays
 # starts with the hosted sidecar variables alone. A stale image once uploaded policies that died at startup.
 DOCKER_DEFAULT_PLATFORM=linux/amd64 docker build -q --target player -t "$IMAGE" . > "$LOG/image.build.log" 2>&1 \
   || { echo "player image build failed (see $LOG/image.build.log)"; exit 1; }
-docker run --rm --platform linux/amd64 -e COWORLD_LLM_ENDPOINT=http://127.0.0.1:9 -e COWORLD_LLM_MODEL=check \
-  -e COWORLD_PLAYER_WS_URL=ws://127.0.0.1:9/x "$IMAGE" node build/llm-player.mjs 2>&1 | grep -q '"status":"configured"' \
-  || { echo "$IMAGE does not start with COWORLD_LLM_* alone; not uploading"; exit 1; }
+# The player then exits nonzero (the game URL is a dummy), so only its startup line counts.
+startup=$(docker run --rm --platform linux/amd64 -e COWORLD_LLM_ENDPOINT=http://127.0.0.1:9 -e COWORLD_LLM_MODEL=check \
+  -e COWORLD_PLAYER_WS_URL=ws://127.0.0.1:9/x "$IMAGE" node build/llm-player.mjs 2>&1 || true)
+case "$startup" in *'"status":"configured"'*) ;; *)
+  echo "$IMAGE does not start with COWORLD_LLM_* alone; not uploading"; echo "$startup" > "$LOG/image.startup.log"; exit 1 ;; esac
 if [ $# -gt 0 ]; then NAMES=("$@"); else NAMES=(wcwl-chatgpt wcwl-haiku wcwl-gemini wcwl-gpt-oss wcwl-llama wcwl-deepseek wcwl-mistral wcwl-glm wcwl-kimi); fi
 
 token() { uv run --project /Users/jt/projects/coworld python -c "import yaml,pathlib;print(yaml.safe_load((pathlib.Path.home()/'.softmax/credentials.yaml').read_text())['tokens']['https://softmax.com/api'])" 2>/dev/null; }

@@ -413,3 +413,16 @@ jt@metatheory.gg. Local and hosted certification passed all 10 checks
   started with the endpoint, every seat acted, and seat 0's 11 model calls all returned 200 from the sidecar.
   The same day, a rerun with the earlier uploads (`ereq_bf6d3a57-58b9-4deb-8abe-f0185e92cd5a`) still failed, so
   `USE_BEDROCK` policies no longer get a sidecar at all and must be re-uploaded.
+
+## 0.2.9: the Graveyard, 30-second nights (October 2, 2026)
+
+Coworld 0.2.9 (`cow_2db310d1-7ebc-4f9e-97d4-e38dbf380aba`, source `a352ce1`), uploaded from jt@metatheory.gg.
+Local and hosted certification passed all 10 checks (`artifacts/release-0.2.9-certification/`).
+
+- **The Graveyard** (`docs/plans/2026-10-02-dead-chat-design.md`). Dead players share a chat only the dead can
+  read; dead humans see every role; each message from a dead human asks at most one dead AI to answer (named,
+  else the LLM host's pick, else seeded random; one outstanding, six per phase). New optional request
+  `dead_chat`; no reply is never a failure. Policies answer only after re-uploading with the new player image.
+- **Night actions 30 s** (was 45). Lobbies may still set up to 45.
+- **No replay button in hosted games.** The finished lobby page becomes the replay; local runs keep Watch replay.
+- Wiki republished: Rules and roles, Play with friends, Build a policy, Game modes.

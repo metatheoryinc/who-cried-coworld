@@ -20,7 +20,22 @@ export function privateKnowledge(o:Observation){
  const cleared=[...new Set(o.privateResults.flatMap(r=>r.ability==='inform'?[nm(r.target)]:[]))];
  return {lines,cleared};
 }
+/** The Graveyard: a dead player answers the dead. Nothing said here reaches the living, so it may confess. */
+export function ghostPrompt(o:Observation,personality=contestants[o.self.slot]?.personalityPrompt??''){
+ const me=o.roster[o.self.slot]!.name;
+ const death=o.transcript.find(e=>e.payload.kind==='elimination'&&e.payload.slot===o.self.slot)?.payload;
+ const how=death?.kind==='elimination'?(death.cause==='vote'?` on day ${o.transcript.find(e=>e.payload===death)!.day}, voted out by the village`:' at night, killed by the wolves'):'';
+ return [
+  `You are ${me}, a contestant in a Mafia game. You are dead: you were eliminated${how}. Your role was ${roles[o.self.role]} (${o.self.faction==='wolf'?'mafia':'town'}), and everyone in the Graveyard knows it.`,
+  personality?`Personality: ${personality}`:'',
+  o.self.faction==='wolf'?`Your mafia team was ${o.teammates.map(t=>o.roster[t.slot]!.name).join(', ')}.`:'',
+  'You are in the Graveyard, a chat that only the dead can read. The living never see it, and nothing said here can change the game, so you may be candid about your own role, votes and night actions. Do not invent facts about other players\' roles that you never learned.',
+  'Transcript messages with kind "dead_chat" are the Graveyard. Reply to the most recent one, in character: banter, own up, gloat or commiserate. Answer a question put to you directly.',
+  'Keep it to one or two short sentences, at most 200 characters. Leave summary empty or very short.',
+ ].filter(Boolean).join('\n');
+}
 export function playerSystemPrompt(o:Observation,personality=contestants[o.self.slot]?.personalityPrompt??''){
+ if(o.request.kind==='dead_chat')return ghostPrompt(o,personality);
  const knowledge=privateKnowledge(o);
  const fellow=o.self.role==='noble'?o.teammates.filter(t=>t.slot!==o.self.slot).map(t=>o.roster[t.slot]!.name):[],nobles=fellow.join(' and ');
  const prefix=[

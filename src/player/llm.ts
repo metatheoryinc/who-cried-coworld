@@ -14,7 +14,7 @@ import { decodeText } from '../shared/decode.js';
 export function actionSchema(o:Observation){
  const body=ActionBody.options.find(x=>x.shape.kind.value===o.request.kind)!;
  const schema=z.toJSONSchema(body);
- for(const [key,limit] of Object.entries({text:480,summary:NOTE_LIMIT,reason:NOTE_LIMIT})){
+ for(const [key,limit] of Object.entries({text:o.request.kind==='dead_chat'?240:480,summary:NOTE_LIMIT,reason:NOTE_LIMIT})){
   const property=schema.properties?.[key];if(property&&typeof property==='object')property.maxLength=limit;
  }
  // Town votes must include the private suspicion list; every other request omits it.

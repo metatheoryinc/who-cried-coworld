@@ -140,10 +140,11 @@ export class HumanSession extends Session {
   this.phaseEvent(period==='dusk'?'night':'day',this.config.humanTimers.transitionMs);
  }
  override disconnect(slot:number){this.ghosts.delete(slot);if(!this.isHuman(slot))super.disconnect(slot);}
- override requestFor(slot:number){return this.pending.get(slot)??this.ghosts.get(slot);}
+ /** A dead seat's only request is its Graveyard reply; the living never have one. */
+ override requestFor(slot:number){return this.state.seats[slot]?.alive===false?this.ghosts.get(slot):this.pending.get(slot);}
  override receive(slot:number,text:unknown,now:number):Receipt{
   const ghost=this.ghosts.get(slot);
-  if(!ghost||this.pending.has(slot))return super.receive(slot,text,now);
+  if(!ghost||this.state.seats[slot]?.alive)return super.receive(slot,text,now);
   if(this.state.result){this.ghosts.delete(slot);return {status:'expired',code:null,retry:false};}
   const receipt=submit(ghost,this.state,slot,text,now);
   // Published at once; a refused or failed reply simply never appears.

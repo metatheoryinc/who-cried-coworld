@@ -10,7 +10,8 @@ export type PolicyOptions=Omit<InferenceConfig,'provider'>&{provider?:InferenceC
 /** Claude calls go through Anthropic Messages without the strict schema, and hosted Haiku wrote 500–645 character speech;
  * a closing reminder with a tighter target keeps speech well inside the game's 480. */
 export function speechReminder(o:Observation,model:string){
- if(!/anthropic|claude/i.test(model)||!['bid','wolf_chat','noble_chat'].includes(o.request.kind))return null;
+ if(!/anthropic|claude/i.test(model)||!['bid','wolf_chat','noble_chat','dead_chat'].includes(o.request.kind))return null;
+ if(o.request.kind==='dead_chat')return 'Length check before you answer: keep text at most 200 characters (one or two short sentences). The game rejects Graveyard text over 240 characters.';
  return 'Length check before you answer: keep text at most 300 characters (about 50 words, two or three short sentences). The game rejects text over 480 characters. Keep summary or reason under 240.';
 }
 export async function llmAction(o:Observation,options:PolicyOptions,signal?:AbortSignal):Promise<Action>{

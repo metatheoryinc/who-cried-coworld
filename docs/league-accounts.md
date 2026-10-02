@@ -11,19 +11,19 @@ League: **Who Cried Wolf Playtests** (`league_9d8825e1-58ff-48ee-ac3d-c6953e048b
 own it. The Competition Pilot (`league_a10c10a8-46da-4f0f-bff6-4087c8dac619`) is private, so other accounts
 get 404 there.
 
-| Account | Player (= policy) | Model | Player id | Policy version |
+| Account | Player (= policy) | Model | Player id | Champion in Playtests |
 | --- | --- | --- | --- | --- |
-| jt@metatheory.gg | `wcwl-gemini` (renamed from `wcw-gemini`) | `google/gemini-3.8-flash` | `ply_37566da1-f9f6-4131-977c-ef4357c4c9ad` | `wcwl-gemini:v3` (works hosted; submit to Playtests) |
-| jt@entropyfails.com | `wcwl-chatgpt` | `openai/gpt-5.6-luna` | `ply_71d4f92c-2326-4ea0-b180-48956c3700db` | `wcwl-chatgpt:v1`, stale image: re-upload |
-|  | `wcwl-haiku` | `anthropic/claude-haiku-4.5` | `ply_ccd0ec92-e97d-4804-808a-c679e9a9623d` | `wcwl-haiku:v1`, stale image: re-upload |
-| `jt-sm1-mt` | `wcwl-gpt-oss` | `openai/gpt-oss-120b` | _to do_ | _to do_ |
-|  | `wcwl-llama` | `meta-llama/llama-4-maverick` | _to do_ | _to do_ |
-| `jt-sm2-mt` | `wcwl-deepseek` | `deepseek/deepseek-v4.1-flash` | _to do_ | _to do_ |
-|  | `wcwl-mistral` | `mistralai/mistral-medium-3.1` | _to do_ | _to do_ |
-| `jt-sm3-mt` | `wcwl-glm` | `z-ai/glm-5.3` | _to do_ | _to do_ |
-|  | `wcwl-kimi` | `moonshotai/kimi-k3` | _to do_ | _to do_ |
+| jt@metatheory.gg | `wcwl-gemini` | `google/gemini-3.8-flash` | `ply_37566da1-f9f6-4131-977c-ef4357c4c9ad` | `wcwl-gemini:v3` |
+| jt@entropyfails.com | `wcwl-chatgpt` | `openai/gpt-5.6-luna` | `ply_71d4f92c-2326-4ea0-b180-48956c3700db` | `wcwl-chatgpt:v2` |
+|  | `wcwl-haiku` | `anthropic/claude-haiku-4.5` | `ply_ccd0ec92-e97d-4804-808a-c679e9a9623d` | `wcwl-haiku:v2` |
+| `jt-sm1-mt` | `wcwl-gpt-oss` | `openai/gpt-oss-120b` | `ply_0f041c65-96ea-41b3-8959-1ef7e4d02236` | `wcwl-gpt-oss:v1` |
+|  | `wcwl-llama` | `meta-llama/llama-4-maverick` | `ply_6adb0bee-914d-44f5-af4e-ee82f7ed5f19` | `wcwl-llama:v1` |
+| `jt-sm2-mt` | `wcwl-deepseek` | `deepseek/deepseek-v4.1-flash` | `ply_6a6b62c9-2a6b-4cea-a014-d143bef2546c` | `wcwl-deepseek:v1` |
+|  | `wcwl-mistral` | `mistralai/mistral-medium-3.1` | `ply_a30ef6a0-13f2-420e-9bba-efdd4008154d` | `wcwl-mistral:v1` |
+| `jt-sm3-mt` | `wcwl-glm` | `z-ai/glm-5.3` | `ply_4421cb16-1282-4de2-9bf1-582a3bdf1eca` | `wcwl-glm:v1` |
+|  | `wcwl-kimi` | `moonshotai/kimi-k3` | `ply_89337967-d27e-4206-b87e-b3f093d41218` | `wcwl-kimi:v1` |
 
-The script prints each player id and policy version as it goes; copy them into the table.
+All nine became champions on October 1, 2026, uploaded with coworld 0.1.56 `--use-llm`.
 
 Uploads use coworld 0.1.56 or later (`uvx --from coworld==0.1.56 coworld`). Its `upload-policy --use-llm
 --llm-model <slug>` stores `COWORLD_LLM_ENABLED` and `COWORLD_LLM_MODEL` as policy **secrets**, and that is what
@@ -71,9 +71,9 @@ the account's main user when it finishes. Signing in again to your usual account
 puts everything back.
 
 The account signed in as jt@metatheory.gg also keeps your personal player `EntropyFails`
-(`ply_ab9a5599-9e99-464d-8fee-07acdc46d25d`). It fields no model in this league. In the separate
-**Playtests** league (`league_9d8825e1-58ff-48ee-ac3d-c6953e048b9b`) it holds the Haiku champion,
-`wcw-bedrock-haiku:v18`, which lobbies there seat.
+(`ply_ab9a5599-9e99-464d-8fee-07acdc46d25d`). In Playtests it is still a champion with
+`wcw-bedrock-haiku:v18`. That version was uploaded with the old `USE_BEDROCK` secret, so it gets no hosted
+model and plays as a dead seat. Retire it, or re-upload it with `--use-llm`, before ranked rounds.
 
 ## Also in the league
 

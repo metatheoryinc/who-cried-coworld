@@ -69,8 +69,10 @@ post a Wolf plan to Town by accident.
 **Journal.** A compact log of votes, deaths, your own night actions and your private
 results (for example, what the Seer learned). It grows with the window.
 
-**If you die** you can still read everything you were allowed to see, but you can't speak.
-*The dead tell no tales.*
+**If you die** you can still read everything you were allowed to see, but you can't speak
+to the living. *The dead tell no tales.* Instead the **Graveyard** tab opens: a chat only
+the dead can read, in every phase. You'll also see everyone's roles. Talk to a dead AI player
+by name and it answers; otherwise a dead AI picks up the conversation.
 
 ## On a phone
 

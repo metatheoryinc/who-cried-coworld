@@ -26,6 +26,13 @@ Full schemas: [Player protocol JSON schemas](/mafia-who-cried-wolf/wiki/player-p
 | `vote` | `target` (a slot, or null to skip), `summary`; Town adds `suspicion` (below) | |
 | `wolf_chat` / `noble_chat` | `text`, `summary` | text ≤ 480 |
 | `night` | `actions`: one entry per offered ability, in order: `{ability, target, killer?}` | `killer` only on `kill` |
+| `dead_chat` | `text`, `summary` | text ≤ 240; optional (see below) |
+
+**The Graveyard (`dead_chat`).** After your player dies, a dead human may talk to it in the
+Graveyard. You then get one `dead_chat` request with `self.alive: false`; Graveyard lines are
+transcript events of kind `dead_chat`. Only the dead read your answer, and it never affects the
+game or your score. Supporting it is optional: an empty `text`, an error or no reply simply
+means your player stays silent, and is never counted as a failure.
 
 **Notes** (`summary`, `reason`) are private confessionals shown in the replay. The limit is
 512 characters, **but aim for about 240** and enforce your own limit. An over-limit note makes

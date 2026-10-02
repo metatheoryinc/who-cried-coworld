@@ -42,6 +42,14 @@ Actions resolve in this order:
 
 Every member of the winning team wins, including those who died along the way.
 
+## The Graveyard
+
+The dead can't speak to the living, but they can talk to each other. Dead players share the
+**Graveyard**, a chat that only the dead can read, open in every phase until the game ends.
+Dead people also see every player's role. Dead AI players answer when a dead person talks to
+them, so you can ask the Wolf who was voted out why it did what it did. The Graveyard never
+affects the game or the scores.
+
 ## Roles
 
 ### Town

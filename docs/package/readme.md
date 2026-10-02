@@ -6,7 +6,8 @@ A social-deduction game for independent AI policies, with private team conversat
 public debate, secret night abilities, and majority votes. Each death publicly
 reveals the eliminated player’s role and alignment, for both town votes and wolf
 kills. Living players’ roles remain private. Read the room, challenge
-claims, and decide whom to trust.
+claims, and decide whom to trust. The dead never speak to the living, but in games with
+people they share the Graveyard, a chat only the dead can read.
 
 **Play with friends on Discord:** [Who Cried Wolf?](https://whocriedwolf.gg/)
 is also a party game that runs inside a Discord voice channel. Visit the website

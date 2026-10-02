@@ -19,6 +19,8 @@ export function scriptedAction(o:Pick<Observation,'episodeId'|'requestId'|'obser
   case 'noble_chat':case 'wolf_chat':body={kind:o.request.kind,text:`${o.phase==='day'?'Day':'Night'} ${o.day}, turn ${o.request.turn+1}: Let us compare the public claims before choosing our next move.`,summary:'Coordinate with living teammates.'};break;
   case 'vote':{const others=o.request.targets.filter(t=>t!==o.self.slot);body={kind:'vote',target:pick(others.length?others:o.request.targets),summary:'Vote for a random living player.'};break;}
   case 'night':body={kind:'night',actions:o.request.choices.map(c=>({ability:c.ability,target:pick(c.targets),...(c.ability==='kill'?{killer:pick(c.actors??[])??o.self.slot}:{})})),summary:'Use each offered ability on a random legal target.'};break;
+  // The baseline stays silent in the Graveyard: an empty reply publishes nothing.
+  case 'dead_chat':body={kind:'dead_chat',text:'',summary:''};break;
  }
  return Action.parse({protocol:'wcw.player/1',type:'action',episodeId:o.episodeId,requestId:o.requestId,observationId:o.observationId,body,report:null});
 }

@@ -5,7 +5,8 @@ export type Request=
  | {kind:'bid';window:number;maxCharacters:480;host?:{reason:'human_reply'|'open_discussion';replyTo:string|null;prompt?:string}}
  | {kind:'wolf_chat'|'noble_chat';turn:number;maxCharacters:480}
  | {kind:'vote';targets:number[];allowPass:true;suspicion?:true}
- | {kind:'night';choices:Choice[]};
+ | {kind:'night';choices:Choice[]}
+ | {kind:'dead_chat';maxCharacters:240};
 export type Code='timeout'|'disconnected'|'malformed'|'illegal'|'refused'|'provider_error'|'throttled'|'version';
 export type Failure={code:Code;source:'game'|'policy_report';disposition:'retry'|'fallback';attempt:0|1|2};
 export type Outcome={body:ActionBody;fallback:boolean;failures:Failure[]};
@@ -20,6 +21,7 @@ export function fallbackBody(r:Request):ActionBody {
   case 'wolf_chat':case 'noble_chat':return {kind:r.kind,text:'',summary:''};
   case 'vote':return {kind:'vote',target:null,summary:''};
   case 'night':return {kind:'night',actions:r.choices.map(c=>({ability:c.ability,target:null})),summary:''};
+  case 'dead_chat':return {kind:'dead_chat',text:'',summary:''};
  }
 }
 export function closeRequest(p:Pending,code:Code='timeout'):Outcome {
@@ -33,7 +35,8 @@ export function closeRequest(p:Pending,code:Code='timeout'):Outcome {
  return p.outcome;
 }
 function legal(p:Pending,s:State,b:ActionBody):boolean {
- if(s.result||!s.seats.some(seat=>seat.slot===p.slot&&seat.alive)||b.kind!==p.request.kind)return false;
+ // Graveyard replies come only from the dead; every other action only from the living.
+ if(s.result||b.kind!==p.request.kind||s.seats.some(seat=>seat.slot===p.slot&&seat.alive)!==(b.kind!=='dead_chat'))return false;
  const living=(slot:number)=>s.seats.some(seat=>seat.slot===slot&&seat.alive);
  switch(b.kind){
   case 'vote':return p.request.kind==='vote'&&(b.target===null||(p.request.targets.includes(b.target)&&living(b.target)));
@@ -48,6 +51,7 @@ function legal(p:Pending,s:State,b:ActionBody):boolean {
   case 'bid':return (b.replyTo===null||(p.visibleSpeechIds??[]).includes(b.replyTo))&&(b.accusation===null||(b.accusation!==p.slot&&living(b.accusation)));
   case 'wolf_chat':return s.seats[p.slot]!.faction==='wolf';
   case 'noble_chat':return s.seats[p.slot]!.role==='noble';
+  case 'dead_chat':return true;
  }
 }
 function reject(p:Pending,code:Code):Receipt {

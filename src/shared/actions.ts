@@ -15,6 +15,8 @@ export const ActionBody=z.discriminatedUnion('kind',[
  Bid,
  z.object({kind:z.literal('wolf_chat'),text:GameText(480),summary:NoteText}).strict(),
  z.object({kind:z.literal('noble_chat'),text:GameText(480),summary:NoteText}).strict(),
+ // A dead seat's Graveyard reply; empty text means no reply.
+ z.object({kind:z.literal('dead_chat'),text:GameText(240),summary:NoteText}).strict(),
  // Optional private wolf probabilities (Town votes). Loosely typed so a bad report can never make the vote malformed;
  // the game validates and drops invalid reports at vote close.
  z.object({kind:z.literal('vote'),target:Slot.nullable(),summary:NoteText,suspicion:z.array(z.object({slot:z.number().int(),wolf:z.number()}).strict()).max(9).optional()}).strict(),

@@ -13,6 +13,7 @@ export function foldEvents(events:ProjectedEvent[]):View{
    case 'roles':for(const row of p.roles)view.roles[row.slot]=row.role;break;
    case 'speech':view.messages.push({id:e.id,slot:p.speech.slot,text:p.speech.text,private:false,day:e.day});break;
    case 'noble_chat':case 'wolf_chat':view.messages.push({id:e.id,slot:p.slot,text:p.text,private:true,channel:p.kind==='noble_chat'?'Noble chat':'Wolf chat',day:e.day});break;
+   case 'dead_chat':view.messages.push({id:e.id,slot:p.slot,text:p.text,private:true,channel:'Graveyard',day:e.day});break;
    case 'ballots':view.ballots=structuredClone(p.ballots);view.resolution=p.resolution;break;
    case 'elimination':{if(p.role)view.roles[p.slot]=p.role;const seat=view.roster.find(s=>s.slot===p.slot);if(seat)seat.alive=false;break;}
    case 'finished':view.result=structuredClone(p.result);view.phase='finished';break;

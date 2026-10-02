@@ -21,19 +21,21 @@ export const Request=z.discriminatedUnion('kind',[
  z.object({kind:z.literal('noble_chat'),turn:z.number().int().min(0).max(17),maxCharacters:z.literal(480)}).strict(),
  z.object({kind:z.literal('vote'),targets:z.array(Slot).max(9),allowPass:z.literal(true),suspicion:z.literal(true).optional()}).strict(),
  z.object({kind:z.literal('night'),choices:z.array(Choice).max(2)}).strict(),
+ // Sent only to dead seats, only after a dead human posts in the Graveyard. Optional to support.
+ z.object({kind:z.literal('dead_chat'),maxCharacters:z.literal(240)}).strict(),
 ]);
 export type Request=z.infer<typeof Request>;
 export const Observation=z.object({
  protocol:z.literal('wcw.player/1'),type:z.literal('observation'),episodeId:Id,observationId:Id,requestId:Id,
  attempt:z.union([z.literal(0),z.literal(1)]),remainingMs:z.number().int().min(0).max(45000),phase:Phase,day:Day,
- self:z.object({slot:Slot,role:Role,faction:Faction,alive:z.literal(true)}).strict(),
+ self:z.object({slot:Slot,role:Role,faction:Faction,alive:z.boolean()}).strict(),
  roster:Roster,
  teammates:z.array(z.object({slot:Slot,role:z.enum(['wolf','alchemist','track_reader','noble'])}).strict()).max(3),
  privateResults:z.array(PrivateResult).max(288),
  votes:z.array(z.object({day:Day,ballots:z.array(VoteRow).max(9),eliminated:Slot.nullable()}).strict()).max(32),
  transcript:z.array(ProjectedEvent).max(128),transcriptTruncated:z.boolean(),request:Request,
 }).strict().refine(o=>o.self.faction===factionOf(o.self.role)&&
- (o.self.faction==='wolf'?o.teammates.every(t=>factionOf(t.role)==='wolf'):o.self.role==='noble'?o.teammates.every(t=>t.role==='noble'):o.teammates.length===0)&&o.roster[o.self.slot]!.alive);
+ (o.self.faction==='wolf'?o.teammates.every(t=>factionOf(t.role)==='wolf'):o.self.role==='noble'?o.teammates.every(t=>t.role==='noble'):o.teammates.length===0)&&o.roster[o.self.slot]!.alive===o.self.alive&&o.self.alive===(o.request.kind!=='dead_chat'));
 export type Observation=z.infer<typeof Observation>;
 export const Control=z.discriminatedUnion('type',[
  z.object({protocol:z.literal('wcw.player/1'),type:z.literal('ready'),episodeId:Id,slot:Slot,canRegisterName:z.boolean().optional()}).strict(),

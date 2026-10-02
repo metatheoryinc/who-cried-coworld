@@ -1,4 +1,4 @@
-import {createRuntimeModerator,type ModeratorLog} from './moderator.js';
+import {createRuntimeModerator,createRuntimeGhostHost,type ModeratorLog} from './moderator.js';
 import { createServer } from 'node:http';
 import { timingSafeEqual,randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
@@ -13,7 +13,12 @@ import {Registration} from '../../shared/player-names.js';
 export async function startServer(config:GameConfig,options:{port:number;host:string;viewerDir?:string;moderatorEnvironment?:NodeJS.ProcessEnv;onModeratorLog?:(log:ModeratorLog)=>void}){
  const session=new (config.mode!=='fast'?HumanSession:Session)(config,`episode_${randomUUID().replaceAll('-','')}`);
  const moderatorEnv=options.moderatorEnvironment??process.env;
- if(session instanceof HumanSession)session.moderator=createRuntimeModerator(config.moderator===undefined?moderatorEnv:{...moderatorEnv,WCW_MODERATOR:config.moderator==='default'?'off':config.moderator},options.onModeratorLog);
+ if(session instanceof HumanSession){
+  const env=config.moderator===undefined?moderatorEnv:{...moderatorEnv,WCW_MODERATOR:config.moderator==='default'?'off':config.moderator};
+  session.moderator=createRuntimeModerator(env,options.onModeratorLog);
+  // The Graveyard host shares the moderator's model; without an LLM host the Graveyard picks at random.
+  if(session.moderator)session.ghostHost=createRuntimeGhostHost(env,options.onModeratorLog&&(log=>options.onModeratorLog!({...log,task:'graveyard'})));
+ }
  const policies=new Map<number,WebSocket>(),viewers=new Map<WebSocket,{slot:number|'public';cursor:number}>();
  const sent=new Map<WebSocket,string>(),invalid=new Map<WebSocket,{request:string;count:number}>();
  let completed=false,timer:ReturnType<typeof setInterval>|undefined;
@@ -53,7 +58,7 @@ export async function startServer(config:GameConfig,options:{port:number;host:st
    if(events.length>viewer.cursor){send(ws,{protocol:'wcw.viewer/1',type:'events',episodeId:session.episodeId,throughCursor:events.length,events:events.slice(viewer.cursor)});viewer.cursor=events.length;}
   }
   for(const [slot,ws] of policies){
-   const p=session.pending.get(slot);
+   const p=session.requestFor(slot);
    if(session instanceof HumanSession&&session.isHuman(slot!)){
     const now=performance.now(),key=`${session.journal.length}:${p?.requestId}:${p?.attempt}:${!!p?.accepted}:${Math.floor(now/1000)}`;
     if(sent.get(ws)!==key){send(ws,{...session.snapshot(slot,now),lobby:session.phase==='waiting'?lobby(session,now):null});sent.set(ws,key);}continue;
@@ -115,7 +120,7 @@ export async function startServer(config:GameConfig,options:{port:number;host:st
       let raw;try{raw=JSON.parse(bytes.toString());}catch{}
       if(raw?.type==='chat'){const receipt=session.chat(slot!,bytes.toString(),performance.now());send(ws,{protocol:'wcw.human/1',type:'chat_receipt',id:raw.id,...receipt});if(receipt.status==='rejected'){const n=(invalid.get(ws)?.count??0)+1;invalid.set(ws,{request:'chat',count:n});if(n>=64)ws.close(1008,'Invalid traffic');}flush();return;}
      }
-     const pending=session.pending.get(slot!);
+     const pending=session.requestFor(slot!);
      const key=pending?.requestId??'unsolicited';
      const receipt=session.receive(slot!,isBinary?null:bytes.toString(),performance.now());
      if(pending)send(ws,{protocol:'wcw.player/1',type:'receipt',requestId:pending.requestId,...receipt});

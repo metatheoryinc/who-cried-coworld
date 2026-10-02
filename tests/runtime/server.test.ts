@@ -140,3 +140,29 @@ it('serves bundled font files as fonts but not other asset types',async()=>{
   expect((await fetch(`http://127.0.0.1:${server.port}/client/assets/fonts/OFL.txt`)).status).not.toBe(200);
  }finally{await server.close();}
 });
+
+it('carries a Graveyard exchange between a dead human and a dead AI, and never to the living',async()=>{
+ const config=GameConfig.parse({...c(),mode:'human'});
+ const server=await startServer(config,{port:0,host:'127.0.0.1'}),clients:WebSocket[]=[],seen=new Map<number,string[]>();
+ try{
+  for(const slot of [0,2,3,4,5,6,7,8]){
+   const ws=new WebSocket(`ws://127.0.0.1:${server.port}/player?slot=${slot}&token=t${slot}`);clients.push(ws);seen.set(slot,[]);
+   ws.on('message',b=>{const text=b.toString(),p=JSON.parse(text);seen.get(slot)!.push(text);if(p.type!=='observation')return;
+    if(p.request.kind==='dead_chat')ws.send(JSON.stringify({protocol:'wcw.player/1',type:'action',episodeId:p.episodeId,requestId:p.requestId,observationId:p.observationId,body:{kind:'dead_chat',text:`Seat ${slot} says boo`,summary:''},report:null}));
+    else ws.send(JSON.stringify(scriptedAction(Observation.parse(p))));});
+   await new Promise(r=>ws.once('open',r));
+  }
+  const human=new WebSocket(`ws://127.0.0.1:${server.port}/player?slot=1&token=t1`);clients.push(human);
+  let latest:any;human.on('message',b=>{const p=JSON.parse(b.toString());if(p.type==='ready')human.send(JSON.stringify({protocol:'wcw.human/1',type:'join'}));if(p.type==='snapshot')latest=p;});
+  await new Promise(r=>human.once('open',r));
+  await new Promise(r=>setTimeout(r,1200));expect(server.session.phase).not.toBe('waiting');
+  const s=server.session as any;
+  for(const slot of [1,3]){const seat=s.state.seats[slot];seat.alive=false;s.emit({kind:'elimination',slot,cause:'vote',role:seat.role,faction:seat.faction});}
+  await new Promise(r=>setTimeout(r,50));
+  human.send(JSON.stringify({protocol:'wcw.human/1',type:'chat',episodeId:latest.episodeId,id:'chat_grave',phaseKey:latest.phaseKey,channel:'graveyard',text:'Seat 3, you too?'}));
+  await new Promise(r=>setTimeout(r,300));
+  const lines=latest.events.filter((e:any)=>e.payload.kind==='dead_chat').map((e:any)=>e.payload.text);
+  expect(lines).toEqual(['Seat 3, you too?','Seat 3 says boo']);
+  for(const slot of [0,2,4,5,6,7,8])expect(seen.get(slot)!.join('\n')).not.toMatch(/you too\?|says boo|dead_chat/);
+ }finally{for(const ws of clients)ws.terminate();await server.close();}
+},8000);

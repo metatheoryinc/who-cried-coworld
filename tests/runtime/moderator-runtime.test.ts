@@ -96,3 +96,17 @@ it('selects a moderator turn through the new hosted Messages proxy',async()=>{
   expect(log).toHaveBeenCalledWith(expect.objectContaining({provider:'softmax',outcome:'selected'}));
  }finally{fetcher.mockRestore();}
 });
+
+import {createRuntimeGhostHost} from '../../src/game/runtime/moderator.js';
+it('asks the same host model which dead AI answers in the Graveyard, and validates the pick',async()=>{
+ const ghostInput={human:{slot:1,name:'JT'},message:'who killed me?',candidates:[{slot:3,name:'Kimi',votedForYou:false,killedYou:true}],recent:[]};
+ const answer=(slot:number)=>vi.fn().mockResolvedValue(Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify({slot})}}]}));
+ const log=vi.fn(),ok=answer(3);
+ const host=createRuntimeGhostHost({OPENROUTER_API_KEY:'secret',OPENROUTER_HOST_MODEL:'test-model'},log,ok)!;
+ expect(await host(ghostInput,new AbortController().signal)).toEqual({slot:3});
+ expect(JSON.parse(ok.mock.calls[0]![1].body).messages[0].content).toContain('Graveyard');
+ expect(log).toHaveBeenCalledWith(expect.objectContaining({outcome:'selected',candidates:[3]}));
+ const wrong=createRuntimeGhostHost({OPENROUTER_API_KEY:'secret'},vi.fn(),answer(5))!;
+ await expect(wrong(ghostInput,new AbortController().signal)).rejects.toThrow('Graveyard host invalid choice');
+ expect(createRuntimeGhostHost({WCW_MODERATOR:'off',OPENROUTER_API_KEY:'secret'})).toBeUndefined();
+});

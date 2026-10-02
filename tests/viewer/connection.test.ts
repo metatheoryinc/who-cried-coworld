@@ -8,7 +8,7 @@ it('uses the supplied hosted address unchanged, without requiring browser tokens
  const c=playerConnection('https://softmax.com/api/episodes/e/proxy/client/player?address='+encodeURIComponent(address));
  expect(c.socket).toBe(address);
  expect(c.replay).toBe('https://softmax.com/api/episodes/e/proxy/replay.json');
- expect(c.replayPage).toBe('https://softmax.com/observatory/v2');
+ expect(c.replayPage).toBeUndefined();
 });
 it('converts http addresses and strips fragments without copying page credentials',()=>{
  expect(playerConnection('https://example.com/client/player?slot=8&token=private&address='+encodeURIComponent('https://example.com/proxy/player?ticket=x#ignored')).socket).toBe('wss://example.com/proxy/player?ticket=x');
@@ -32,17 +32,16 @@ it('validates supplied viewer addresses and converts HTTPS to WSS',()=>{
  expect(viewerConnection('https://example.com/client/global?address='+encodeURIComponent('https://proxy.example/global?ticket=x#ignored')).socket).toBe('wss://proxy.example/global?ticket=x');
  expect(()=>viewerConnection('https://example.com/client/global?address=javascript:alert(1)')).toThrow();
 });
-it('sends hosted players to Softmax without leaking seat credentials',()=>{
+it('gives hosted players no replay link, since the lobby page becomes the replay',()=>{
  const address='wss://softmax.com/api/session/proxy/player?token=private';
  const c=playerConnection('https://softmax.com/api/session/proxy/client/player?slot=0&token=private&address='+encodeURIComponent(address));
- expect(c.replayPage).toBe('https://softmax.com/observatory/v2');
- expect(c.replayLabel).toBe('Open Softmax');
- expect(c.replayNotice).toContain('completed game');
- expect(c.replayPage).not.toContain('private');
+ expect(c.replayPage).toBeUndefined();
+ expect(c.replayLabel).toBeUndefined();
+ expect(c.replayNotice).toContain('lobby page');
 });
 it('recognizes a Softmax socket when the player page uses a separate asset host',()=>{
  const c=playerConnection('https://assets.example/client/player?address='+encodeURIComponent('wss://softmax.com/api/proxy/player?ticket=test'));
- expect(c.replayPage).toBe('https://softmax.com/observatory/v2');
+ expect(c.replayPage).toBeUndefined();
 });
 it('retains direct replay links for local games and avoids lookalike domains',()=>{
  const c=playerConnection('http://localhost:8772/client/player?slot=0&token=test');
@@ -52,8 +51,8 @@ it('retains direct replay links for local games and avoids lookalike domains',()
 });
 it('recognizes the Observatory research proxy at game end',()=>{
  const c=playerConnection('https://api.observatory.softmax-research.net/v2/coworlds/jobs/job/proxy/client/player?slot=0&token=private');
- expect(c.replayLabel).toBe('Open Softmax');
- expect(c.replayPage).toBe('https://softmax.com/observatory/v2');
+ expect(c.replayLabel).toBeUndefined();
+ expect(c.replayPage).toBeUndefined();
  expect(c.replayNotice).not.toContain('local host');
  expect(playerConnection('https://softmax-research.net.example/client/player').replayLabel).toBe('Watch replay');
 });

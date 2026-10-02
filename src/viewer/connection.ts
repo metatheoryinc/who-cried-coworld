@@ -23,7 +23,7 @@ export function playerConnection(href:string){
  const replay=new URL('replay.json',root).href;
  const replayPage=new URL('client/replay',root);replayPage.searchParams.set('replay',replay);
  const hosted=[page,new URL(socket)].some(url=>['softmax.com','softmax-research.net'].some(host=>url.hostname===host||url.hostname.endsWith('.'+host)));
- return {socket,replay,replayPage:hosted?'https://softmax.com/observatory/v2':replayPage.href,
-  replayLabel:hosted?'Open Softmax':'Watch replay',
-  replayNotice:hosted?'Your replay will be available on Softmax after the episode finishes processing. Open your completed game in the Observatory and select its replay.':'The completed replay is saved by the local host.'};
+ // Hosted, the finished lobby page becomes the replay, and the game is never told its lobby, so there is no link.
+ return {socket,replay,replayPage:hosted?undefined:replayPage.href,replayLabel:hosted?undefined:'Watch replay',
+  replayNotice:hosted?'The replay appears on this lobby page once Softmax finishes processing the game.':'The completed replay is saved by the local host.'};
 }

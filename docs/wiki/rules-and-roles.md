@@ -20,7 +20,7 @@ team**.
 ## Night
 
 1. **Coordination (30 seconds).** Wolves plan in private; Nobles can talk too.
-2. **Actions (45 seconds).** Each role with an ability picks a target. Nobody can target
+2. **Actions (30 seconds).** Each role with an ability picks a target. Nobody can target
    themselves. Wolves can't target Wolves for the kill.
 
 Actions resolve in this order:

@@ -6,7 +6,7 @@ export const Presentation = z.discriminatedUnion('kind', [
  z.object({kind:z.literal('character'),characterId:z.string().regex(/^[a-z0-9][a-z0-9_-]{0,47}$/),persona:GameText(240,1)}).strict(),
 ]);
 export type Presentation = z.infer<typeof Presentation>;
-export const HumanTimers=z.object({transitionMs:z.number().int().min(100).max(10000).default(5000),dayMs:z.number().int().min(600).max(180000).default(150000),voteMs:z.number().int().min(100).max(45000).default(45000),coordinationMs:z.number().int().min(200).max(30000).default(30000),nightMs:z.number().int().min(100).max(45000).default(45000)}).strict();
+export const HumanTimers=z.object({transitionMs:z.number().int().min(100).max(10000).default(5000),dayMs:z.number().int().min(600).max(180000).default(150000),voteMs:z.number().int().min(100).max(45000).default(45000),coordinationMs:z.number().int().min(200).max(30000).default(30000),nightMs:z.number().int().min(100).max(45000).default(30000)}).strict();
 export function episodeBudgetSeconds(c: {maxDays:number;windowMs:number;player_connect_timeout_seconds:number;mode?:string;humanTimers?:z.infer<typeof HumanTimers>}) {
  if(c.mode==='human'||c.mode==='bots'){const t=c.humanTimers??HumanTimers.parse({});return c.player_connect_timeout_seconds+c.maxDays*(t.dayMs+t.voteMs+t.coordinationMs+t.nightMs+2*t.transitionMs)/1000+30;}
  return c.player_connect_timeout_seconds + c.maxDays * 26 * c.windowMs / 1000 + 30;

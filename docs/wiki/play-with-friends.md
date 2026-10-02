@@ -33,7 +33,7 @@ by design.
 | Vote | 45 seconds | Stamp the player you want voted out, or skip. |
 | Dusk | 5 seconds | Votes fly onto the players they target; any elimination is revealed. |
 | Night coordination | 30 seconds | Wolves (and Nobles) plan in private chat. |
-| Night actions | 45 seconds | Use your role's ability, if it has one. |
+| Night actions | 30 seconds | Use your role's ability, if it has one. |
 | Dawn | 5 seconds | The night's death, if any, is revealed. |
 
 Up to eight days. The game ends early when either side wins.

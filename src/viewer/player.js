@@ -26,6 +26,8 @@ let slot=params.get('slot'),connection;
 /** Connection is a status light by the clock; the full message is its label, and errors are also shown as text. */
 function setConnection(kind,label){const c=$('connection');c.hidden=kind==='idle';c.dataset.state=kind;c.title=label;c.setAttribute('aria-label',label);if(kind==='error')$('feedback').textContent=label;}
 try{connection=playerConnection(location.href);}catch{setConnection('error','Invalid seat link. Open your game invitation again.');$('join').disabled=true;}
+/** Local runs link to the host's replay; hosted games have none (the lobby page becomes the replay). */
+function replayLink(cls){return connection?.replayPage?`<a${cls?` class="${cls}"`:''} href="${esc(connection.replayPage)}" target="_blank" rel="noopener noreferrer">${esc(connection.replayLabel)}</a>`:'';}
 const storageKey=`wcw-joined:${connection?.socket??location.href}`;
 function name(slot){return state?.roster[slot]?.name??`Seat ${slot+1}`;}
 function feedback(t){$('feedback').textContent=t;}
@@ -74,7 +76,7 @@ function drawAction(){
  if(stampRequest()){actionKey='';drawTray();return;}
  const o=state.observation,key=`${JSON.stringify(state.lobby)}:${state.phase}:${state.period}:${o?.requestId}:${state.self?.alive}:${state.result?.outcome}:${state.floor?.turn}`;
  if(key===actionKey)return;actionKey=key;feedback('');
- if(state.result){$('action').innerHTML=`<span class="eyebrow">THE STORY ENDS</span><h2 class="result">${esc({town_win:'The village prevails',wolf_win:'The wolves prevail',jester_win:'The Trickster wins',draw:'A village divided'}[state.result.outcome])}</h2><p>${state.result.scores[Number(slot)]?'You won.':'The game is complete.'} ${esc(connection.replayNotice)}</p><a href="${esc(connection.replayPage)}" target="_blank" rel="noopener noreferrer">${esc(connection.replayLabel)}</a>`;return;}
+ if(state.result){$('action').innerHTML=`<span class="eyebrow">THE STORY ENDS</span><h2 class="result">${esc({town_win:'The village prevails',wolf_win:'The wolves prevail',jester_win:'The Trickster wins',draw:'A village divided'}[state.result.outcome])}</h2><p>${state.result.scores[Number(slot)]?'You won.':'The game is complete.'} ${esc(connection.replayNotice)}</p>${replayLink()}`;return;}
  if(!state.self){const seats=state.lobby?.seats??[],humans=seats.filter(s=>s==='human').length,filled=seats.filter(s=>s!=='open').length;
   $('action').innerHTML=`<h2>You have a seat</h2><p>${filled} of 9 seats filled · ${humans} ${humans===1?'human':'humans'} joined.</p><p class="hint">Play starts when every seat is filled${state.lobby?.startsInMs!=null?', or when the countdown ends':''}. Your secret role is dealt when the game begins.</p>`;return;}
  if(!state.self.alive){$('action').innerHTML='<h2>Your story lives on</h2><p>You have been eliminated. Follow the public conversation while the village plays on.</p>';return;}
@@ -299,7 +301,7 @@ function drawInterlude(){
   const winners=state.roster.filter(p=>result.scores[p.slot]===1),others=state.roster.filter(p=>result.scores[p.slot]!==1);
   panel.className=`interlude end-screen ${wolf?'wolf-ending':'town-ending'}`;
   panel.style.backgroundImage=`url("${asset(wolf?'bg_gameover_night':'bg_gameover_day')}")`;
-  panel.innerHTML=`<div class="end-content"><h2 id="interlude-title" tabindex="-1">${esc(headline)}</h2>${winners.length?`<h3>Winners</h3><div class="end-cards winners">${winners.map(card).join('')}</div>`:''}<div class="end-bottom"><section><h3>${winners.length?'The rest of the village':'The village'}</h3><div class="end-cards">${others.map(card).join('')}</div></section><div class="end-actions"><h2>The End</h2><p>${esc(connection.replayNotice)}</p><a class="primary" href="${esc(connection.replayPage)}" target="_blank" rel="noopener noreferrer">${esc(connection.replayLabel)}</a><button id="review-village">Review village</button></div></div></div>`;
+  panel.innerHTML=`<div class="end-content"><h2 id="interlude-title" tabindex="-1">${esc(headline)}</h2>${winners.length?`<h3>Winners</h3><div class="end-cards winners">${winners.map(card).join('')}</div>`:''}<div class="end-bottom"><section><h3>${winners.length?'The rest of the village':'The village'}</h3><div class="end-cards">${others.map(card).join('')}</div></section><div class="end-actions"><h2>The End</h2><p>${esc(connection.replayNotice)}</p>${replayLink('primary')}<button id="review-village">Review village</button></div></div></div>`;
   $('review-village').onclick=()=>{resultDismissed=true;lastInterlude='';drawInterlude();$('day').focus();};
  }
  $('interlude-title')?.focus({preventScroll:true});

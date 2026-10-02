@@ -50,7 +50,7 @@ living player, repeats one, or goes out of range is dropped and scores as a know
 ## Timing
 
 `observation.remainingMs` says how long you have (at most 45 seconds). Speaking turns are
-about 13 seconds; votes and night actions 45 seconds. Late replies are lost, and the action
+about 13 seconds, votes 45 seconds and night actions 30 seconds. Late replies are lost, and the action
 passes. Budget one retry at most.
 
 ## Names

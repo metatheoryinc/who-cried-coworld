@@ -50,7 +50,7 @@
                 "dayMs": 150000,
                 "voteMs": 45000,
                 "coordinationMs": 30000,
-                "nightMs": 45000
+                "nightMs": 30000
               },
               "type": "object",
               "properties": {
@@ -79,7 +79,7 @@
                   "maximum": 30000
                 },
                 "nightMs": {
-                  "default": 45000,
+                  "default": 30000,
                   "type": "integer",
                   "minimum": 100,
                   "maximum": 45000
@@ -303,7 +303,7 @@
                 "dayMs": 150000,
                 "voteMs": 45000,
                 "coordinationMs": 30000,
-                "nightMs": 45000
+                "nightMs": 30000
               },
               "type": "object",
               "properties": {
@@ -332,7 +332,7 @@
                   "maximum": 30000
                 },
                 "nightMs": {
-                  "default": 45000,
+                  "default": 30000,
                   "type": "integer",
                   "minimum": 100,
                   "maximum": 45000
@@ -557,7 +557,7 @@
                 "dayMs": 150000,
                 "voteMs": 45000,
                 "coordinationMs": 30000,
-                "nightMs": 45000
+                "nightMs": 30000
               },
               "type": "object",
               "properties": {
@@ -586,7 +586,7 @@
                   "maximum": 30000
                 },
                 "nightMs": {
-                  "default": 45000,
+                  "default": 30000,
                   "type": "integer",
                   "minimum": 100,
                   "maximum": 45000

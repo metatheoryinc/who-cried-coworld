@@ -28,7 +28,7 @@ it('allows ten-second fast LLM windows within the sixty-minute package budget',(
 });
 it('gives human lobbies a five-minute wait within the sixty-minute budget',()=>{
  const c=GameConfig.parse({...input(),mode:'human'});
- expect([c.player_connect_timeout_seconds,episodeBudgetSeconds(c)]).toEqual([300,2570]);
+ expect([c.player_connect_timeout_seconds,episodeBudgetSeconds(c)]).toEqual([300,2450]);
  expect(GameConfig.safeParse({...input(),maxDays:13,windowMs:10000}).success).toBe(true);
 });
 it('validates moderator selection independently of paced variant settings',()=>{

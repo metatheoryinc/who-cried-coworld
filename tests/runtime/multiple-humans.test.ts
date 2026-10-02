@@ -21,7 +21,7 @@ it('gives multiple humans independent chat IDs, private team channels, and vote 
  expect(s.receive(5,JSON.stringify(action),150001).status).toBe('accepted');
  expect(s.snapshot(1,150001).accepted).toBeNull();
  s.advance(230000);
- for(const slot of [0,1,5])expect(s.observation(slot,230000)?.remainingMs).toBe(45000);
+ for(const slot of [0,1,5])expect(s.observation(slot,230000)?.remainingMs).toBe(30000);
 });
 it('runs an all-human game without asking a model to select a human speaker',()=>{
  const s=game(Array.from({length:9},(_,i)=>i));

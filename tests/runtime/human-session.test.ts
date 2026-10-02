@@ -8,7 +8,7 @@ const config=()=>GameConfig.parse({tokens:Array.from({length:9},(_,i)=>`t${i}`),
 const human=(c:GameConfig)=>{const s=new HumanSession(c,'episode');s.registerHuman(1);return s;};
 it('keeps public phases fixed while policies get shorter deadlines',()=>{
  const c=config(),s=human(c);s.start(0);
- expect(episodeBudgetSeconds(c)).toBe(2570);
+ expect(episodeBudgetSeconds(c)).toBe(2450);
  expect(s.snapshot(1,0).remainingMs).toBe(150000);
  expect(s.observation(5,0)?.remainingMs).toBe(13000);
  expect(s.snapshot(1,0).revealedRoles).toEqual([]);
@@ -25,9 +25,9 @@ it('keeps public phases fixed while policies get shorter deadlines',()=>{
  s.advance(200000);expect(s.snapshot(1,200000).period).toBe('coordination');
  expect(s.snapshot(1,200000).remainingMs).toBe(30000);
  s.advance(230000);expect(s.snapshot(1,230000).period).toBe('actions');
- expect(s.observation(1,230000)?.remainingMs).toBe(45000);
- s.advance(275000);expect(s.snapshot(1,275000).period).toBe('dawn');expect(s.pending.size).toBe(0);
- s.advance(280000);expect(s.state.day).toBe(2);expect(s.snapshot(1,280000).remainingMs).toBe(150000);
+ expect(s.observation(1,230000)?.remainingMs).toBe(30000);
+ s.advance(260000);expect(s.snapshot(1,260000).period).toBe('dawn');expect(s.pending.size).toBe(0);
+ s.advance(265000);expect(s.state.day).toBe(2);expect(s.snapshot(1,265000).remainingMs).toBe(150000);
 });
 it('isolates team chat and rejects duplicate, stale, dead and unauthorized messages',()=>{
  const s=human(config());s.start(0);

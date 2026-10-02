@@ -23,7 +23,7 @@ The play modes, `standard` and `reproducible` share human pacing:
 | Day discussion | 150 s (eleven 13 s speaking turns, then a 7 s turn) |
 | Vote | 45 s |
 | Night coordination | 30 s |
-| Night actions | 45 s |
+| Night actions | 30 s |
 | Dusk / dawn | 5 s each |
 
 Play modes also wait for people: the game starts when all nine seats are connected, or five

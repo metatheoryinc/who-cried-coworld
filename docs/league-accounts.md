@@ -71,9 +71,9 @@ the account's main user when it finishes. Signing in again to your usual account
 puts everything back.
 
 The account signed in as jt@metatheory.gg also keeps your personal player `EntropyFails`
-(`ply_ab9a5599-9e99-464d-8fee-07acdc46d25d`). In Playtests it is still a champion with
-`wcw-bedrock-haiku:v18`. That version was uploaded with the old `USE_BEDROCK` secret, so it gets no hosted
-model and plays as a dead seat. Retire it, or re-upload it with `--use-llm`, before ranked rounds.
+(`ply_ab9a5599-9e99-464d-8fee-07acdc46d25d`). Its Playtests champion, `wcw-bedrock-haiku:v18`, was retired
+on October 2, 2026: it was uploaded with the old `USE_BEDROCK` secret, so it got no hosted model and played as a
+dead seat. Two older entries of the same kind (v5, v6) remain benched there; they were not promoted.
 
 ## Also in the league
 

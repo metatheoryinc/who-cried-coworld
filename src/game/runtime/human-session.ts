@@ -1,8 +1,10 @@
-import { validateModeratorChoice,type Moderator,type ModeratorChoice } from '../domain/moderator.js';
+import { validateModeratorChoice,validateGhostChoice,type Moderator,type ModeratorChoice,type GhostHost,type GhostInput } from '../domain/moderator.js';
 import { newD3Decks } from '../../shared/roles.js';
 import { chooseSpeaker } from '../domain/human-host.js';
 import { Session } from './session.js';
-import { closeRequest,openRequest,type Request } from '../domain/requests.js';
+import { closeRequest,openRequest,submit,type Pending,type Receipt,type Request } from '../domain/requests.js';
+import { draw } from '../domain/random.js';
+import { mentionsName } from '../../shared/player-names.js';
 import { legalNightChoices } from '../domain/rules.js';
 import { publicRoster } from './observation.js';
 import { project } from '../../shared/presentation/project.js';
@@ -15,7 +17,16 @@ export class HumanSession extends Session {
  phaseDeadline=0;
  moderator?:Moderator;
  private moderationController?:AbortController;
- cancelModerator(){const controller=this.moderationController;this.moderationController=undefined;controller?.abort();}
+ cancelModerator(){const controller=this.moderationController;this.moderationController=undefined;controller?.abort();this.ghostController?.abort();}
+ /** The Graveyard. Requests to dead AI live apart from the phase's `pending`, so phases, tallies and scores never see them. */
+ ghostHost?:GhostHost;
+ readonly ghosts=new Map<number,Pending>();
+ private ghostController?:AbortController;
+ private ghostRepliesKey='';
+ private ghostReplies=0;
+ private ghostDraws=0;
+ static readonly GHOST_REPLIES_PER_PHASE=6;
+ static readonly GHOST_DEADLINE_MS=15000;
 
  readonly humanSlots=new Set<number>();
  override isHuman(slot:number){return this.humanSlots.has(slot);}
@@ -128,21 +139,73 @@ export class HumanSession extends Session {
   this.period=period;this.pending.clear();this.phaseDeadline=now+this.config.humanTimers.transitionMs;this.deadline=this.phaseDeadline;
   this.phaseEvent(period==='dusk'?'night':'day',this.config.humanTimers.transitionMs);
  }
- override disconnect(slot:number){if(!this.isHuman(slot))super.disconnect(slot);}
+ override disconnect(slot:number){this.ghosts.delete(slot);if(!this.isHuman(slot))super.disconnect(slot);}
+ override requestFor(slot:number){return this.pending.get(slot)??this.ghosts.get(slot);}
+ override receive(slot:number,text:unknown,now:number):Receipt{
+  const ghost=this.ghosts.get(slot);
+  if(!ghost||this.pending.has(slot))return super.receive(slot,text,now);
+  if(this.state.result){this.ghosts.delete(slot);return {status:'expired',code:null,retry:false};}
+  const receipt=submit(ghost,this.state,slot,text,now);
+  // Published at once; a refused or failed reply simply never appears.
+  if(ghost.accepted){const b=ghost.accepted.body;if(b.kind==='dead_chat'&&b.text.trim())this.emit({kind:'dead_chat',slot,text:b.text},{kind:'dead'});}
+  if(ghost.accepted||ghost.outcome)this.ghosts.delete(slot);
+  return receipt;
+ }
+ override advance(now:number){
+  super.advance(now);
+  for(const [slot,g] of this.ghosts)if(this.state.result||now>=g.deadline)this.ghosts.delete(slot);
+ }
+ /** After a dead human's Graveyard message, ask one dead AI to answer: the one named, else the host's pick, else a seeded random one. */
+ private summonGhost(human:number,text:string,now:number){
+  const key=`${this.state.day}:${this.period}`;
+  if(key!==this.ghostRepliesKey){this.ghostRepliesKey=key;this.ghostReplies=0;}
+  const candidates=this.state.seats.filter(p=>!p.alive&&!this.isHuman(p.slot)).map(p=>p.slot);
+  if(!candidates.length||this.ghosts.size||this.ghostController||this.ghostReplies>=HumanSession.GHOST_REPLIES_PER_PHASE)return;
+  this.ghostReplies++;
+  const roster=publicRoster(this.state,this.config),names=roster.map(p=>p.name),name=(slot:number)=>roster[slot]!.name;
+  const named=candidates.find(slot=>mentionsName(text,name(slot),names));
+  const random=()=>candidates[draw(this.state.seed,'graveyard',this.ghostDraws++,candidates.length).value]!;
+  const ask=(slot:number)=>{
+   if(this.state.result||this.state.seats[slot]!.alive||this.ghosts.size)return;
+   const index=++this.counters[slot]!;
+   this.ghosts.set(slot,openRequest({slot,episodeId:this.episodeId,requestId:`r_${slot}_${index}`,observationId:`o_${slot}_${index}`,deadline:now+HumanSession.GHOST_DEADLINE_MS,request:{kind:'dead_chat',maxCharacters:240}}));
+  };
+  if(named!==undefined||!this.ghostHost){ask(named??random());return;}
+  const killers=new Set<number>(),voters=new Set<number>();
+  for(const e of this.journal){const p=e.payload;
+   if(p.kind==='ballots')for(const b of p.ballots)if(b.target===human)voters.add(b.slot);
+   if(p.kind==='kill_resolution'&&p.target===human&&p.killer!==null)killers.add(p.killer);
+  }
+  const input:GhostInput={human:{slot:human,name:name(human)},message:text,
+   candidates:candidates.map(slot=>({slot,name:name(slot),votedForYou:voters.has(slot),killedYou:killers.has(slot)})),
+   recent:this.journal.flatMap(e=>e.payload.kind==='dead_chat'?[{name:name(e.payload.slot),text:e.payload.text}]:[]).slice(-6)};
+  const controller=new AbortController();this.ghostController=controller;
+  let timeout:ReturnType<typeof setTimeout>;
+  const expired=new Promise<never>((_,reject)=>{timeout=setTimeout(()=>{reject(Error('Graveyard host timed out'));controller.abort();},2000);});
+  Promise.race([Promise.resolve().then(()=>this.ghostHost!(input,controller.signal)),expired]).then(raw=>validateGhostChoice(raw,input).slot).catch(()=>random()).then(slot=>{
+   clearTimeout(timeout);
+   if(this.ghostController!==controller)return;
+   this.ghostController=undefined;ask(slot);
+  });
+ }
  chat(slot:number,text:unknown,now:number):{status:'accepted'|'duplicate'|'rejected';message?:string}{
   this.advance(now);
   const parsed=decodeText(text,HumanChat);
   const reject=(message:string)=>({status:'rejected' as const,message});
   if(!parsed.ok)return reject('Invalid chat message.');
   const m=parsed.value,seat=this.state.seats[slot];
-  if(!this.isHuman(slot)||!seat?.alive||this.state.result||this.phase==='waiting'||m.episodeId!==this.episodeId||m.phaseKey!==`${this.state.day}:${this.period}`)return reject('This chat window has closed.');
-  if(m.channel==='town'?this.period!=='discussion':!['discussion','coordination'].includes(this.period)|| (m.channel==='wolves'?seat.faction!=='wolf':seat.role!=='noble'))return reject('This channel is unavailable.');
+  if(!this.isHuman(slot)||!seat||this.state.result||this.phase==='waiting'||m.episodeId!==this.episodeId||m.phaseKey!==`${this.state.day}:${this.period}`)return reject('This chat window has closed.');
+  // The dead cannot speak to the living: the Graveyard is the only channel for the dead, and only for them.
+  if(m.channel==='graveyard'){if(seat.alive)return reject('This channel is unavailable.');}
+  else if(!seat.alive)return reject('The dead tell no tales.');
+  else if(m.channel==='town'?this.period!=='discussion':!['discussion','coordination'].includes(this.period)|| (m.channel==='wolves'?seat.faction!=='wolf':seat.role!=='noble'))return reject('This channel is unavailable.');
   const signature=JSON.stringify(m),prior=this.chatIds.get(`${slot}:${m.id}`);
   if(prior)return prior===signature?{status:'duplicate'}:reject('Message ID already used.');
   const key=`${slot}:${this.period}:${m.channel}`,count=this.chatCounts.get(key)??0;
   if(count>=30||now-(this.lastChat.get(slot)??-Infinity)<2000)return reject('Please wait a moment before sending another message.');
   this.chatIds.set(`${slot}:${m.id}`,signature);this.chatCounts.set(key,count+1);this.lastChat.set(slot,now);
-  if(m.channel==='town')this.emit({kind:'speech',speech:{slot,text:m.text,replyTo:null,accusation:null}});
+  if(m.channel==='graveyard'){this.emit({kind:'dead_chat',slot,text:m.text},{kind:'dead'});this.summonGhost(slot,m.text,now);}
+  else if(m.channel==='town')this.emit({kind:'speech',speech:{slot,text:m.text,replyTo:null,accusation:null}});
   else this.teamMessage(slot,m.channel==='wolves'?'wolf_chat':'noble_chat',m.text);
   return {status:'accepted'};
  }
@@ -164,10 +227,11 @@ export class HumanSession extends Session {
    floor:this.period==='discussion'&&floor?{slot:floor.slot,turn:this.window,prompt:floor.request.kind==='bid'?floor.request.host?.prompt??null:null,replyingToHuman:floor.request.kind==='bid'&&floor.request.host?.reason==='human_reply'}:null,
    self:started?{slot,role:seat.role,faction:seat.faction,alive:seat.alive}:null,roster:publicRoster(this.state,this.config),
    teammates:started?this.state.seats.filter(p=>seat.faction==='wolf'?p.faction==='wolf':seat.role==='noble'?p.role==='noble':false).map(p=>({slot:p.slot,role:p.role})):[],
-   channels:started?channels:['town'],chatEnabled:started&&seat.alive&&!this.state.result&&(this.period==='discussion'||this.period==='coordination'),
+   channels:started?(seat.alive?channels:[...channels,'graveyard']):['town'],chatEnabled:started&&!this.state.result&&(!seat.alive||this.period==='discussion'||this.period==='coordination'),
    observation:started&&seat.alive?this.observation(slot,now):null,accepted:p?.accepted?.body??null,
    packDrafts:this.packDrafts(slot),
-   revealedRoles:this.state.result?this.state.seats.map(p=>({slot:p.slot,role:p.role,faction:p.faction})):[],
+   // The ghost's view: dead humans see every role (they cannot speak to the living).
+   revealedRoles:this.state.result||started&&!seat.alive?this.state.seats.map(p=>({slot:p.slot,role:p.role,faction:p.faction})):[],
    events:project(this.journal,slot),result:this.state.result??null};
  }
 }

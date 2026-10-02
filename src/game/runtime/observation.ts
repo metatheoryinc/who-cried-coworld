@@ -9,9 +9,10 @@ export function publicRoster(s:State,c:GameConfig){
 }
 export function buildObservation(s:State,c:GameConfig,journal:Event[],p:Pending,phase:Phase,now:number):Observation{
  const seat=s.seats[p.slot];
- if(!seat?.alive||s.result)throw new Error('No action observation for inactive seat');
+ // The dead are asked one thing only: a Graveyard reply.
+ if(!seat||s.result||seat.alive!==(p.request.kind!=='dead_chat'))throw new Error('No action observation for inactive seat');
  const visible=project(journal,p.slot);
- const speech=visible.filter(e=>e.payload.kind==='speech'||e.payload.kind==='wolf_chat'||e.payload.kind==='noble_chat'||e.payload.kind==='elimination');
+ const speech=visible.filter(e=>e.payload.kind==='speech'||e.payload.kind==='wolf_chat'||e.payload.kind==='noble_chat'||e.payload.kind==='dead_chat'||e.payload.kind==='elimination');
  // Preserve every public death even when older conversation leaves the context window.
  const deaths=speech.filter(e=>e.payload.kind==='elimination');
  const recent=new Set(speech.filter(e=>e.payload.kind!=='elimination').slice(-(128-deaths.length)));

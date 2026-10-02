@@ -95,7 +95,9 @@ export class Session {
    this.pending.set(slot,openRequest({slot,episodeId:this.episodeId,requestId:`r_${slot}_${index}`,observationId:`o_${slot}_${index}`,deadline:this.deadline,request,visibleSpeechIds:publicSpeech}));
   }
  }
- observation(slot:number,now:number){const p=this.pending.get(slot);return p&&!p.outcome&&!this.state.result?buildObservation(this.state,this.config,this.journal,p,this.phase,now):null;}
+ /** The open request for a seat, if any. HumanSession adds Graveyard requests for dead seats. */
+ requestFor(slot:number){return this.pending.get(slot);}
+ observation(slot:number,now:number){const p=this.requestFor(slot);return p&&!p.outcome&&!this.state.result?buildObservation(this.state,this.config,this.journal,p,this.phase,now):null;}
  receive(slot:number,text:unknown,now:number):Receipt{
   const p=this.pending.get(slot);
   if(!p||this.state.result)return {status:'expired',code:null,retry:false};

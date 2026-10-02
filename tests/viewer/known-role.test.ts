@@ -14,3 +14,8 @@ it('uses exact private discoveries without guessing from ambiguous results',()=>
  expect(knownRole({...state,events:[{payload:{kind:'private_result',slot:0,result:{day:1,ability:'inspect',target:2,result:'not_wolf'}}}]},2)).toBeNull();
  expect(knownRole({...state,events:[{payload:{kind:'private_result',slot:0,result:{day:1,ability:'inform',target:2,result:'town'}}}]},2)).toBe('dairy_maid');
 });
+it("shows a dead player every revealed role (the ghost's view), and a living one none",()=>{
+ const revealedRoles=[{slot:2,role:'wolf' as const}];
+ expect(knownRole({...state,self:{slot:0,role:'sheep',alive:false},revealedRoles},2)).toBe('wolf');
+ expect(knownRole({...state,self:{slot:0,role:'sheep',alive:true},revealedRoles},2)).toBeNull();
+});

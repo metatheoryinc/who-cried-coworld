@@ -18,7 +18,7 @@ const labels={discussion:'Discuss & deduce',vote:'Cast your vote',coordination:'
 // Stamp drafts: placements are local until the server confirms them; they count when the timer ends.
 // freshStamp animates a stamp once, on the redraw right after it is placed.
 let freshStamp=null,placements={},held=null,draftKey=null,dirty=false,saveState='idle',changeSeq=0,sentSeq=0,sendTimer;
-let state=null,ws,channel='town',lastRender='',actionKey='',remainingUntil=0,joined=false,connecting=false,ended=false,pendingChat=null,pendingChannel=null;
+let state=null,ws,channel='town',graveyardOpened=false,lastRender='',actionKey='',remainingUntil=0,joined=false,connecting=false,ended=false,pendingChat=null,pendingChannel=null;
 // Each channel keeps its own unsent draft so private text can never be sent to another channel after switching tabs.
 const drafts={};
 const params=new URLSearchParams(location.search);
@@ -243,6 +243,7 @@ const channelInfo={
  town:{name:'Town',title:'Village voices',note:'Public · everyone can read this',icon:chatIcon('<path d="M4 5h16v11H10l-5 4v-4H4z"/>')},
  wolves:{name:'Wolves',title:'Wolves’ den',note:'Private · only living Wolves can read this',icon:chatIcon('<circle cx="7" cy="9" r="1.8"/><circle cx="12" cy="6.5" r="1.8"/><circle cx="17" cy="9" r="1.8"/><path d="M12 12c-3 0-5.5 3-5.5 5.2 0 1.5 1.3 2.3 2.8 2L12 18.5l2.7.7c1.5.3 2.8-.5 2.8-2C17.5 15 15 12 12 12z"/>')},
  nobles:{name:'Nobles',title:'Noble chat',note:'Private · only Nobles can read this',icon:chatIcon('<path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z"/>')},
+ graveyard:{name:'Graveyard',title:'The Graveyard',note:'Private · only the dead can read this',icon:chatIcon('<path d="M7 21V9a5 5 0 0 1 10 0v12z"/><path d="M4 21h16"/><path d="M12 11v6M9.5 13.5h5"/>')},
 };
 const lockIcon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
 // Read position per channel (last seen message id), kept for this browser tab so a reload keeps badges honest.
@@ -250,11 +251,13 @@ const seenKey=`wcw-seen:${storageKey}`;
 let lastSeen={},divider={channel:null,id:null};
 try{lastSeen=JSON.parse(sessionStorage.getItem(seenKey)??'{}')??{};}catch{}
 function drawChat(){
+ // On death, open the Graveyard once; after that the player picks tabs freely.
+ if(state.channels.includes('graveyard')&&!graveyardOpened){graveyardOpened=true;drafts[channel]=$('message').value;channel='graveyard';$('message').value=drafts[channel]??'';}
  if(!state.channels.includes(channel))channel='town';
  const selfSlot=state.self?.slot??-1,selfName=state.self?name(selfSlot):'',info=channelInfo[channel];
  const active=unread(state.events,channel,lastSeen[channel],selfSlot,selfName,state.roster.map(p=>p.name));
  if(divider.channel!==channel)divider={channel,id:active.firstId};
- const kind=channel==='town'?'speech':channel==='wolves'?'wolf_chat':'noble_chat';
+ const kind=channel==='town'?'speech':channel==='wolves'?'wolf_chat':channel==='graveyard'?'dead_chat':'noble_chat';
  const latest=state.events.filter(e=>e.payload.kind===kind).at(-1);
  if(latest&&lastSeen[channel]!==latest.id){lastSeen[channel]=latest.id;try{sessionStorage.setItem(seenKey,JSON.stringify(lastSeen));}catch{}}
  $('channels').innerHTML=state.channels.map(c=>{
@@ -271,12 +274,13 @@ function drawChat(){
  const el=$('messages'),atBottom=el.scrollTop+el.clientHeight>=el.scrollHeight-60;
  el.innerHTML=items.length?items.map(e=>{if(e.line)return `<p class="system-line">${esc(e.line)}</p>`;const mark=e.id&&e.id===divider.id?'<p class="new-divider"><span>New</span></p>':'';const p=e.payload,b=p.kind==='speech'?p.speech:p;return `${mark}<article class="message ${b.slot===state.self?.slot?'mine':''}"><small>Day ${e.day}</small><strong><b class="seat-no seat-c${b.slot}">${b.slot+1}</b>${esc(name(b.slot))}${b.slot===state.self?.slot?' · you':''}</strong><p>${esc(b.text)}</p></article>`;}).join(''):'<p class="empty">No messages in this channel yet.</p>';
  if(atBottom)el.scrollTop=el.scrollHeight;
- const allowed=state.chatEnabled&&(channel!=='town'||state.period==='discussion');
+ const dead=state.self&&!state.self.alive;
+ // The dead cannot speak to the living: only the Graveyard takes their messages, in any phase.
+ const allowed=state.chatEnabled&&(dead?channel==='graveyard':channel!=='town'||state.period==='discussion');
  $('message').disabled=!allowed||ws?.readyState!==WebSocket.OPEN;$('send').disabled=$('message').disabled||!!pendingChat;
  $('send').textContent=channel==='town'?'Send':`Send to ${names[channel]}`;
- const dead=state.self&&!state.self.alive;
- $('message').placeholder=allowed?`Message ${names[channel]}…`:state.phase==='waiting'?'Chat opens when the game starts.':dead?'The dead tell no tales…':'Chat is closed for this phase.';
- $('chat-hint').textContent=allowed?'480 characters · Enter to send':state.phase==='waiting'?'Your role stays private.':state.self?.alive?'Chat reopens during discussion.':'You can still watch the living argue.';
+ $('message').placeholder=allowed?`Message ${names[channel]}…`:state.phase==='waiting'?'Chat opens when the game starts.':dead?'The dead tell no tales… Talk in the Graveyard.':'Chat is closed for this phase.';
+ $('chat-hint').textContent=allowed?(channel==='graveyard'?'Only the dead can read this · Enter to send':'480 characters · Enter to send'):state.phase==='waiting'?'Your role stays private.':state.self?.alive?'Chat reopens during discussion.':'You can still watch the living argue.';
 }
 function deathMark(cause){return cause?`<img class="death-mark ${cause==='wolf'?'claw':'meat'}" src="${asset(cause==='wolf'?'dead_icon_claw':'dead_icon_meat')}" alt="${cause==='wolf'?'Killed by wolves':'Eliminated by town'}">`:'';}
 let resultDismissed=false,lastInterlude='';

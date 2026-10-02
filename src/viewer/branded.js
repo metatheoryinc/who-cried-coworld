@@ -161,7 +161,7 @@ function derive(evs) {
   // Who performs the event at the cursor (a speaker, a Wolf chatting, a confessional, a night action), for the highlight.
   const last = evs.at(-1)?.payload;
   m.actor = !last ? null : last.kind === 'speech' ? last.speech.slot
-    : ['confessional', 'wolf_chat', 'noble_chat', 'bid', 'night_choices', 'failure', 'suspicion', 'suspicion_dropped', 'private_result'].includes(last.kind) ? last.slot : null;
+    : ['confessional', 'wolf_chat', 'noble_chat', 'dead_chat', 'bid', 'night_choices', 'failure', 'suspicion', 'suspicion_dropped', 'private_result'].includes(last.kind) ? last.slot : null;
   return m;
 }
 
@@ -399,7 +399,7 @@ const plainLine = html => `<li class="line" style="grid-template-columns:1fr"><p
 /* Consecutive private events of the same kind become one panel. A wolf conversation
    reads as a conversation; five headers read as a log file. */
 function coalesce(evs) {
-  const GROUP = { noble_chat: 1, wolf_chat: 1, night_choices: 1, confessional: 1, bid: 1, night_outcome: 1, suspicion: 1, suspicion_dropped: 1 };
+  const GROUP = { noble_chat: 1, wolf_chat: 1, dead_chat: 1, night_choices: 1, confessional: 1, bid: 1, night_outcome: 1, suspicion: 1, suspicion_dropped: 1 };
   const out = [];
   for (const e of evs) {
     const k = e.payload.kind;
@@ -419,6 +419,11 @@ function revealParts(e) {
     case 'noble_chat':case 'wolf_chat':
       return { title: p.kind==='noble_chat'?'Noble channel':'Wolf channel',
         inner: `<ul>${e.group.map((w, i) => lineOf(w.payload.slot, esc(w.payload.text), `Turn ${i + 1}`)).join('')}</ul>`, };
+
+    // Only the dead could read these during play.
+    case 'dead_chat':
+      return { title: 'Graveyard',
+        inner: `<ul>${e.group.map(w => lineOf(w.payload.slot, esc(w.payload.text), 'From beyond')).join('')}</ul>`, };
 
     case 'bid': {
       const rows = e.group.map(b => b.payload).sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99));

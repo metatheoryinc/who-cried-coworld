@@ -1,11 +1,12 @@
 import type {Role} from '../shared/roles.js';
 import type {Payload} from '../shared/events.js';
 /** Exact role knowledge only; alignment checks and 'vanilla' are ambiguous. */
-export function knownRole(s:{self:{slot:number;role:Role}|null;teammates:{slot:number;role:Role}[];events:{payload:Payload}[];result?:unknown;revealedRoles?:{slot:number;role:Role}[]}|null,slot:number):Role|null{
+export function knownRole(s:{self:{slot:number;role:Role;alive?:boolean}|null;teammates:{slot:number;role:Role}[];events:{payload:Payload}[];result?:unknown;revealedRoles?:{slot:number;role:Role}[]}|null,slot:number):Role|null{
  if(!s)return null;
  if(s.self?.slot===slot)return s.self.role;
  const teammate=s.teammates.find(t=>t.slot===slot);if(teammate)return teammate.role;
- if(s.result){const revealed=s.revealedRoles?.find(t=>t.slot===slot);if(revealed)return revealed.role;}
+ // After the game, and for the dead (the ghost's view), every role is revealed.
+ if(s.result||s.self?.alive===false){const revealed=s.revealedRoles?.find(t=>t.slot===slot);if(revealed)return revealed.role;}
  const death=s.events.find(e=>e.payload.kind==='elimination'&&e.payload.slot===slot)?.payload;
  if(death?.kind==='elimination'&&death.role)return death.role;
  for(const e of s.events){

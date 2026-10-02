@@ -23,3 +23,7 @@ it('matches a name as a whole word, case-insensitively',()=>{
  expect(mentions('Human-2 wrote this','Human')).toBe(false);
  expect(mentions('Human, and Human-2','Human')).toBe(true);
 });
+it('counts unread Graveyard messages on their own tab',()=>{
+ const events=[{id:'private_1',day:1,payload:{kind:'dead_chat' as const,slot:3,text:'Ann, you there?'}},{id:'public_1',day:1,payload:{kind:'speech' as const,speech:{slot:2,text:'hi',replyTo:null,accusation:null}}}];
+ expect(unread(events,'graveyard',undefined,0,'Ann')).toEqual({count:1,mention:true,firstId:'private_1'});
+});

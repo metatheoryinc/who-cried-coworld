@@ -237,7 +237,7 @@ body.lobby .action-panel p{margin:4px 0}
  .conn[data-state=ok]{display:none}
 }
 /* Chat channels: folder tabs in the channel's color, unread badges, and a channel-colored panel edge. */
-.chan-town{--chan:#c6a36b}.chan-wolves{--chan:#d0573f}.chan-nobles{--chan:#6d95d6}
+.chan-town{--chan:#c6a36b}.chan-wolves{--chan:#d0573f}.chan-nobles{--chan:#6d95d6}.chan-graveyard{--chan:#a59bc4}
 .chat-panel{border-color:var(--chan,#99734d);transition:border-color .2s}
 #channels{gap:4px;padding:0 14px;border-bottom:2px solid var(--chan,#71553c)}
 #channels .chan{position:relative;display:inline-flex;align-items:center;gap:6px;margin-bottom:-2px;padding:8px 12px 9px;border:2px solid transparent;border-bottom:0;border-radius:10px 10px 0 0;background:#3a2c21;color:#cdb795;font:600 12.5px system-ui}

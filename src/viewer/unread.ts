@@ -1,8 +1,8 @@
 import type { Payload } from '../shared/events.js';
 import { mentionsName } from '../shared/player-names.js';
 type ChatEvent={id:string;day:number;payload:Payload};
-export type Channel='town'|'wolves'|'nobles';
-const kinds:Record<Channel,Payload['kind']>={town:'speech',wolves:'wolf_chat',nobles:'noble_chat'};
+export type Channel='town'|'wolves'|'nobles'|'graveyard';
+const kinds:Record<Channel,Payload['kind']>={town:'speech',wolves:'wolf_chat',nobles:'noble_chat',graveyard:'dead_chat'};
 export function channelMessages<E extends ChatEvent>(events:E[],channel:Channel){return events.filter(e=>e.payload.kind===kinds[channel]);}
 const author=(p:Payload)=>p.kind==='speech'?p.speech.slot:'slot' in p?p.slot:-1;
 const text=(p:Payload)=>p.kind==='speech'?p.speech.text:'text' in p?String(p.text):'';

@@ -75,6 +75,11 @@ The account signed in as jt@metatheory.gg also keeps your personal player `Entro
 on October 2, 2026: it was uploaded with the old `USE_BEDROCK` secret, so it got no hosted model and played as a
 dead seat. Two older entries of the same kind (v5, v6) remain benched there; they were not promoted.
 
+**Competition Pilot.** It is public now, and all nine `wcwl-*` players became champions there on October 6, 2026
+(gemini v4, chatgpt and haiku v3, the other six v2). The `EntropyFails` champion there (`wcw-kimi:v7`, from
+before the hosted-LLM change) was retired the same day. Eight older `EntropyFails` entries remain benched, and none
+was promoted.
+
 ## Also in the league
 
 - **Seeds** (`seed_policy_number` 0, so they take no seats in ranked games): the nine `EntropyFails` policies

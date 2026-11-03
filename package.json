@@ -19,7 +19,7 @@
     "@aws-sdk/client-bedrock-runtime": "3.1134.0",
     "@smithy/node-http-handler": "4.12.1",
     "ws": "8.21.3",
-    "zod": "4.6.5"
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "@types/node": "24.13.5",
